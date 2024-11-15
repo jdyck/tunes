@@ -17,5 +17,5 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-merriweather-sans), sans-serif;
+  font-family: sans-serif;
 }

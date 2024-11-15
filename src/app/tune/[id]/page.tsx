@@ -1,4 +1,3 @@
-// app/tune/[id]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,8 +9,10 @@ import {
   BoltIcon,
   BoltSlashIcon,
   PlusCircleIcon,
+  TrashIcon,
 } from "@heroicons/react/20/solid";
 import { fetchYouTubeVideoData, extractYouTubeID } from "@/utils/youtube";
+import { merriweather } from "@/lib/fonts";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -24,6 +25,7 @@ export default function TunePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
   const [isSaved, setIsSaved] = useState(true);
   const [youtubeData, setYoutubeData] = useState<{ [key: string]: any }>({});
 
@@ -43,6 +45,7 @@ export default function TunePage() {
 
         setTune(tuneData as Tune);
         setNotes(tuneData?.notes || "");
+        setTitle(tuneData?.name || "");
 
         const { data: recordingsData, error: recordingsError } = await supabase
           .from("recordings")
@@ -83,25 +86,44 @@ export default function TunePage() {
     fetchTuneAndRecordings();
   }, [id]);
 
-  const handleSaveNotes = async () => {
+  const handleSave = async () => {
     if (!id || !tune) return;
 
     const { error } = await supabase
       .from("tunes")
-      .update({ notes })
+      .update({ notes, name: title })
       .eq("id", id);
 
     if (error) {
-      console.error("Error updating notes:", error.message);
-      setError(`Error updating notes: ${error.message}`);
+      console.error("Error saving data:", error.message);
+      setError(`Error saving data: ${error.message}`);
     } else {
       setError(null);
       setIsSaved(true);
     }
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+
+    const { error } = await supabase.from("tunes").delete().eq("id", id);
+
+    if (error) {
+      console.error("Error deleting tune:", error.message);
+      setError(`Error deleting tune: ${error.message}`);
+    } else {
+      console.log("Tune deleted successfully!");
+      router.push("/"); // Redirect to homepage or another page
+    }
+  };
+
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNotes(e.target.value);
+    setIsSaved(false);
+  };
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
     setIsSaved(false);
   };
 
@@ -111,36 +133,45 @@ export default function TunePage() {
 
   return (
     <div className="w-full">
-      <h1 className="font-bold text-2xl border-b mb-4 pb-2">{tune.name}</h1>
-
-      <div className="w-full mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-bold">Notes</h3>
+      <form
+        className="w-full"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <input
+            value={title}
+            onChange={handleTitleChange}
+            className={`font-bold text-2xl bg-transparent pb-2 ${merriweather.className} p-1`}
+          />
           <button
-            onClick={handleSaveNotes}
+            type="submit"
             title={isSaved ? "Saved" : "Unsaved changes"}
-            className="bg-white p-2 rounded-lg"
+            className="block relative"
           >
             {isSaved ? (
-              <BoltIcon className="h-5 w-5 text-green-500" />
+              <BoltIcon className="h-5 w-5 text-green-600" />
             ) : (
-              <BoltSlashIcon className="h-5 w-5 text-red-500" />
+              <BoltSlashIcon className="h-5 w-5 text-red-600" />
             )}
           </button>
         </div>
+
         <textarea
           value={notes}
           onChange={handleNotesChange}
           rows={10}
-          className="w-full p-1.5 rounded-md"
+          className="w-full p-1.5 rounded-md mb-4"
         />
-      </div>
+      </form>
 
       <div className="flex justify-between items-center mb-2">
         <h2 className="font-bold">Recordings</h2>
         <Link href={`/tune/${id}/add-recording`} className="block p-2">
           <PlusCircleIcon
-            className="h-6 w-6 text-blue-500"
+            className="h-6 w-6 text-green-600"
             title="Add Recording"
           />
         </Link>
@@ -184,7 +215,19 @@ export default function TunePage() {
         <p>No recordings found for this tune.</p>
       )}
 
-      <button onClick={() => router.back()}>Go Back</button>
+      <button
+        onClick={handleDelete}
+        className="mt-4 w-full px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700"
+      >
+        Delete Tune
+      </button>
+
+      <button
+        onClick={() => router.back()}
+        className="mt-2 w-full px-4 py-2 bg-gray-600 text-white font-bold rounded-md hover:bg-gray-700"
+      >
+        Go Back
+      </button>
     </div>
   );
 }

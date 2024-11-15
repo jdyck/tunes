@@ -1,17 +1,16 @@
-// app/add-tune/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { User, Tune } from "@/types/types";
 
 export default function AddTune() {
   const [name, setName] = useState<Tune["name"]>("");
-  const [year, setYear] = useState<Tune["year"]>("");
-  const [notes, setNotes] = useState<Tune["notes"]>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -32,10 +31,8 @@ export default function AddTune() {
       return;
     }
 
-    const tune: Tune = {
+    const tune: Partial<Tune> = {
       name,
-      year,
-      notes,
       user_id: user.id,
     };
 
@@ -47,41 +44,29 @@ export default function AddTune() {
     } else {
       setSuccessMessage("Tune added successfully!");
       setName("");
-      setYear("");
-      setNotes("");
       console.log("Tune added:", data);
+
+      // Redirect to the homepage after a short delay
+      setTimeout(() => {
+        router.push("/");
+      }, 1000);
     }
   };
 
   return (
-    <div>
+    <div className="w-full">
       <h1>Add a New Tune</h1>
       {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
       {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
-      <div>
-        <label>
-          Name:
+      <div className="w-full">
+        <label className="block w-full pb-4">
+          <span className="block"> Name</span>
           <input
+            className="block w-full p-1.5"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-        </label>
-      </div>
-      <div>
-        <label>
-          Year:
-          <input
-            type="number"
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Notes:
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
       </div>
       <button onClick={handleAddTune}>Add Tune</button>
