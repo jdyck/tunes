@@ -2,16 +2,13 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Link from "next/link";
+import { MusicalNoteIcon } from "@heroicons/react/16/solid";
+import { Merriweather_Sans } from "next/font/google";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+const merriweatherSans = Merriweather_Sans({
+  subsets: ["latin"], // Specify any additional subsets you need
+  weight: ["300", "400", "700"], // Optional: specify font weights you need
+  variable: "--font-merriweather-sans", // Add a CSS variable if desired
 });
 
 export const metadata: Metadata = {
@@ -28,7 +25,11 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-slate-100">
         <header>
-          <Link href="/" className="p-4 font-bold block">
+          <Link
+            href="/"
+            className="p-4 font-bold block text-xl flex w-full justify-center text-indigo-800"
+          >
+            <MusicalNoteIcon className="w-6 h-6 inline-block mr-1" />
             Tunes
           </Link>
         </header>

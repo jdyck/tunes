@@ -1,4 +1,4 @@
-// src/types.ts
+// src/types/types.ts
 
 import { User as SupabaseUser } from "@supabase/supabase-js";
 

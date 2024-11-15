@@ -6,7 +6,14 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Tune, Recording } from "@/types/types";
 import Link from "next/link";
-import YouTubePlayer from "@/components/YouTubePlayer";
+import {
+  BoltIcon,
+  BoltSlashIcon,
+  PlusCircleIcon,
+} from "@heroicons/react/20/solid";
+import { fetchYouTubeVideoData, extractYouTubeID } from "@/utils/youtube";
+
+const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 export default function TunePage() {
   const { id } = useParams();
@@ -16,7 +23,9 @@ export default function TunePage() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activePlayer, setActivePlayer] = useState<YT.Player | null>(null);
+  const [notes, setNotes] = useState<string>("");
+  const [isSaved, setIsSaved] = useState(true);
+  const [youtubeData, setYoutubeData] = useState<{ [key: string]: any }>({});
 
   useEffect(() => {
     if (!id) return;
@@ -29,11 +38,11 @@ export default function TunePage() {
           .eq("id", id)
           .single();
 
-        if (tuneError) {
+        if (tuneError)
           throw new Error(`Error fetching tune: ${tuneError.message}`);
-        } else {
-          setTune(tuneData as Tune);
-        }
+
+        setTune(tuneData as Tune);
+        setNotes(tuneData?.notes || "");
 
         const { data: recordingsData, error: recordingsError } = await supabase
           .from("recordings")
@@ -41,17 +50,30 @@ export default function TunePage() {
           .eq("tune_id", id)
           .order("sortOrder");
 
-        if (recordingsError) {
+        if (recordingsError)
           throw new Error(
             `Error fetching recordings: ${recordingsError.message}`
           );
-        } else {
-          setRecordings(recordingsData as Recording[]);
-        }
 
+        setRecordings(recordingsData as Recording[]);
+
+        const videoData: { [key: string]: any } = {};
+        await Promise.all(
+          recordingsData.map(async (recording) => {
+            const videoId = extractYouTubeID(recording.url);
+            if (videoId && YOUTUBE_API_KEY) {
+              const data = await fetchYouTubeVideoData(
+                videoId,
+                YOUTUBE_API_KEY
+              );
+              if (data) videoData[recording.id] = data;
+            }
+          })
+        );
+        setYoutubeData(videoData);
         setLoading(false);
       } catch (err) {
-        console.error("Fetch error:", err); // This should log a detailed error
+        console.error("Fetch error:", err);
         setError(
           err instanceof Error ? err.message : "An unknown error occurred"
         );
@@ -61,11 +83,26 @@ export default function TunePage() {
     fetchTuneAndRecordings();
   }, [id]);
 
-  const handlePlay = (player: YT.Player) => {
-    if (activePlayer && activePlayer !== player) {
-      activePlayer.pauseVideo();
+  const handleSaveNotes = async () => {
+    if (!id || !tune) return;
+
+    const { error } = await supabase
+      .from("tunes")
+      .update({ notes })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating notes:", error.message);
+      setError(`Error updating notes: ${error.message}`);
+    } else {
+      setError(null);
+      setIsSaved(true);
     }
-    setActivePlayer(player);
+  };
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNotes(e.target.value);
+    setIsSaved(false);
   };
 
   if (loading) return <p>Loading tune...</p>;
@@ -73,56 +110,81 @@ export default function TunePage() {
   if (!tune) return <p>No tune found.</p>;
 
   return (
-    <div>
-      <h1>{tune.name}</h1>
-      <p>
-        <strong>Year:</strong> {tune.year}
-      </p>
-      <p>
-        <strong>Notes:</strong> {tune.notes}
-      </p>
+    <div className="w-full">
+      <h1 className="font-bold text-2xl border-b mb-4 pb-2">{tune.name}</h1>
 
-      <h2>Recordings</h2>
+      <div className="w-full mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-bold">Notes</h3>
+          <button
+            onClick={handleSaveNotes}
+            title={isSaved ? "Saved" : "Unsaved changes"}
+            className="bg-white p-2 rounded-lg"
+          >
+            {isSaved ? (
+              <BoltIcon className="h-5 w-5 text-green-500" />
+            ) : (
+              <BoltSlashIcon className="h-5 w-5 text-red-500" />
+            )}
+          </button>
+        </div>
+        <textarea
+          value={notes}
+          onChange={handleNotesChange}
+          rows={10}
+          className="w-full p-1.5 rounded-md"
+        />
+      </div>
+
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="font-bold">Recordings</h2>
+        <Link href={`/tune/${id}/add-recording`} className="block p-2">
+          <PlusCircleIcon
+            className="h-6 w-6 text-blue-500"
+            title="Add Recording"
+          />
+        </Link>
+      </div>
       {recordings.length > 0 ? (
         <ul>
-          {recordings.map((recording) => (
-            <li key={recording.id}>
-              <strong>{recording.name}</strong> - {recording.rating}/5
-              <p>{recording.notes}</p>
-              {recording.url && extractYouTubeID(recording.url) ? (
-                <YouTubePlayer
-                  videoId={extractYouTubeID(recording.url)!}
-                  onPlay={handlePlay}
-                />
-              ) : (
+          {recordings.map((recording) => {
+            const videoInfo = youtubeData[recording.id];
+            return (
+              <li
+                key={recording.id}
+                className="bg-white rounded-lg mb-4 overflow-hidden block"
+              >
                 <a
-                  href={recording.url}
-                  target="_blank"
+                  href={`/recording/${recording.id}`}
                   rel="noopener noreferrer"
+                  className="flex"
                 >
-                  Listen
+                  {videoInfo && (
+                    <div className="flex overflow-hidden relative">
+                      {videoInfo.thumbnails && videoInfo.thumbnails.high && (
+                        <div className="w-20 h-auto overflow-hidden flex-shrink-0">
+                          <img
+                            src={videoInfo.thumbnails.high.url}
+                            alt="Video thumbnail"
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                      )}
+                      <p className="p-4 pl-4 font-semibold leading-5 line-clamp-2 overflow-hidden text-ellipsis">
+                        {videoInfo.title}
+                      </p>
+                    </div>
+                  )}
                 </a>
-              )}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p>No recordings found for this tune.</p>
       )}
 
-      <Link href={`/tune/${id}/add-recording`}>
-        <button>Add a Recording</button>
-      </Link>
-
       <button onClick={() => router.back()}>Go Back</button>
     </div>
   );
 }
-
-// Helper function to extract YouTube video ID
-const extractYouTubeID = (url: string) => {
-  const match = url.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|.*v=))([\w-]{11})/
-  );
-  return match ? match[1] : null;
-};
