@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { User, Tune } from "@/types";
+import { User, Tune } from "@/types/types";
 
 export default function AddTune() {
   const [name, setName] = useState<Tune["name"]>("");
