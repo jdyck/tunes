@@ -26,6 +26,8 @@ export default function TunePage() {
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string>("");
   const [title, setTitle] = useState<string>("");
+  const [composer, setComposer] = useState<string>("");
+  const [year, setYear] = useState<string>("");
   const [isSaved, setIsSaved] = useState(true);
   const [youtubeData, setYoutubeData] = useState<{ [key: string]: any }>({});
 
@@ -46,6 +48,8 @@ export default function TunePage() {
         setTune(tuneData as Tune);
         setNotes(tuneData?.notes || "");
         setTitle(tuneData?.name || "");
+        setComposer(tuneData?.composer || "");
+        setYear(tuneData?.year || "");
 
         const { data: recordingsData, error: recordingsError } = await supabase
           .from("recordings")
@@ -89,9 +93,16 @@ export default function TunePage() {
   const handleSave = async () => {
     if (!id || !tune) return;
 
+    const updatedFields: Partial<Tune> = {
+      notes,
+      name: title,
+      composer,
+      year: year || null,
+    };
+
     const { error } = await supabase
       .from("tunes")
-      .update({ notes, name: title })
+      .update(updatedFields)
       .eq("id", id);
 
     if (error) {
@@ -106,6 +117,11 @@ export default function TunePage() {
   const handleDelete = async () => {
     if (!id) return;
 
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this tune? This action cannot be undone."
+    );
+    if (!confirmed) return;
+
     const { error } = await supabase.from("tunes").delete().eq("id", id);
 
     if (error) {
@@ -113,19 +129,16 @@ export default function TunePage() {
       setError(`Error deleting tune: ${error.message}`);
     } else {
       console.log("Tune deleted successfully!");
-      router.push("/"); // Redirect to homepage or another page
+      router.push("/");
     }
   };
 
-  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setNotes(e.target.value);
-    setIsSaved(false);
-  };
-
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-    setIsSaved(false);
-  };
+  const handleFieldChange =
+    (setter: (value: string) => void) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setter(e.target.value);
+      setIsSaved(false);
+    };
 
   if (loading) return <p>Loading tune...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
@@ -143,8 +156,8 @@ export default function TunePage() {
         <div className="flex justify-between items-center mb-4">
           <input
             value={title}
-            onChange={handleTitleChange}
-            className={`font-bold text-2xl bg-transparent pb-2 ${merriweather.className} p-1`}
+            onChange={handleFieldChange(setTitle)}
+            className={`font-bold text-2xl bg-transparent pb-2 ${merriweather.className}`}
           />
           <button
             type="submit"
@@ -158,12 +171,37 @@ export default function TunePage() {
             )}
           </button>
         </div>
+        <div className="flex justify-between">
+          <div className="mb-4">
+            <label className="block text-sm font-bold mb-1 hidden">
+              Composer
+            </label>
+            <input
+              value={composer}
+              onChange={handleFieldChange(setComposer)}
+              className="block w-full bg-transparent rounded-md border-black"
+              placeholder="Enter composer name"
+            />
+          </div>
+
+          <div className="mb-4 text-right">
+            <label className="block text-sm font-bold mb-1 hidden">Year</label>
+            <input
+              type="text"
+              value={year}
+              onChange={handleFieldChange(setYear)}
+              className="block w-full rounded-md bg-transparent text-right"
+              placeholder="Enter year"
+            />
+          </div>
+        </div>
 
         <textarea
           value={notes}
-          onChange={handleNotesChange}
+          onChange={handleFieldChange(setNotes)}
           rows={10}
           className="w-full p-1.5 rounded-md mb-4"
+          placeholder="Notes"
         />
       </form>
 

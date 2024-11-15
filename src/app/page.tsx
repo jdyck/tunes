@@ -10,6 +10,7 @@ import { merriweather } from "@/lib/fonts";
 export default function HomePage() {
   const [tunes, setTunes] = useState<Tune[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingUser, setLoadingUser] = useState<boolean>(true); // State to track user loading
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,6 +19,7 @@ export default function HomePage() {
     const fetchSession = async () => {
       const { data } = await supabase.auth.getSession();
       setUser(data.session?.user ?? null);
+      setLoadingUser(false); // User session check complete
     };
 
     fetchSession();
@@ -68,6 +70,10 @@ export default function HomePage() {
       setUser(sessionData.data.session?.user ?? null);
     }
   };
+
+  if (loadingUser) {
+    return <p>Loading...</p>;
+  }
 
   if (!user) {
     return (

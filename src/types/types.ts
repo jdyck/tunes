@@ -7,7 +7,8 @@ export interface User extends SupabaseUser {}
 export interface Tune {
   id?: string;
   name: string;
-  year: string;
+  composer?: string;
+  year?: string | null;
   notes: string;
   user_id: string;
 }
@@ -17,8 +18,8 @@ export interface Recording {
   tune_id: string;
   user_id: string;
   name: string;
-  notes: string;
-  url: string;
-  rating: number;
-  sortOrder: number;
+  notes?: string | null;
+  url?: string | null;
+  rating?: number | null;
+  sortOrder?: number | null;
 }

@@ -1,4 +1,3 @@
-// app/tune/[id]/add-recording/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -14,8 +13,6 @@ export default function AddRecordingPage() {
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
   const [url, setUrl] = useState("");
-  const [rating, setRating] = useState<number | "">("");
-  const [sortOrder, setSortOrder] = useState<number | "">("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -41,10 +38,8 @@ export default function AddRecordingPage() {
       tune_id: tuneId,
       user_id: userId,
       name,
-      notes,
-      url,
-      rating: rating as number,
-      sortOrder: sortOrder as number,
+      notes: notes || null,
+      url: url || null,
     };
 
     const { error } = await supabase.from("recordings").insert(newRecording);
@@ -58,16 +53,16 @@ export default function AddRecordingPage() {
   };
 
   return (
-    <div>
+    <div className="w-full">
       <h1>Add a New Recording</h1>
       {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
       {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
 
-      {/* Form fields */}
-      <div>
+      <div className="w-full">
         <label>
-          Name:
+          Name
           <input
+            className="block w-full p-2 rounded-md mb-4"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -77,49 +72,32 @@ export default function AddRecordingPage() {
       </div>
       <div>
         <label>
-          Notes:
+          Notes
           <textarea
+            className="block w-full p-2 rounded-md mb-4"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            required
           />
         </label>
       </div>
       <div>
         <label>
-          URL:
+          URL
           <input
+            className="block w-full p-2 rounded-md mb-4"
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
         </label>
       </div>
-      <div>
-        <label>
-          Rating (1-5):
-          <input
-            type="number"
-            value={rating}
-            onChange={(e) => setRating(Number(e.target.value))}
-            min="1"
-            max="5"
-            required
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Sort Order:
-          <input
-            type="number"
-            value={sortOrder}
-            onChange={(e) => setSortOrder(Number(e.target.value))}
-            required
-          />
-        </label>
-      </div>
-      <button onClick={handleAddRecording}>Add Recording</button>
+
+      <button
+        onClick={handleAddRecording}
+        className="block mb-4 bg-slate-700 text-white w-full p-3 rounded-lg"
+      >
+        Add Recording
+      </button>
       <button onClick={() => router.back()}>Cancel</button>
     </div>
   );
