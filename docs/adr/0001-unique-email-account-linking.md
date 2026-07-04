@@ -1,0 +1,3 @@
+# One email, one account, across auth methods
+
+We're adding Google sign-in alongside existing email/password auth, and need to decide what happens when the same email address is used with both. We decided a given email must map to exactly one account regardless of which method the user signs in with, rather than Supabase's default of treating each auth method as a separate identity. This requires enforcing email confirmation on password sign-up (not currently wired up), since safe automatic account linking depends on both identities having a verified email — without that, an attacker could claim someone else's unverified email and hijack their account.

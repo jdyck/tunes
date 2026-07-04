@@ -1,0 +1,5 @@
+# Song metadata is canonical/shared; User Song is the private per-user wrapper
+
+We originally deferred any shared/canonical entity for tunes (session note, since superseded), treating each user's tune as fully siloed to avoid the hard problem of deduping and reconciling metadata across users. Revisited: publishing facts (title, composer, year, lyricist) aren't copyrightable and aren't genuinely user-specific, so we decided to make Song a shared canonical entity, with a separate User Song holding each user's private notes, their own display title (which may deliberately diverge from the canonical title), and their Recordings. Also renamed Tune to Song, since "tune" reads as jazz-specific and this app spans genres including classical.
+
+Any user can create a new Song when nothing matches on search/autocomplete — we are not gating creation behind admin approval, unlike Lead Sheets ([ADR-0002](0002-lead-sheets-admin-gated-publishing.md)), because bad/duplicate metadata is a data-quality nuisance, not a legal risk. Duplicate Songs are expected and will be merged by a Site Admin later; a "mark as duplicate" flow for admin review is a future feature, not built yet.

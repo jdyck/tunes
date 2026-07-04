@@ -1,0 +1,3 @@
+# Lead sheets are private by default; publishing is admin-gated, not self-service
+
+Lead sheets/scores are copyrighted material in most cases, so we need a rule for when (if ever) they can be shown to other users. We decided they stay private per-user by default regardless of copyright status, and can only be made visible to others if a Site Admin (the app owner or someone explicitly trusted) personally vets the work as public domain and approves it — no automatic or user-driven publishing based on a "this is public domain" checkbox. We rejected letting any user self-declare public domain status because getting that wrong at scale is a real legal risk, and a manual admin gate is a rule that can't be gotten wrong by an uninformed user.
