@@ -228,22 +228,23 @@ export default function TunePage() {
                   rel="noopener noreferrer"
                   className="flex"
                 >
-                  {videoInfo && (
-                    <div className="flex overflow-hidden relative">
-                      {videoInfo.thumbnails && videoInfo.thumbnails.high && (
-                        <div className="w-20 h-auto overflow-hidden flex-shrink-0">
-                          <img
-                            src={videoInfo.thumbnails.high.url}
-                            alt="Video thumbnail"
-                            className="object-cover w-full h-full"
-                          />
-                        </div>
-                      )}
-                      <p className="p-4 pl-4 font-semibold leading-5 line-clamp-2 overflow-hidden text-ellipsis">
-                        {videoInfo.title}
-                      </p>
-                    </div>
-                  )}
+                  <div className="flex overflow-hidden relative">
+                    {videoInfo?.thumbnails?.high && (
+                      <div className="w-20 h-auto overflow-hidden flex-shrink-0">
+                        <img
+                          src={videoInfo.thumbnails.high.url}
+                          alt="Video thumbnail"
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                    )}
+                    <p className="p-4 pl-4 font-semibold leading-5 line-clamp-2 overflow-hidden text-ellipsis break-words">
+                      {videoInfo?.title ||
+                        recording.name ||
+                        recording.url ||
+                        "Untitled recording"}
+                    </p>
+                  </div>
                 </a>
               </li>
             );

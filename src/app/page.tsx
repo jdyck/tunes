@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Tune } from "@/types/types";
@@ -8,22 +9,32 @@ import Link from "next/link";
 import { merriweather } from "@/lib/fonts";
 
 export default function HomePage() {
+  const router = useRouter();
   const [tunes, setTunes] = useState<Tune[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingUser, setLoadingUser] = useState<boolean>(true); // State to track user loading
   const [user, setUser] = useState<User | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   useEffect(() => {
-    const fetchSession = async () => {
-      const { data } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
       setLoadingUser(false); // User session check complete
-    };
+    });
 
-    fetchSession();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!loadingUser && !user) {
+      router.replace("/login");
+    }
+  }, [loadingUser, user, router]);
 
   useEffect(() => {
     const fetchTunes = async () => {
@@ -48,61 +59,12 @@ export default function HomePage() {
     fetchTunes();
   }, [user]);
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error logging out:", error.message);
-    } else {
-      setUser(null);
-    }
-  };
-
-  const handleLogin = async () => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      console.error("Error logging in:", error.message);
-    } else {
-      const sessionData = await supabase.auth.getSession();
-      setUser(sessionData.data.session?.user ?? null);
-    }
-  };
-
-  if (loadingUser) {
+  if (loadingUser || !user) {
     return <p>Loading...</p>;
-  }
-
-  if (!user) {
-    return (
-      <div className="flex flex-col gap-4 w-[300px]">
-        <input
-          className="p-1"
-          type="email"
-          placeholder="Email"
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          className="p-1"
-          type="password"
-          placeholder="Password"
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          onClick={handleLogin}
-          className="bg-slate-800 text-white uppercase text-xs p-1.5 rounded"
-        >
-          Log In
-        </button>
-      </div>
-    );
   }
 
   return (
     <div className="w-full">
-      <button onClick={handleLogout}>Logout {user.email}</button>
       <div className="w-full">
         {loading ? (
           <p>Loading tunes...</p>

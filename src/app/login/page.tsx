@@ -1,36 +1,92 @@
-// /src/app/login/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import Spinner from "@/components/Spinner";
 
-export default function Login() {
+export default function LoginPage() {
+  const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
-  const handleLogin = async () => {
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        router.replace("/");
+      } else {
+        setCheckingAuth(false);
+      }
+    });
+  }, [router]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    setLoggingIn(true);
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    if (error) console.error("Error logging in:", error.message);
-    else console.log("Login successful!");
+
+    if (error) {
+      setLoginError(error.message);
+      setLoggingIn(false);
+      return;
+    }
+
+    router.push("/");
   };
 
+  if (checkingAuth) {
+    return <p>Loading...</p>;
+  }
+
   return (
-    <div>
-      <h1>Login</h1>
-      <input
-        type="email"
-        placeholder="Email"
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <button onClick={handleLogin}>Log In</button>
+    <div className="flex flex-col gap-4 w-[300px]">
+      <form onSubmit={handleLogin} className="flex flex-col gap-4">
+        <input
+          className="p-1"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          className="p-1"
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          type="submit"
+          disabled={loggingIn}
+          className="bg-slate-800 text-white uppercase text-xs p-1.5 rounded flex items-center justify-center gap-2 disabled:opacity-70"
+        >
+          {loggingIn ? (
+            <>
+              <Spinner /> Logging in
+            </>
+          ) : (
+            "Log In"
+          )}
+        </button>
+      </form>
+      {loginError && <p className="text-sm text-red-600">{loginError}</p>}
+      <div className="flex justify-between text-xs">
+        <Link href="/forgot-password" className="text-green-800 underline">
+          Forgot your password?
+        </Link>
+        <Link href="/signup" className="text-green-800 underline">
+          Sign up
+        </Link>
+      </div>
     </div>
   );
 }
