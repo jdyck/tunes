@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MusicalNoteIcon } from "@heroicons/react/16/solid";
 import { merriweatherSans } from "@/lib/fonts";
 import AccountMenu from "@/components/AccountMenu";
+import GlobalPlayer from "@/components/GlobalPlayer";
 
 export const metadata: Metadata = {
   title: "Tunes",
@@ -48,7 +49,11 @@ export default function RootLayout({
             <AccountMenu />
           </div>
         </header>
-        <div className="flex px-4 max-w-screen-md m-auto pb-16">{children}</div>
+        <GlobalPlayer>
+          <div className="flex px-4 max-w-screen-md m-auto pb-16">
+            {children}
+          </div>
+        </GlobalPlayer>
       </body>
     </html>
   );

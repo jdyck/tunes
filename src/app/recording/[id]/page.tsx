@@ -5,13 +5,20 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Recording } from "@/types/types";
 import { fetchYouTubeVideoData, extractYouTubeID } from "@/utils/youtube";
-import { BoltIcon, BoltSlashIcon, TrashIcon } from "@heroicons/react/20/solid";
+import {
+  BoltIcon,
+  BoltSlashIcon,
+  TrashIcon,
+  PlayIcon,
+} from "@heroicons/react/20/solid";
+import { usePlayer } from "@/components/GlobalPlayer";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 export default function RecordingPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { play } = usePlayer();
 
   const [recording, setRecording] = useState<Recording | null>(null);
   const [name, setName] = useState<string>("");
@@ -149,20 +156,14 @@ export default function RecordingPage() {
 
   return (
     <div className="w-full p-4">
-      {videoId && (
-        <div className="mb-6">
-          <div className="flex flex-col items-center overflow-hidden">
-            <iframe
-              width="300"
-              src={`https://www.youtube.com/embed/${videoId}`}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="rounded-lg mb-4 max-w-full aspect-square w-full"
-            ></iframe>
-          </div>
-        </div>
+      {videoId && recording && (
+        <button
+          onClick={() => play(recording)}
+          className="mb-6 w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-800 text-white font-bold rounded-md hover:bg-green-900"
+        >
+          <PlayIcon className="w-5 h-5" />
+          Play
+        </button>
       )}
       <form
         className="w-full"

@@ -8,17 +8,20 @@ import Link from "next/link";
 import {
   BoltIcon,
   BoltSlashIcon,
+  PlayIcon,
   PlusCircleIcon,
   TrashIcon,
 } from "@heroicons/react/20/solid";
 import { fetchYouTubeVideoData, extractYouTubeID } from "@/utils/youtube";
 import { merriweather } from "@/lib/fonts";
+import { usePlayer } from "@/components/GlobalPlayer";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 export default function TunePage() {
   const { id } = useParams();
   const router = useRouter();
+  const { play } = usePlayer();
 
   const [tune, setTune] = useState<Tune | null>(null);
   const [recordings, setRecordings] = useState<Recording[]>([]);
@@ -221,12 +224,12 @@ export default function TunePage() {
             return (
               <li
                 key={recording.id}
-                className="bg-white rounded-lg mb-4 overflow-hidden block"
+                className="bg-white rounded-lg mb-4 overflow-hidden flex items-stretch"
               >
                 <a
                   href={`/recording/${recording.id}`}
                   rel="noopener noreferrer"
-                  className="flex"
+                  className="flex flex-1 min-w-0"
                 >
                   <div className="flex overflow-hidden relative">
                     {videoInfo?.thumbnails?.high && (
@@ -253,6 +256,19 @@ export default function TunePage() {
                     </div>
                   </div>
                 </a>
+                {extractYouTubeID(recording.url || "") && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      play(recording);
+                    }}
+                    aria-label="Play recording"
+                    className="p-3 text-green-800 flex-shrink-0 self-center"
+                  >
+                    <PlayIcon className="w-6 h-6" />
+                  </button>
+                )}
               </li>
             );
           })}
