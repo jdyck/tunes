@@ -22,4 +22,5 @@ export interface Recording {
   url?: string | null;
   rating?: number | null;
   sortOrder?: number | null;
+  kind?: "released" | "video_capture" | null;
 }

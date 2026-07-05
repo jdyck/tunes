@@ -28,7 +28,43 @@ export const fetchYouTubeVideoData = async (
   }
 };
 
-// Helper to extract video ID from a YouTube URL
+export interface YouTubeSearchResult {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnail: string;
+  isMusic: boolean;
+}
+
+export const searchYouTubeVideos = async (
+  query: string,
+  apiKey: string
+): Promise<YouTubeSearchResult[]> => {
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(
+    query
+  )}&key=${apiKey}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!data.items) {
+      return [];
+    }
+
+    return data.items.map((item: any) => ({
+      videoId: item.id.videoId,
+      title: item.snippet.title,
+      channelTitle: item.snippet.channelTitle,
+      thumbnail: item.snippet.thumbnails?.default?.url ?? "",
+      isMusic: item.snippet.channelTitle.endsWith(" - Topic"),
+    }));
+  } catch (error) {
+    console.error("Error searching YouTube videos:", error);
+    return [];
+  }
+};
+
 export const extractYouTubeID = (url: string) => {
   const match = url.match(
     /(?:youtube\.com\/(?:embed\/|v\/|.*v=)|youtu\.be\/)([\w-]{11})/
