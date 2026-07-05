@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Recording } from "@/types/types";
-import { searchYouTubeVideos, YouTubeSearchResult } from "@/utils/youtube";
+import {
+  fetchYouTubeVideoData,
+  parseYouTubeMusicMetadata,
+  searchYouTubeVideos,
+  YouTubeSearchResult,
+} from "@/utils/youtube";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -17,6 +22,13 @@ export default function AddRecordingPage() {
   const [notes, setNotes] = useState("");
   const [url, setUrl] = useState("");
   const [kind, setKind] = useState<Recording["kind"]>(null);
+  const [artist, setArtist] = useState("");
+  const [year, setYear] = useState("");
+  const [album, setAlbum] = useState("");
+  const [duration, setDuration] = useState("");
+  const [key, setKey] = useState("");
+  const [tempo, setTempo] = useState("");
+  const [tags, setTags] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -44,12 +56,30 @@ export default function AddRecordingPage() {
     setSearching(false);
   };
 
-  const handleSelectResult = (result: YouTubeSearchResult) => {
+  const handleSelectResult = async (result: YouTubeSearchResult) => {
     setUrl(`https://www.youtube.com/watch?v=${result.videoId}`);
     setKind(result.isMusic ? "released" : "video_capture");
     setName(result.title);
+    setArtist(result.channelTitle.replace(/ - Topic$/, ""));
     setSearchResults([]);
     setSearchQuery("");
+
+    if (YOUTUBE_API_KEY) {
+      const videoData = await fetchYouTubeVideoData(
+        result.videoId,
+        YOUTUBE_API_KEY
+      );
+      if (videoData?.duration) {
+        setDuration(videoData.duration);
+      }
+      if (videoData?.description) {
+        const { album, releaseYear } = parseYouTubeMusicMetadata(
+          videoData.description
+        );
+        if (album) setAlbum(album);
+        if (releaseYear) setYear(releaseYear);
+      }
+    }
   };
 
   const handleAddRecording = async () => {
@@ -77,6 +107,18 @@ export default function AddRecordingPage() {
       notes: notes || null,
       url: url || null,
       kind,
+      artist: artist || null,
+      year: year || null,
+      album: album || null,
+      duration: duration || null,
+      key: key || null,
+      tempo: tempo ? parseInt(tempo, 10) : null,
+      tags: tags
+        ? tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : null,
     };
 
     const { error } = await supabase.from("recordings").insert(newRecording);
@@ -156,6 +198,83 @@ export default function AddRecordingPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Artist
+          <input
+            className="block w-full p-2 rounded-md mb-4"
+            type="text"
+            value={artist}
+            onChange={(e) => setArtist(e.target.value)}
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Album
+          <input
+            className="block w-full p-2 rounded-md mb-4"
+            type="text"
+            value={album}
+            onChange={(e) => setAlbum(e.target.value)}
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Year
+          <input
+            className="block w-full p-2 rounded-md mb-4"
+            type="text"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Duration
+          <input
+            className="block w-full p-2 rounded-md mb-4"
+            type="text"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Key
+          <input
+            className="block w-full p-2 rounded-md mb-4"
+            type="text"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Tempo (BPM)
+          <input
+            className="block w-full p-2 rounded-md mb-4"
+            type="number"
+            value={tempo}
+            onChange={(e) => setTempo(e.target.value)}
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Tags (comma separated)
+          <input
+            className="block w-full p-2 rounded-md mb-4"
+            type="text"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
           />
         </label>
       </div>
