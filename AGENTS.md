@@ -16,7 +16,7 @@ src/app/            Next.js App Router pages (route = folder path)
   tune/[id]/           a Song's detail page
   tune/[id]/add-recording/   add a Recording to a Song
   recording/[id]/      a Recording's detail page
-src/components/      shared React components (e.g. YouTubePlayer)
+src/components/      shared React components (e.g. GlobalPlayer, the persistent player)
 src/lib/             infra clients (supabaseClient, fonts)
 src/types/           shared TS types
 src/utils/           helpers (e.g. youtube.ts)
@@ -28,7 +28,7 @@ docs/                domain model, ADRs, direction notes (issues + ideas by subj
 - Next.js 15 (App Router), React 18, TypeScript
 - Tailwind CSS
 - Supabase (`@supabase/supabase-js`) — auth + Postgres, client in `src/lib/supabaseClient.js`
-- YouTube embeds for Recordings (`src/components/YouTubePlayer.tsx`, `src/utils/youtube.ts`)
+- Persistent custom player for Recordings, backed by the YouTube IFrame API (`src/components/GlobalPlayer.tsx`, `src/utils/youtube.ts`) — see [docs/direction/music-player.md](docs/direction/music-player.md)
 
 ## Commands
 

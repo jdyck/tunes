@@ -11,6 +11,7 @@ import {
   YouTubeSearchResult,
 } from "@/utils/youtube";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
+import { usePlayer } from "@/components/GlobalPlayer";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -18,6 +19,7 @@ export default function AddRecordingPage() {
   const params = useParams();
   const tuneId = Array.isArray(params.id) ? params.id[0] : params.id;
   const router = useRouter();
+  const { play } = usePlayer();
 
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
@@ -40,7 +42,6 @@ export default function AddRecordingPage() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [showAllResults, setShowAllResults] = useState(false);
-  const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -111,7 +112,6 @@ export default function AddRecordingPage() {
     setArtist(result.channelTitle.replace(/ - Topic$/, ""));
     setSearchResults([]);
     setSearchQuery("");
-    setPreviewVideoId(null);
     setNextPageToken(null);
 
     if (YOUTUBE_API_KEY) {
@@ -241,11 +241,12 @@ export default function AddRecordingPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      setPreviewVideoId(
-                        previewVideoId === result.videoId
-                          ? null
-                          : result.videoId
-                      )
+                      play({
+                        name: result.title,
+                        artist: result.channelTitle.replace(/ - Topic$/, ""),
+                        url: `https://www.youtube.com/watch?v=${result.videoId}`,
+                        kind: result.isMusic ? "released" : "video_capture",
+                      })
                     }
                     className="flex-shrink-0"
                     title="Preview"
@@ -270,18 +271,6 @@ export default function AddRecordingPage() {
                     <PlusCircleIcon className="h-6 w-6 text-green-600" />
                   </button>
                 </div>
-                {previewVideoId === result.videoId && (
-                  <iframe
-                    width="100%"
-                    height="200"
-                    src={`https://www.youtube.com/embed/${result.videoId}`}
-                    title="Preview"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="mt-2 rounded-lg"
-                  />
-                )}
               </li>
             ))}
           </ul>
