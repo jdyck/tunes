@@ -10,6 +10,7 @@ import {
   searchYouTubeVideos,
   YouTubeSearchResult,
 } from "@/utils/youtube";
+import { PlusCircleIcon } from "@heroicons/react/20/solid";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -38,6 +39,26 @@ export default function AddRecordingPage() {
   );
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [showAllResults, setShowAllResults] = useState(false);
+  const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const RESULTS_PAGE_SIZE = 10;
+
+  const visibleResults = showAllResults
+    ? searchResults
+    : searchResults.filter((result) => result.isMusic);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(visibleResults.length / RESULTS_PAGE_SIZE)
+  );
+  const pagedResults = visibleResults.slice(
+    currentPage * RESULTS_PAGE_SIZE,
+    (currentPage + 1) * RESULTS_PAGE_SIZE
+  );
 
   const handleSearch = async () => {
     setSearchError(null);
@@ -51,9 +72,36 @@ export default function AddRecordingPage() {
     }
 
     setSearching(true);
-    const results = await searchYouTubeVideos(searchQuery, YOUTUBE_API_KEY);
+    const { results, nextPageToken: token } = await searchYouTubeVideos(
+      searchQuery,
+      YOUTUBE_API_KEY
+    );
     setSearchResults(results);
+    setNextPageToken(token);
+    setCurrentPage(0);
     setSearching(false);
+  };
+
+  const handleLoadMore = async () => {
+    if (!YOUTUBE_API_KEY || !nextPageToken) {
+      return;
+    }
+
+    setLoadingMore(true);
+    const { results, nextPageToken: token } = await searchYouTubeVideos(
+      searchQuery,
+      YOUTUBE_API_KEY,
+      nextPageToken
+    );
+    setSearchResults((prev) => {
+      const byId = new Map(prev.map((result) => [result.videoId, result]));
+      for (const result of results) {
+        byId.set(result.videoId, result);
+      }
+      return Array.from(byId.values());
+    });
+    setNextPageToken(token);
+    setLoadingMore(false);
   };
 
   const handleSelectResult = async (result: YouTubeSearchResult) => {
@@ -63,6 +111,8 @@ export default function AddRecordingPage() {
     setArtist(result.channelTitle.replace(/ - Topic$/, ""));
     setSearchResults([]);
     setSearchQuery("");
+    setPreviewVideoId(null);
+    setNextPageToken(null);
 
     if (YOUTUBE_API_KEY) {
       const videoData = await fetchYouTubeVideoData(
@@ -165,22 +215,112 @@ export default function AddRecordingPage() {
       {searchError && <p style={{ color: "red" }}>{searchError}</p>}
 
       {searchResults.length > 0 && (
-        <ul className="mb-4">
-          {searchResults.map((result) => (
-            <li
-              key={result.videoId}
-              onClick={() => handleSelectResult(result)}
-              className="flex items-center gap-2 mb-2 cursor-pointer"
+        <>
+          <label className="block mb-2">
+            <input
+              type="checkbox"
+              checked={showAllResults}
+              onChange={(e) => {
+                setShowAllResults(e.target.checked);
+                setCurrentPage(0);
+              }}
+            />{" "}
+            Show all results (not just Music)
+          </label>
+
+          {visibleResults.length === 0 && (
+            <p className="mb-4">
+              No Music results. Check the box above to see all results.
+            </p>
+          )}
+
+          <ul className="mb-4">
+            {pagedResults.map((result) => (
+              <li key={result.videoId} className="mb-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewVideoId(
+                        previewVideoId === result.videoId
+                          ? null
+                          : result.videoId
+                      )
+                    }
+                    className="flex-shrink-0"
+                    title="Preview"
+                  >
+                    {result.thumbnail && (
+                      <img
+                        src={result.thumbnail}
+                        alt=""
+                        width={60}
+                        height={45}
+                      />
+                    )}
+                  </button>
+                  <span>{result.isMusic ? "Music" : "Video"}</span>
+                  <span className="flex-1">{result.title}</span>
+                  <span style={{ color: "gray" }}>{result.channelTitle}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectResult(result)}
+                    title="Use this result"
+                  >
+                    <PlusCircleIcon className="h-6 w-6 text-green-600" />
+                  </button>
+                </div>
+                {previewVideoId === result.videoId && (
+                  <iframe
+                    width="100%"
+                    height="200"
+                    src={`https://www.youtube.com/embed/${result.videoId}`}
+                    title="Preview"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="mt-2 rounded-lg"
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(0, page - 1))}
+                disabled={currentPage === 0}
+              >
+                Previous
+              </button>
+              <span>
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages - 1, page + 1))
+                }
+                disabled={currentPage >= totalPages - 1}
+              >
+                Next
+              </button>
+            </div>
+          )}
+
+          {nextPageToken && (
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="mb-4 bg-slate-700 text-white px-3 py-2 rounded-lg"
             >
-              {result.thumbnail && (
-                <img src={result.thumbnail} alt="" width={60} height={45} />
-              )}
-              <span>{result.isMusic ? "Music" : "Video"}</span>
-              <span>{result.title}</span>
-              <span style={{ color: "gray" }}>{result.channelTitle}</span>
-            </li>
-          ))}
-        </ul>
+              {loadingMore ? "Loading..." : "Load next 50 results"}
+            </button>
+          )}
+        </>
       )}
 
       {kind && (

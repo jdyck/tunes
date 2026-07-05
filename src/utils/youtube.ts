@@ -78,32 +78,43 @@ export interface YouTubeSearchResult {
   isMusic: boolean;
 }
 
+export interface YouTubeSearchPage {
+  results: YouTubeSearchResult[];
+  nextPageToken: string | null;
+}
+
+// Fetches one page (up to 50, search.list's max) at a time. Pass the
+// previous call's nextPageToken to fetch the next 50 on demand, e.g. from
+// a "Load more" button, rather than always spending extra quota up front.
 export const searchYouTubeVideos = async (
   query: string,
-  apiKey: string
-): Promise<YouTubeSearchResult[]> => {
-  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(
+  apiKey: string,
+  pageToken?: string
+): Promise<YouTubeSearchPage> => {
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=50&q=${encodeURIComponent(
     query
-  )}&key=${apiKey}`;
+  )}&key=${apiKey}${pageToken ? `&pageToken=${pageToken}` : ""}`;
 
   try {
     const response = await fetch(url);
     const data = await response.json();
 
     if (!data.items) {
-      return [];
+      return { results: [], nextPageToken: null };
     }
 
-    return data.items.map((item: any) => ({
+    const results = data.items.map((item: any) => ({
       videoId: item.id.videoId,
       title: item.snippet.title,
       channelTitle: item.snippet.channelTitle,
       thumbnail: item.snippet.thumbnails?.default?.url ?? "",
       isMusic: item.snippet.channelTitle.endsWith(" - Topic"),
     }));
+
+    return { results, nextPageToken: data.nextPageToken ?? null };
   } catch (error) {
     console.error("Error searching YouTube videos:", error);
-    return [];
+    return { results: [], nextPageToken: null };
   }
 };
 
