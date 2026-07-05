@@ -16,6 +16,13 @@ export default function RecordingPage() {
   const [recording, setRecording] = useState<Recording | null>(null);
   const [name, setName] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [artist, setArtist] = useState<string>("");
+  const [album, setAlbum] = useState<string>("");
+  const [year, setYear] = useState<string>("");
+  const [duration, setDuration] = useState<string>("");
+  const [key, setKey] = useState<string>("");
+  const [tempo, setTempo] = useState<string>("");
+  const [tags, setTags] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [youtubeData, setYoutubeData] = useState<{ [key: string]: any } | null>(
@@ -44,6 +51,15 @@ export default function RecordingPage() {
         setRecording(recordingData as Recording);
         setName(recordingData.name || "");
         setNotes(recordingData.notes || "");
+        setArtist(recordingData.artist || "");
+        setAlbum(recordingData.album || "");
+        setYear(recordingData.year || "");
+        setDuration(recordingData.duration || "");
+        setKey(recordingData.key || "");
+        setTempo(
+          recordingData.tempo != null ? String(recordingData.tempo) : ""
+        );
+        setTags((recordingData.tags || []).join(", "));
 
         const videoId = extractYouTubeID(recordingData.url);
         setVideoId(videoId);
@@ -73,7 +89,22 @@ export default function RecordingPage() {
 
     const { error } = await supabase
       .from("recordings")
-      .update({ name, notes })
+      .update({
+        name,
+        notes,
+        artist: artist || null,
+        album: album || null,
+        year: year || null,
+        duration: duration || null,
+        key: key || null,
+        tempo: tempo ? parseInt(tempo, 10) : null,
+        tags: tags
+          ? tags
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter(Boolean)
+          : null,
+      })
       .eq("id", id);
 
     if (error) {
@@ -157,6 +188,78 @@ export default function RecordingPage() {
               <BoltSlashIcon className="h-5 w-5 text-red-600" />
             )}
           </button>
+        </div>
+
+        <div className="mb-4">
+          <label className="block">
+            Artist
+            <input
+              value={artist}
+              onChange={handleFieldChange(setArtist)}
+              className="block w-full p-1.5 rounded-md"
+            />
+          </label>
+        </div>
+        <div className="mb-4">
+          <label className="block">
+            Album
+            <input
+              value={album}
+              onChange={handleFieldChange(setAlbum)}
+              className="block w-full p-1.5 rounded-md"
+            />
+          </label>
+        </div>
+        <div className="mb-4">
+          <label className="block">
+            Year
+            <input
+              value={year}
+              onChange={handleFieldChange(setYear)}
+              className="block w-full p-1.5 rounded-md"
+            />
+          </label>
+        </div>
+        <div className="mb-4">
+          <label className="block">
+            Duration
+            <input
+              value={duration}
+              onChange={handleFieldChange(setDuration)}
+              className="block w-full p-1.5 rounded-md"
+            />
+          </label>
+        </div>
+        <div className="mb-4">
+          <label className="block">
+            Key
+            <input
+              value={key}
+              onChange={handleFieldChange(setKey)}
+              className="block w-full p-1.5 rounded-md"
+            />
+          </label>
+        </div>
+        <div className="mb-4">
+          <label className="block">
+            Tempo (BPM)
+            <input
+              type="number"
+              value={tempo}
+              onChange={handleFieldChange(setTempo)}
+              className="block w-full p-1.5 rounded-md"
+            />
+          </label>
+        </div>
+        <div className="mb-4">
+          <label className="block">
+            Tags (comma separated)
+            <input
+              value={tags}
+              onChange={handleFieldChange(setTags)}
+              className="block w-full p-1.5 rounded-md"
+            />
+          </label>
         </div>
 
         <textarea

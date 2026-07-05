@@ -22,4 +22,12 @@ export interface Recording {
   url?: string | null;
   rating?: number | null;
   sortOrder?: number | null;
+  kind?: "released" | "video_capture" | null;
+  artist?: string | null;
+  year?: string | null;
+  album?: string | null;
+  duration?: string | null;
+  key?: string | null;
+  tempo?: number | null;
+  tags?: string[] | null;
 }
