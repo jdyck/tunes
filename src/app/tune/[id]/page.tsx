@@ -233,7 +233,7 @@ export default function TunePage() {
                 >
                   <div className="flex overflow-hidden relative">
                     {videoInfo?.thumbnails?.high && (
-                      <div className="w-20 h-auto overflow-hidden flex-shrink-0">
+                      <div className="w-20 h-auto overflow-hidden shrink-0">
                         <img
                           src={videoInfo.thumbnails.high.url}
                           alt="Video thumbnail"
@@ -264,7 +264,7 @@ export default function TunePage() {
                       play(recording);
                     }}
                     aria-label="Play recording"
-                    className="p-3 text-green-800 flex-shrink-0 self-center"
+                    className="p-3 text-green-800 shrink-0 self-center"
                   >
                     <PlayIcon className="w-6 h-6" />
                   </button>

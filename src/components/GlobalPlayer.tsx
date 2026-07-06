@@ -192,7 +192,7 @@ export default function GlobalPlayer({
             <button
               onClick={togglePlayPause}
               aria-label={isPlaying ? "Pause" : "Play"}
-              className="text-green-800 flex-shrink-0"
+              className="text-green-800 shrink-0"
             >
               {isPlaying ? (
                 <PauseIcon className="w-8 h-8" />
@@ -228,7 +228,7 @@ export default function GlobalPlayer({
             <button
               onClick={() => setIsVideoVisible((v) => !v)}
               aria-label={isVideoVisible ? "Hide video" : "Show video"}
-              className="text-gray-500 flex-shrink-0"
+              className="text-gray-500 shrink-0"
             >
               {isVideoVisible ? (
                 <ChevronDownIcon className="w-5 h-5" />
@@ -240,7 +240,7 @@ export default function GlobalPlayer({
             <button
               onClick={close}
               aria-label="Close player"
-              className="text-gray-400 flex-shrink-0"
+              className="text-gray-400 shrink-0"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>

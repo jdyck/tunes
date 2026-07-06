@@ -248,7 +248,7 @@ export default function AddRecordingPage() {
                         kind: result.isMusic ? "released" : "video_capture",
                       })
                     }
-                    className="flex-shrink-0"
+                    className="shrink-0"
                     title="Preview"
                   >
                     {result.thumbnail && (
