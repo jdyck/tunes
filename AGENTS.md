@@ -25,7 +25,7 @@ docs/                domain model, ADRs, direction notes (issues + ideas by subj
 
 ## Tech stack
 
-- Next.js 15 (App Router), React 18, TypeScript
+- Next.js 16 (App Router), React 19, TypeScript
 - Tailwind CSS
 - Supabase (`@supabase/supabase-js`) — auth + Postgres, client in `src/lib/supabaseClient.js`
 - Persistent custom player for Recordings, backed by the YouTube IFrame API (`src/components/GlobalPlayer.tsx`, `src/utils/youtube.ts`) — see [docs/direction/music-player.md](docs/direction/music-player.md)
@@ -36,7 +36,6 @@ docs/                domain model, ADRs, direction notes (issues + ideas by subj
 npm run dev      # start dev server (localhost:3000)
 npm run build    # production build
 npm run start    # run production build
-npm run lint     # next lint
 ```
 
 No test suite exists yet (see [docs/direction/testing.md](docs/direction/testing.md)).
