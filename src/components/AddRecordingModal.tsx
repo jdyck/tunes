@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Recording } from "@/types/types";
 import {
@@ -12,13 +11,19 @@ import {
 } from "@/utils/youtube";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/GlobalPlayer";
+import Modal from "@/components/Modal";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
-export default function AddRecordingPage() {
-  const params = useParams();
-  const tuneId = Array.isArray(params.id) ? params.id[0] : params.id;
-  const router = useRouter();
+export default function AddRecordingModal({
+  tuneId,
+  onClose,
+  onAdded,
+}: {
+  tuneId: string;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
   const { play } = usePlayer();
 
   const [name, setName] = useState("");
@@ -33,7 +38,7 @@ export default function AddRecordingPage() {
   const [tempo, setTempo] = useState("");
   const [tags, setTags] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<YouTubeSearchResult[]>(
@@ -134,7 +139,6 @@ export default function AddRecordingPage() {
 
   const handleAddRecording = async () => {
     setErrorMessage(null);
-    setSuccessMessage(null);
 
     const { data: sessionData, error: sessionError } =
       await supabase.auth.getSession();
@@ -144,11 +148,6 @@ export default function AddRecordingPage() {
     }
 
     const userId = sessionData.session.user.id;
-
-    if (!tuneId) {
-      setErrorMessage("Invalid tune ID.");
-      return;
-    }
 
     const newRecording: Omit<Recording, "id"> = {
       tune_id: tuneId,
@@ -171,27 +170,26 @@ export default function AddRecordingPage() {
         : null,
     };
 
+    setSaving(true);
     const { error } = await supabase.from("recordings").insert(newRecording);
+    setSaving(false);
 
     if (error) {
       setErrorMessage("Failed to add recording: " + error.message);
     } else {
-      setSuccessMessage("Recording added successfully!");
-      setTimeout(() => router.push(`/tune/${tuneId}`), 1500);
+      onAdded();
     }
   };
 
   return (
-    <div className="w-full">
-      <h1>Add a New Recording</h1>
-      {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
-      {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
+    <Modal title="Add a Recording" onClose={onClose}>
+      {errorMessage && <p className="text-red-600 mb-2">{errorMessage}</p>}
 
       <div className="w-full">
         <label>
           Search YouTube
           <input
-            className="block w-full p-2 rounded-md mb-2"
+            className="block w-full p-2 rounded-md border border-slate-300 mb-2"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -212,7 +210,7 @@ export default function AddRecordingPage() {
         </button>
       </div>
 
-      {searchError && <p style={{ color: "red" }}>{searchError}</p>}
+      {searchError && <p className="text-red-600">{searchError}</p>}
 
       {searchResults.length > 0 && (
         <>
@@ -248,7 +246,7 @@ export default function AddRecordingPage() {
                         kind: result.isMusic ? "released" : "video_capture",
                       })
                     }
-                    className="flex-shrink-0"
+                    className="shrink-0"
                     title="Preview"
                   >
                     {result.thumbnail && (
@@ -261,8 +259,7 @@ export default function AddRecordingPage() {
                     )}
                   </button>
                   <span>{result.isMusic ? "Music" : "Video"}</span>
-                  <span className="flex-1">{result.title}</span>
-                  <span style={{ color: "gray" }}>{result.channelTitle}</span>
+                  <span className="flex-1 truncate">{result.title}</span>
                   <button
                     type="button"
                     onClick={() => handleSelectResult(result)}
@@ -318,127 +315,109 @@ export default function AddRecordingPage() {
         </p>
       )}
 
-      <div className="w-full">
-        <label>
-          Name
-          <input
-            className="block w-full p-2 rounded-md mb-4"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Artist
-          <input
-            className="block w-full p-2 rounded-md mb-4"
-            type="text"
-            value={artist}
-            onChange={(e) => setArtist(e.target.value)}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Album
-          <input
-            className="block w-full p-2 rounded-md mb-4"
-            type="text"
-            value={album}
-            onChange={(e) => setAlbum(e.target.value)}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Year
-          <input
-            className="block w-full p-2 rounded-md mb-4"
-            type="text"
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Duration
-          <input
-            className="block w-full p-2 rounded-md mb-4"
-            type="text"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Key
-          <input
-            className="block w-full p-2 rounded-md mb-4"
-            type="text"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Tempo (BPM)
-          <input
-            className="block w-full p-2 rounded-md mb-4"
-            type="number"
-            value={tempo}
-            onChange={(e) => setTempo(e.target.value)}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Tags (comma separated)
-          <input
-            className="block w-full p-2 rounded-md mb-4"
-            type="text"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Notes
-          <textarea
-            className="block w-full p-2 rounded-md mb-4"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
+      <label className="block mb-3">
+        <span className="block text-sm mb-1">Name</span>
+        <input
+          className="block w-full p-2 rounded-md border border-slate-300"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+      </label>
+      <label className="block mb-3">
+        <span className="block text-sm mb-1">Artist</span>
+        <input
+          className="block w-full p-2 rounded-md border border-slate-300"
+          type="text"
+          value={artist}
+          onChange={(e) => setArtist(e.target.value)}
+        />
+      </label>
+      <label className="block mb-3">
+        <span className="block text-sm mb-1">Album</span>
+        <input
+          className="block w-full p-2 rounded-md border border-slate-300"
+          type="text"
+          value={album}
+          onChange={(e) => setAlbum(e.target.value)}
+        />
+      </label>
+      <label className="block mb-3">
+        <span className="block text-sm mb-1">Year</span>
+        <input
+          className="block w-full p-2 rounded-md border border-slate-300"
+          type="text"
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+        />
+      </label>
+      <label className="block mb-3">
+        <span className="block text-sm mb-1">Duration</span>
+        <input
+          className="block w-full p-2 rounded-md border border-slate-300"
+          type="text"
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+        />
+      </label>
+      <label className="block mb-3">
+        <span className="block text-sm mb-1">Key</span>
+        <input
+          className="block w-full p-2 rounded-md border border-slate-300"
+          type="text"
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+        />
+      </label>
+      <label className="block mb-3">
+        <span className="block text-sm mb-1">Tempo (BPM)</span>
+        <input
+          className="block w-full p-2 rounded-md border border-slate-300"
+          type="number"
+          value={tempo}
+          onChange={(e) => setTempo(e.target.value)}
+        />
+      </label>
+      <label className="block mb-3">
+        <span className="block text-sm mb-1">Tags (comma separated)</span>
+        <input
+          className="block w-full p-2 rounded-md border border-slate-300"
+          type="text"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+        />
+      </label>
+      <label className="block mb-3">
+        <span className="block text-sm mb-1">Notes</span>
+        <textarea
+          className="block w-full p-2 rounded-md border border-slate-300"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </label>
+      <label className="block mb-4">
+        <span className="block text-sm mb-1">
           URL (or paste a link directly)
-          <input
-            className="block w-full p-2 rounded-md mb-4"
-            type="url"
-            value={url}
-            onChange={(e) => {
-              setUrl(e.target.value);
-              setKind(null);
-            }}
-          />
-        </label>
-      </div>
+        </span>
+        <input
+          className="block w-full p-2 rounded-md border border-slate-300"
+          type="url"
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setKind(null);
+          }}
+        />
+      </label>
 
       <button
         onClick={handleAddRecording}
-        className="block mb-4 bg-slate-700 text-white w-full p-3 rounded-lg"
+        disabled={saving}
+        className="block w-full bg-slate-700 text-white p-3 rounded-lg disabled:opacity-70"
       >
-        Add Recording
+        {saving ? "Adding..." : "Add Recording"}
       </button>
-      <button onClick={() => router.back()}>Cancel</button>
-    </div>
+    </Modal>
   );
 }

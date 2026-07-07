@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Link from "next/link";
-import { MusicalNoteIcon } from "@heroicons/react/16/solid";
 import { merriweatherSans } from "@/lib/fonts";
-import AccountMenu from "@/components/AccountMenu";
 import GlobalPlayer from "@/components/GlobalPlayer";
 
 export const metadata: Metadata = {
@@ -35,25 +32,7 @@ export default function RootLayout({
         <title>{String(metadata.title || "Default Title")}</title>
       </head>
       <body className={`bg-slate-100 ${merriweatherSans.className} font-[300]`}>
-        <header className="relative">
-          <Link
-            href="/"
-            className="p-4 font-[800] uppercase block text-xl flex w-full justify-center text-green-800"
-          >
-            <MusicalNoteIcon
-              className={`w-6 h-6 inline-block mr-0.5 relative top-0.5`}
-            />
-            Tunes
-          </Link>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <AccountMenu />
-          </div>
-        </header>
-        <GlobalPlayer>
-          <div className="flex px-4 max-w-screen-md m-auto pb-16">
-            {children}
-          </div>
-        </GlobalPlayer>
+        <GlobalPlayer>{children}</GlobalPlayer>
       </body>
     </html>
   );

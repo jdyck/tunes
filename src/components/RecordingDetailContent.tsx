@@ -1,45 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Recording } from "@/types/types";
 import { fetchYouTubeVideoData, extractYouTubeID } from "@/utils/youtube";
 import {
   BoltIcon,
   BoltSlashIcon,
-  TrashIcon,
   PlayIcon,
+  XMarkIcon,
 } from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/GlobalPlayer";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
-export default function RecordingPage() {
-  const { id } = useParams();
+export default function RecordingDetailContent({
+  id,
+  onClose,
+}: {
+  id: string;
+  onClose?: () => void;
+}) {
   const router = useRouter();
   const { play } = usePlayer();
 
   const [recording, setRecording] = useState<Recording | null>(null);
-  const [name, setName] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
-  const [artist, setArtist] = useState<string>("");
-  const [album, setAlbum] = useState<string>("");
-  const [year, setYear] = useState<string>("");
-  const [duration, setDuration] = useState<string>("");
-  const [key, setKey] = useState<string>("");
-  const [tempo, setTempo] = useState<string>("");
-  const [tags, setTags] = useState<string>("");
+  const [name, setName] = useState("");
+  const [notes, setNotes] = useState("");
+  const [artist, setArtist] = useState("");
+  const [album, setAlbum] = useState("");
+  const [year, setYear] = useState("");
+  const [duration, setDuration] = useState("");
+  const [key, setKey] = useState("");
+  const [tempo, setTempo] = useState("");
+  const [tags, setTags] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [youtubeData, setYoutubeData] = useState<{ [key: string]: any } | null>(
-    null
-  );
   const [videoId, setVideoId] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(true);
 
   useEffect(() => {
     if (!id) return;
+    setLoading(true);
+    setError(null);
 
     const fetchRecording = async () => {
       try {
@@ -67,18 +71,7 @@ export default function RecordingPage() {
           recordingData.tempo != null ? String(recordingData.tempo) : ""
         );
         setTags((recordingData.tags || []).join(", "));
-
-        const videoId = extractYouTubeID(recordingData.url);
-        setVideoId(videoId);
-
-        if (videoId && YOUTUBE_API_KEY) {
-          const videoData = await fetchYouTubeVideoData(
-            videoId,
-            YOUTUBE_API_KEY
-          );
-          setYoutubeData(videoData);
-        }
-
+        setVideoId(extractYouTubeID(recordingData.url));
         setLoading(false);
       } catch (err) {
         console.error("Fetch error:", err);
@@ -129,17 +122,17 @@ export default function RecordingPage() {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this recording? This action cannot be undone."
     );
+    if (!confirmDelete) return;
 
-    if (confirmDelete) {
-      const { error } = await supabase.from("recordings").delete().eq("id", id);
+    const { error } = await supabase.from("recordings").delete().eq("id", id);
 
-      if (error) {
-        console.error("Error deleting recording:", error.message);
-        setError(`Error deleting recording: ${error.message}`);
-      } else {
-        console.log("Recording deleted successfully!");
-        router.back(); // Redirect to previous page
-      }
+    if (error) {
+      console.error("Error deleting recording:", error.message);
+      setError(`Error deleting recording: ${error.message}`);
+    } else if (onClose) {
+      onClose();
+    } else {
+      router.back();
     }
   };
 
@@ -150,12 +143,23 @@ export default function RecordingPage() {
       setIsSaved(false);
     };
 
-  if (loading) return <p>Loading recording...</p>;
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
-  if (!recording) return <p>No recording found.</p>;
+  if (loading) return <p className="p-4">Loading recording...</p>;
+  if (error) return <p className="p-4 text-red-600">{error}</p>;
+  if (!recording) return <p className="p-4">No recording found.</p>;
 
   return (
     <div className="w-full p-4">
+      {onClose && (
+        <button
+          onClick={onClose}
+          aria-label="Close recording"
+          className="mb-4 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+        >
+          <XMarkIcon className="w-4 h-4" />
+          Close
+        </button>
+      )}
+
       {videoId && recording && (
         <button
           onClick={() => play(recording)}
@@ -277,13 +281,6 @@ export default function RecordingPage() {
         className="mt-4 w-full px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700"
       >
         Delete Recording
-      </button>
-
-      <button
-        onClick={() => router.back()}
-        className="mt-2 w-full px-4 py-2 bg-gray-600 text-white font-bold rounded-md hover:bg-gray-700"
-      >
-        Go Back
       </button>
     </div>
   );

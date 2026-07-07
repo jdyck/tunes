@@ -8,6 +8,7 @@ export interface Tune {
   id?: string;
   name: string;
   composer?: string;
+  lyricist?: string | null;
   year?: string | null;
   notes: string;
   user_id: string;

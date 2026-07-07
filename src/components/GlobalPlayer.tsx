@@ -16,6 +16,7 @@ import {
   XMarkIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  MusicalNoteIcon,
 } from "@heroicons/react/20/solid";
 
 export interface Playable {
@@ -117,6 +118,8 @@ export default function GlobalPlayer({
       playerRef.current?.destroy();
       playerRef.current = new window.YT.Player(hostRef.current, {
         videoId,
+        width: "100%",
+        height: "100%",
         events: {
           onReady: (event) => {
             setDuration(event.target.getDuration());
@@ -186,13 +189,13 @@ export default function GlobalPlayer({
     <PlayerContext.Provider value={{ play }}>
       {children}
 
-      {recording && (
-        <div className="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] z-20">
+      <div className="fixed bottom-0 inset-x-0 lg:inset-x-auto lg:left-0 lg:w-64 bg-white border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] z-40">
+        {recording ? (
           <div className="max-w-screen-md mx-auto px-4 py-2 flex items-center gap-3">
             <button
               onClick={togglePlayPause}
               aria-label={isPlaying ? "Pause" : "Play"}
-              className="text-green-800 flex-shrink-0"
+              className="text-green-800 shrink-0"
             >
               {isPlaying ? (
                 <PauseIcon className="w-8 h-8" />
@@ -228,7 +231,7 @@ export default function GlobalPlayer({
             <button
               onClick={() => setIsVideoVisible((v) => !v)}
               aria-label={isVideoVisible ? "Hide video" : "Show video"}
-              className="text-gray-500 flex-shrink-0"
+              className="text-gray-500 shrink-0"
             >
               {isVideoVisible ? (
                 <ChevronDownIcon className="w-5 h-5" />
@@ -240,18 +243,23 @@ export default function GlobalPlayer({
             <button
               onClick={close}
               aria-label="Close player"
-              className="text-gray-400 flex-shrink-0"
+              className="text-gray-400 shrink-0"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="max-w-screen-md mx-auto px-4 py-3 flex items-center gap-3 text-gray-400">
+            <MusicalNoteIcon className="w-5 h-5 shrink-0" />
+            <p className="text-sm">Nothing playing</p>
+          </div>
+        )}
+      </div>
 
       <div
         className={
           recording && isVideoVisible
-            ? "fixed bottom-[68px] inset-x-0 max-w-screen-md w-full mx-auto aspect-video bg-black z-20"
+            ? "yt-album-art fixed bottom-[68px] left-2 w-32 sm:w-40 lg:left-0 lg:w-64 aspect-square bg-black rounded-md lg:rounded-none overflow-hidden shadow-lg z-40"
             : "fixed -left-[9999px] top-0 w-80 aspect-video"
         }
       >
