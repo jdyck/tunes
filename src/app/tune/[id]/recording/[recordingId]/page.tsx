@@ -1,18 +1,18 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import SongDetailContent from "@/components/SongDetailContent";
+import RecordingDetailContent from "@/components/RecordingDetailContent";
 
-export default function TunePage() {
-  const { id } = useParams();
+export default function RecordingPage() {
+  const { recordingId } = useParams();
   const router = useRouter();
-  const tuneId = Array.isArray(id) ? id[0] : id;
+  const id = Array.isArray(recordingId) ? recordingId[0] : recordingId;
 
-  if (!tuneId) return null;
+  if (!id) return null;
 
   return (
     <div className="w-full">
-      <SongDetailContent id={tuneId} />
+      <RecordingDetailContent id={id} />
       <button
         onClick={() => router.back()}
         className="mt-2 w-full px-4 py-2 bg-gray-600 text-white font-bold rounded-md hover:bg-gray-700"
