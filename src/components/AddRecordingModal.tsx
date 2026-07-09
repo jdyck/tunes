@@ -9,7 +9,11 @@ import {
   searchYouTubeVideos,
   YouTubeSearchResult,
 } from "@/utils/youtube";
-import { PlusCircleIcon } from "@heroicons/react/20/solid";
+import {
+  PlusCircleIcon,
+  MusicalNoteIcon,
+  VideoCameraIcon,
+} from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/GlobalPlayer";
 import Modal from "@/components/Modal";
 
@@ -17,10 +21,12 @@ const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 export default function AddRecordingModal({
   tuneId,
+  tuneTitle,
   onClose,
   onAdded,
 }: {
   tuneId: string;
+  tuneTitle: string;
   onClose: () => void;
   onAdded: () => void;
 }) {
@@ -40,7 +46,7 @@ export default function AddRecordingModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(`${tuneTitle} `);
   const [searchResults, setSearchResults] = useState<YouTubeSearchResult[]>(
     []
   );
@@ -189,7 +195,7 @@ export default function AddRecordingModal({
         <label>
           Search YouTube
           <input
-            className="block w-full p-2 rounded-md border border-slate-300 mb-2"
+            className="block w-full p-2 rounded-md border border-line-200 mb-2"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -258,8 +264,17 @@ export default function AddRecordingModal({
                       />
                     )}
                   </button>
-                  <span>{result.isMusic ? "Music" : "Video"}</span>
-                  <span className="flex-1 truncate">{result.title}</span>
+                  {result.isMusic ? (
+                    <MusicalNoteIcon className="h-4 w-4 text-ink-400 shrink-0" />
+                  ) : (
+                    <VideoCameraIcon className="h-4 w-4 text-ink-400 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate">{result.title}</p>
+                    <p className="truncate text-xs text-ink-600">
+                      {result.channelTitle.replace(/ - Topic$/, "")}
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleSelectResult(result)}
@@ -318,7 +333,7 @@ export default function AddRecordingModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Name</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -328,7 +343,7 @@ export default function AddRecordingModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Artist</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={artist}
           onChange={(e) => setArtist(e.target.value)}
@@ -337,7 +352,7 @@ export default function AddRecordingModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Album</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={album}
           onChange={(e) => setAlbum(e.target.value)}
@@ -346,7 +361,7 @@ export default function AddRecordingModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Year</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={year}
           onChange={(e) => setYear(e.target.value)}
@@ -355,7 +370,7 @@ export default function AddRecordingModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Duration</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
@@ -364,7 +379,7 @@ export default function AddRecordingModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Key</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={key}
           onChange={(e) => setKey(e.target.value)}
@@ -373,7 +388,7 @@ export default function AddRecordingModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Tempo (BPM)</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="number"
           value={tempo}
           onChange={(e) => setTempo(e.target.value)}
@@ -382,7 +397,7 @@ export default function AddRecordingModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Tags (comma separated)</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={tags}
           onChange={(e) => setTags(e.target.value)}
@@ -391,7 +406,7 @@ export default function AddRecordingModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Notes</span>
         <textarea
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
@@ -401,7 +416,7 @@ export default function AddRecordingModal({
           URL (or paste a link directly)
         </span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="url"
           value={url}
           onChange={(e) => {

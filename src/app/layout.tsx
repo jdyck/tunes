@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { merriweatherSans } from "@/lib/fonts";
+import { anton, antonio, instrumentSans, ibmPlexMono } from "@/lib/fonts";
 import GlobalPlayer from "@/components/GlobalPlayer";
 
 export const metadata: Metadata = {
@@ -17,7 +17,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${anton.variable} ${antonio.variable} ${instrumentSans.variable} ${ibmPlexMono.variable}`}
+    >
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -31,7 +34,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <title>{String(metadata.title || "Default Title")}</title>
       </head>
-      <body className={`bg-slate-100 ${merriweatherSans.className} font-[300]`}>
+      <body className={`bg-cream-200 ${instrumentSans.className} font-[300]`}>
         <GlobalPlayer>{children}</GlobalPlayer>
       </body>
     </html>

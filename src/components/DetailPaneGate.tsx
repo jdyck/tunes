@@ -18,7 +18,7 @@ export default function DetailPaneGate({
 
   if (!hasTune) {
     return (
-      <div className="hidden lg:flex lg:w-full lg:h-full lg:items-center lg:justify-center p-8 text-center text-gray-400">
+      <div className="hidden lg:flex lg:w-full lg:h-full lg:items-center lg:justify-center p-8 text-center text-ink-400">
         <p>Choose a song, or add a song to get started.</p>
       </div>
     );

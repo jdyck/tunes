@@ -6,7 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Tune } from "@/types/types";
-import { merriweather } from "@/lib/fonts";
+import {anton, antonio, instrumentSans} from "@/lib/fonts";
 import { PlusCircleIcon, MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import AddSongModal from "@/components/AddSongModal";
 
@@ -75,8 +75,8 @@ export default function SongsListPane() {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 pb-2">
-        <h1 className={`font-bold text-xl ${merriweather.className}`}>
+      <div className="flex items-center justify-between p-4">
+        <h1 className={`font-bold text-5xl uppercase ${antonio.className}`}>
           Songs
         </h1>
         <button
@@ -90,13 +90,13 @@ export default function SongsListPane() {
 
       <div className="px-4 pb-3">
         <div className="relative">
-          <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <MagnifyingGlassIcon className="h-4 w-4 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search songs"
-            className="w-full pl-9 pr-3 py-2 rounded-md border border-slate-300 bg-white"
+            className="w-full pl-9 pr-3 py-2 rounded-md border border-line-200 bg-cream-100"
           />
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function SongsListPane() {
               <li key={tune.id} className="mb-3">
                 <Link
                   href={`/tune/${tune.id}`}
-                  className="block bg-white p-3 rounded-lg"
+                  className="block bg-cream-100 p-3 rounded-lg"
                 >
                   <SongRow tune={tune} />
                 </Link>
@@ -140,15 +140,15 @@ export default function SongsListPane() {
 
 function SongRow({ tune }: { tune: Tune }) {
   return (
-    <div className={merriweather.className}>
+    <div className={instrumentSans.className}>
       <div className="flex justify-between items-start gap-2">
         <span className="font-[400]">{tune.name}</span>
         {tune.year && (
-          <span className="text-sm text-gray-500 shrink-0">{tune.year}</span>
+          <span className="text-sm text-ink-600 shrink-0">{tune.year}</span>
         )}
       </div>
       {tune.composer && (
-        <div className="text-sm text-gray-500">{tune.composer}</div>
+        <div className="text-sm text-ink-600">{tune.composer}</div>
       )}
     </div>
   );

@@ -21,7 +21,7 @@ export default function BrowseLayout({
         <TopHeader />
       </div>
 
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 lg:h-screen bg-white border-r border-slate-200">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 lg:h-screen bg-cream-100 border-r border-line-100">
         <div className="p-4 flex items-center justify-between">
           <Link
             href="/"
@@ -35,7 +35,7 @@ export default function BrowseLayout({
         <nav className="px-2">
           <Link
             href="/"
-            className="block px-3 py-2 rounded-md font-semibold text-green-900 hover:bg-slate-100"
+            className="block px-3 py-2 rounded-md font-semibold text-green-900 hover:bg-cream-200"
           >
             Songs
           </Link>
@@ -46,7 +46,7 @@ export default function BrowseLayout({
       </aside>
 
       <div className="flex-1 flex lg:h-screen lg:overflow-hidden">
-        <div className="fixed inset-x-0 top-16 bottom-0 z-10 overflow-y-auto pb-16 bg-slate-100 lg:static lg:inset-auto lg:z-auto lg:w-96 lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-slate-200">
+        <div className="fixed inset-x-0 top-16 bottom-0 z-10 overflow-y-auto pb-16 bg-cream-200 lg:static lg:inset-auto lg:z-auto lg:w-96 lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-line-100">
           <SongsListPane />
         </div>
         <div className="lg:flex lg:flex-1 lg:h-full lg:overflow-hidden">

@@ -148,7 +148,7 @@ export default function RecordingDetailContent({
       <button
         onClick={onClose}
         aria-label="Close recording"
-        className="mb-4 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+        className="mb-4 text-sm text-ink-600 hover:text-ink-800 flex items-center gap-1"
       >
         <XMarkIcon className="w-4 h-4" />
         Close
