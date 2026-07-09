@@ -18,13 +18,7 @@ import AddRecordingModal from "@/components/AddRecordingModal";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
-export default function SongDetailContent({
-  id,
-  onBack,
-}: {
-  id: string;
-  onBack?: () => void;
-}) {
+export default function SongDetailContent({ id }: { id: string }) {
   const router = useRouter();
   const { play } = usePlayer();
 
@@ -154,15 +148,6 @@ export default function SongDetailContent({
 
   return (
     <div className="w-full p-4">
-      {onBack && (
-        <button
-          onClick={onBack}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700"
-        >
-          &larr; Back
-        </button>
-      )}
-
       <form
         className="w-full"
         onSubmit={(e) => {

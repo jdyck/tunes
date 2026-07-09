@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import SongDetailContent from "@/components/SongDetailContent";
 import RecordingPaneWrapper from "@/components/RecordingPaneWrapper";
 
-export default function InterceptedTuneDetailLayout({
+export default function TuneDetailLayout({
   children,
   recording,
 }: {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Recording } from "@/types/types";
 import { fetchYouTubeVideoData, extractYouTubeID } from "@/utils/youtube";
@@ -20,9 +19,8 @@ export default function RecordingDetailContent({
   onClose,
 }: {
   id: string;
-  onClose?: () => void;
+  onClose: () => void;
 }) {
-  const router = useRouter();
   const { play } = usePlayer();
 
   const [recording, setRecording] = useState<Recording | null>(null);
@@ -129,10 +127,8 @@ export default function RecordingDetailContent({
     if (error) {
       console.error("Error deleting recording:", error.message);
       setError(`Error deleting recording: ${error.message}`);
-    } else if (onClose) {
-      onClose();
     } else {
-      router.back();
+      onClose();
     }
   };
 
@@ -149,16 +145,14 @@ export default function RecordingDetailContent({
 
   return (
     <div className="w-full p-4">
-      {onClose && (
-        <button
-          onClick={onClose}
-          aria-label="Close recording"
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-        >
-          <XMarkIcon className="w-4 h-4" />
-          Close
-        </button>
-      )}
+      <button
+        onClick={onClose}
+        aria-label="Close recording"
+        className="mb-4 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+      >
+        <XMarkIcon className="w-4 h-4" />
+        Close
+      </button>
 
       {videoId && recording && (
         <button

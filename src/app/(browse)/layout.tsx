@@ -3,9 +3,13 @@ import { MusicalNoteIcon } from "@heroicons/react/16/solid";
 import AccountMenu from "@/components/AccountMenu";
 import TopHeader from "@/components/TopHeader";
 import DetailPaneGate from "@/components/DetailPaneGate";
+import SongsListPane from "@/components/SongsListPane";
 
+// The song list never varies by URL, so it's rendered directly here rather
+// than through the `children` slot — routing it through `page.tsx`/
+// `default.tsx` caused it to remount (and refetch) on every navigation into
+// a song, since Next treats those as different component identities.
 export default function BrowseLayout({
-  children,
   detail,
 }: {
   children: React.ReactNode;
@@ -43,7 +47,7 @@ export default function BrowseLayout({
 
       <div className="flex-1 flex lg:h-screen lg:overflow-hidden">
         <div className="fixed inset-x-0 top-16 bottom-0 z-10 overflow-y-auto pb-16 bg-slate-100 lg:static lg:inset-auto lg:z-auto lg:w-96 lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-slate-200">
-          {children}
+          <SongsListPane />
         </div>
         <div className="lg:flex lg:flex-1 lg:h-full lg:overflow-hidden">
           <DetailPaneGate>{detail}</DetailPaneGate>

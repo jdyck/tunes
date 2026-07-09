@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import RecordingDetailContent from "@/components/RecordingDetailContent";
 
-export default function InterceptedRecordingDetail() {
+export default function RecordingDetailPage() {
   const { id, recordingId } = useParams();
   const router = useRouter();
   const tuneId = Array.isArray(id) ? id[0] : id;
