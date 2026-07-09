@@ -1,19 +1,37 @@
 // Import fonts from next/font/google
-import { Merriweather_Sans, Merriweather } from "next/font/google";
+import { Anton, Antonio, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 
-// Configure Merriweather Sans
-const merriweatherSans = Merriweather_Sans({
+// Jazz Library design tokens: display face
+const antonio = Antonio({
   subsets: ["latin"],
-  weight: ["300", "400", "700", "800"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
+  variable: "--font-antonio",
 });
 
-// Configure Merriweather
-const merriweather = Merriweather({
+// Jazz Library design tokens: song headline face (single black weight)
+const anton = Anton({
   subsets: ["latin"],
-  weight: ["400", "700", "900"],
+  weight: ["400"],
+  display: "swap",
+  variable: "--font-anton",
+});
+
+// Jazz Library design tokens: body face
+const instrumentSans = Instrument_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
   display: "swap",
+  variable: "--font-instrument-sans",
 });
 
-export { merriweatherSans, merriweather };
+// Jazz Library design tokens: mono face
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+  variable: "--font-ibm-plex-mono",
+});
+
+export { anton, antonio, instrumentSans, ibmPlexMono };

@@ -12,19 +12,13 @@ import {
   PlusCircleIcon,
 } from "@heroicons/react/20/solid";
 import { extractYouTubeID, fetchYouTubeVideoData } from "@/utils/youtube";
-import { merriweather } from "@/lib/fonts";
+import {anton, antonio, instrumentSans} from "@/lib/fonts";
 import { usePlayer } from "@/components/GlobalPlayer";
 import AddRecordingModal from "@/components/AddRecordingModal";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
-export default function SongDetailContent({
-  id,
-  onBack,
-}: {
-  id: string;
-  onBack?: () => void;
-}) {
+export default function SongDetailContent({ id }: { id: string }) {
   const router = useRouter();
   const { play } = usePlayer();
 
@@ -154,15 +148,6 @@ export default function SongDetailContent({
 
   return (
     <div className="w-full p-4">
-      {onBack && (
-        <button
-          onClick={onBack}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700"
-        >
-          &larr; Back
-        </button>
-      )}
-
       <form
         className="w-full"
         onSubmit={(e) => {
@@ -174,7 +159,7 @@ export default function SongDetailContent({
           <input
             value={title}
             onChange={handleFieldChange(setTitle)}
-            className={`font-bold text-2xl bg-transparent pb-2 ${merriweather.className}`}
+            className={`text-2xl bg-transparent pb-2 ${anton.className}`}
           />
           <button
             type="submit"
@@ -191,7 +176,7 @@ export default function SongDetailContent({
 
         <div className="flex justify-between gap-4 mb-1">
           <label className="flex-1">
-            <span className="block text-xs text-gray-500">Composer</span>
+            <span className="block text-xs text-ink-600">Composer</span>
             <input
               value={composer}
               onChange={handleFieldChange(setComposer)}
@@ -200,7 +185,7 @@ export default function SongDetailContent({
             />
           </label>
           <label className="flex-1">
-            <span className="block text-xs text-gray-500">Lyricist</span>
+            <span className="block text-xs text-ink-600">Lyricist</span>
             <input
               value={lyricist}
               onChange={handleFieldChange(setLyricist)}
@@ -209,7 +194,7 @@ export default function SongDetailContent({
             />
           </label>
           <label className="text-right">
-            <span className="block text-xs text-gray-500">Year</span>
+            <span className="block text-xs text-ink-600">Year</span>
             <input
               type="text"
               value={year}
@@ -231,8 +216,12 @@ export default function SongDetailContent({
 
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
-          <h2 className="font-bold">Recordings</h2>
-          <span className="inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-slate-700 text-white text-xs">
+          <h2 className={`font-bold text-teal-700 text-xl uppercase  ${antonio.className}`}>
+            Recordings
+          </h2>
+          <span
+            className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-teal-700 text-white text-xs ${instrumentSans.className}`}
+          >
             {recordings.length}
           </span>
         </div>
@@ -254,7 +243,7 @@ export default function SongDetailContent({
             return (
               <li
                 key={recording.id}
-                className="bg-white rounded-lg mb-4 overflow-hidden flex items-stretch"
+                className="bg-cream-100 rounded-lg mb-4 overflow-hidden flex items-stretch"
               >
                 <Link
                   href={`/tune/${id}/recording/${recording.id}`}
@@ -293,6 +282,7 @@ export default function SongDetailContent({
       {showAddRecording && (
         <AddRecordingModal
           tuneId={id}
+          tuneTitle={title}
           onClose={() => setShowAddRecording(false)}
           onAdded={() => {
             setShowAddRecording(false);
@@ -330,7 +320,7 @@ function RecordingRow({
             "Untitled recording"}
         </p>
         {recording.artist && (
-          <p className="text-sm text-gray-500">{recording.artist}</p>
+          <p className="text-sm text-ink-600">{recording.artist}</p>
         )}
       </div>
     </div>

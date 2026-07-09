@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import SongDetailContent from "@/components/SongDetailContent";
 import RecordingPaneWrapper from "@/components/RecordingPaneWrapper";
 
-export default function InterceptedTuneDetailLayout({
+export default function TuneDetailLayout({
   children,
   recording,
 }: {
@@ -18,7 +18,7 @@ export default function InterceptedTuneDetailLayout({
 
   return (
     <>
-      <div className="fixed inset-x-0 top-16 bottom-0 z-20 overflow-y-auto pb-16 bg-slate-100 lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-slate-200">
+      <div className="fixed inset-x-0 top-16 bottom-0 z-20 overflow-y-auto pb-16 bg-cream-200 lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-line-100">
         <SongDetailContent id={tuneId} />
         {children}
       </div>

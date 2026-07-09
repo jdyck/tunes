@@ -65,7 +65,7 @@ export default function AddSongModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Name</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -75,7 +75,7 @@ export default function AddSongModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Composer</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={composer}
           onChange={(e) => setComposer(e.target.value)}
@@ -84,7 +84,7 @@ export default function AddSongModal({
       <label className="block mb-3">
         <span className="block text-sm mb-1">Lyricist</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={lyricist}
           onChange={(e) => setLyricist(e.target.value)}
@@ -93,7 +93,7 @@ export default function AddSongModal({
       <label className="block mb-4">
         <span className="block text-sm mb-1">Year</span>
         <input
-          className="block w-full p-2 rounded-md border border-slate-300"
+          className="block w-full p-2 rounded-md border border-line-200"
           type="text"
           value={year}
           onChange={(e) => setYear(e.target.value)}

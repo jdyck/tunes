@@ -189,7 +189,7 @@ export default function GlobalPlayer({
     <PlayerContext.Provider value={{ play }}>
       {children}
 
-      <div className="fixed bottom-0 inset-x-0 lg:inset-x-auto lg:left-0 lg:w-64 bg-white border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] z-40">
+      <div className="fixed bottom-0 inset-x-0 lg:inset-x-auto lg:left-0 lg:w-64 bg-cream-100 border-t border-line-100 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] z-40">
         {recording ? (
           <div className="max-w-screen-md mx-auto px-4 py-2 flex items-center gap-3">
             <button
@@ -209,7 +209,7 @@ export default function GlobalPlayer({
                 {recording.name}
               </p>
               {recording.artist && (
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-ink-600 truncate">
                   {recording.artist}
                 </p>
               )}
@@ -222,7 +222,7 @@ export default function GlobalPlayer({
                 className="w-full"
                 aria-label="Seek"
               />
-              <div className="flex justify-between text-[10px] text-gray-400">
+              <div className="flex justify-between text-[10px] text-ink-400">
                 <span>{formatTime(progress)}</span>
                 <span>{formatTime(duration)}</span>
               </div>
@@ -231,7 +231,7 @@ export default function GlobalPlayer({
             <button
               onClick={() => setIsVideoVisible((v) => !v)}
               aria-label={isVideoVisible ? "Hide video" : "Show video"}
-              className="text-gray-500 shrink-0"
+              className="text-ink-600 shrink-0"
             >
               {isVideoVisible ? (
                 <ChevronDownIcon className="w-5 h-5" />
@@ -243,13 +243,13 @@ export default function GlobalPlayer({
             <button
               onClick={close}
               aria-label="Close player"
-              className="text-gray-400 shrink-0"
+              className="text-ink-400 shrink-0"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
         ) : (
-          <div className="max-w-screen-md mx-auto px-4 py-3 flex items-center gap-3 text-gray-400">
+          <div className="max-w-screen-md mx-auto px-4 py-3 flex items-center gap-3 text-ink-400">
             <MusicalNoteIcon className="w-5 h-5 shrink-0" />
             <p className="text-sm">Nothing playing</p>
           </div>
