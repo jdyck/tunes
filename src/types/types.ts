@@ -11,6 +11,9 @@ export interface Tune {
   notes: string;
   user_id: string;
   song_writers?: SongWriter[];
+  wikipedia_extract?: string | null;
+  wikipedia_url?: string | null;
+  musicbrainz_work_id?: string | null;
 }
 
 export type SongWriterRole = "composer" | "lyricist" | "writer";

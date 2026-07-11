@@ -5,9 +5,15 @@ import { supabase } from "@/lib/supabaseClient";
 import { Tune } from "@/types/types";
 import { SongWorkSearchResult } from "@/utils/musicbrainz";
 import { WriterInput, saveSongWriters } from "@/utils/songWriters";
-import { PlusCircleIcon } from "@heroicons/react/20/solid";
+import {
+  searchSongMetadata,
+  fetchWorkDetail,
+  fetchWorkBackground,
+} from "@/utils/songMetadataClient";
+import { XMarkIcon } from "@heroicons/react/20/solid";
 import Modal from "@/components/Modal";
 import SongWritersEditor from "@/components/SongWritersEditor";
+import SongWorkResultsList from "@/components/SongWorkResultsList";
 
 export default function AddSongModal({
   onClose,
@@ -28,6 +34,12 @@ export default function AddSongModal({
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
+  const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
+  const [wikipediaExtract, setWikipediaExtract] = useState<string | null>(null);
+  const [wikipediaUrl, setWikipediaUrl] = useState<string | null>(null);
+  const [lookingUpBackground, setLookingUpBackground] = useState(false);
+  const [backgroundError, setBackgroundError] = useState<string | null>(null);
+
   const handleSearch = async () => {
     setSearchError(null);
 
@@ -37,12 +49,7 @@ export default function AddSongModal({
 
     setSearching(true);
     try {
-      const response = await fetch(
-        `/api/song-metadata/search?q=${encodeURIComponent(name)}`
-      );
-      if (!response.ok) throw new Error("Search failed");
-      const data = await response.json();
-      setSearchResults(data.results || []);
+      setSearchResults(await searchSongMetadata(name));
     } catch {
       setSearchError("Couldn't look up song metadata. Try again later.");
       setSearchResults([]);
@@ -58,15 +65,31 @@ export default function AddSongModal({
       ...result.writers.map((name) => ({ name, role: "writer" as const })),
     ]);
     setSearchResults([]);
+    setSelectedWorkId(result.workId);
+    setWikipediaExtract(null);
+    setWikipediaUrl(null);
 
-    try {
-      const response = await fetch(`/api/song-metadata/work/${result.workId}`);
-      if (!response.ok) return;
-      const data = await response.json();
-      if (data.year) setYear(data.year);
-    } catch {
-      // Year is best-effort; leave it blank for hand entry on failure.
+    const workDetail = await fetchWorkDetail(result.workId);
+    if (workDetail?.year) setYear(workDetail.year);
+  };
+
+  const handleLookUpBackground = async () => {
+    if (!selectedWorkId) return;
+
+    setBackgroundError(null);
+    setLookingUpBackground(true);
+    const background = await fetchWorkBackground(selectedWorkId);
+    setLookingUpBackground(false);
+
+    if (!background) {
+      setWikipediaExtract(null);
+      setWikipediaUrl(null);
+      setBackgroundError("No Wikipedia background found for this song.");
+      return;
     }
+
+    setWikipediaExtract(background.extract);
+    setWikipediaUrl(background.url);
   };
 
   const handleAdd = async () => {
@@ -89,6 +112,9 @@ export default function AddSongModal({
       name,
       year: year || null,
       user_id: user.id,
+      wikipedia_extract: wikipediaExtract,
+      wikipedia_url: wikipediaUrl,
+      musicbrainz_work_id: selectedWorkId,
     };
 
     const { data, error } = await supabase
@@ -150,48 +176,7 @@ export default function AddSongModal({
 
       {searchError && <p className="text-red-600 mb-3">{searchError}</p>}
 
-      {searchResults.length > 0 && (
-        <ul className="mb-4">
-          {searchResults.map((result) => (
-            <li key={result.workId} className="mb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="truncate">
-                    {result.title}
-                    {result.disambiguation && (
-                      <span className="text-ink-600">
-                        {" "}
-                        ({result.disambiguation})
-                      </span>
-                    )}
-                  </p>
-                  <p className="truncate text-xs text-ink-600">
-                    {result.composers.length > 0 || result.lyricists.length > 0
-                      ? [
-                          result.composers.length > 0 &&
-                            `Composer: ${result.composers.join(", ")}`,
-                          result.lyricists.length > 0 &&
-                            `Lyricist: ${result.lyricists.join(", ")}`,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")
-                      : result.writers.length > 0
-                        ? `Written by: ${result.writers.join(", ")}`
-                        : "No writer credits found"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleSelectResult(result)}
-                  title="Use this match"
-                >
-                  <PlusCircleIcon className="h-6 w-6 text-green-600" />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <SongWorkResultsList results={searchResults} onSelect={handleSelectResult} />
 
       <SongWritersEditor value={writers} onChange={setWriters} />
 
@@ -204,6 +189,62 @@ export default function AddSongModal({
           onChange={(e) => setYear(e.target.value)}
         />
       </label>
+
+      {selectedWorkId && (
+        <div className="mb-4">
+          <a
+            href={`https://musicbrainz.org/work/${selectedWorkId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="block text-xs text-teal-700 underline mb-1"
+          >
+            View on MusicBrainz
+          </a>
+          {wikipediaExtract ? (
+            <div className="p-3 rounded-md border border-line-200">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm">{wikipediaExtract}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWikipediaExtract(null);
+                    setWikipediaUrl(null);
+                  }}
+                  aria-label="Remove background"
+                  className="shrink-0"
+                >
+                  <XMarkIcon className="h-5 w-5 text-ink-600" />
+                </button>
+              </div>
+              {wikipediaUrl && (
+                <a
+                  href={wikipediaUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-teal-700 underline"
+                >
+                  via Wikipedia, CC BY-SA
+                </a>
+              )}
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleLookUpBackground}
+                disabled={lookingUpBackground}
+                className="text-sm text-teal-700 underline disabled:opacity-70"
+              >
+                {lookingUpBackground ? "Looking up..." : "Look up background"}
+              </button>
+              {backgroundError && (
+                <p className="text-sm text-ink-600 mt-1">{backgroundError}</p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <button
         onClick={handleAdd}
         disabled={saving}

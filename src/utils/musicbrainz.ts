@@ -23,6 +23,7 @@ export interface SongWorkSearchResult {
 interface MusicBrainzArtistRelation {
   type: string;
   artist?: { name: string };
+  begin?: string;
 }
 
 interface MusicBrainzWork {
@@ -31,6 +32,32 @@ interface MusicBrainzWork {
   disambiguation?: string;
   relations?: MusicBrainzArtistRelation[];
 }
+
+const mapWorkToSearchResult = (work: MusicBrainzWork): SongWorkSearchResult => {
+  const relations = work.relations || [];
+  const namesForType = (type: string) =>
+    relations.filter((r) => r.type === type && r.artist).map((r) => r.artist!.name);
+
+  return {
+    workId: work.id,
+    title: work.title,
+    disambiguation: work.disambiguation || null,
+    composers: namesForType("composer"),
+    lyricists: namesForType("lyricist"),
+    writers: namesForType("writer"),
+  };
+};
+
+// Best-effort "year written": MusicBrainz works have no composition-date
+// field, so this approximates it as the earliest dated relation on the
+// work (first performance/recording) — close enough for songs written
+// for a film or show and recorded soon after. null when nothing is dated.
+const earliestYear = (relations: MusicBrainzArtistRelation[]): string | null => {
+  const years = relations
+    .map((r) => r.begin?.match(/^\d{4}/)?.[0])
+    .filter((year): year is string => Boolean(year));
+  return years.length > 0 ? years.sort()[0] : null;
+};
 
 export const searchSongWorks = async (
   title: string
@@ -51,30 +78,19 @@ export const searchSongWorks = async (
   const data = await response.json();
   const works: MusicBrainzWork[] = data.works || [];
 
-  return works.map((work) => {
-    const relations = work.relations || [];
-    const namesForType = (type: string) =>
-      relations.filter((r) => r.type === type && r.artist).map((r) => r.artist!.name);
-
-    return {
-      workId: work.id,
-      title: work.title,
-      disambiguation: work.disambiguation || null,
-      composers: namesForType("composer"),
-      lyricists: namesForType("lyricist"),
-      writers: namesForType("writer"),
-    };
-  });
+  return works.map(mapWorkToSearchResult);
 };
 
-// Best-effort "year written": MusicBrainz works have no composition-date
-// field, so this approximates it as the earliest dated relation on the
-// work (first performance/recording) — close enough for songs written
-// for a film or show and recorded soon after. Returns null rather than
-// guessing when nothing is dated.
-export const fetchSongWorkYear = async (
+export interface SongWorkDetail extends SongWorkSearchResult {
+  year: string | null;
+}
+
+// Looks up a single, already-known work by ID -- used to refresh a Song's
+// writers/year/title from its linked MusicBrainz work, without re-searching
+// by title.
+export const fetchSongWork = async (
   workId: string
-): Promise<string | null> => {
+): Promise<SongWorkDetail | null> => {
   const url = new URL(`https://musicbrainz.org/ws/2/work/${workId}`);
   url.searchParams.set("fmt", "json");
   url.searchParams.set("inc", "work-rels+artist-rels+recording-rels");
@@ -83,16 +99,13 @@ export const fetchSongWorkYear = async (
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
   });
 
-  if (!response.ok) {
-    throw new Error(`MusicBrainz work lookup failed with status ${response.status}`);
-  }
+  if (!response.ok) return null;
 
   const data = await response.json();
-  const relations: { begin?: string }[] = data.relations || [];
-  const years = relations
-    .map((r) => r.begin?.match(/^\d{4}/)?.[0])
-    .filter((year): year is string => Boolean(year));
+  const work: MusicBrainzWork = data;
 
-  if (years.length === 0) return null;
-  return years.sort()[0];
+  return {
+    ...mapWorkToSearchResult(work),
+    year: earliestYear(work.relations || []),
+  };
 };

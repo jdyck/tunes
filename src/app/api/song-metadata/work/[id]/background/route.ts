@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchSongWork } from "@/utils/musicbrainz";
+import { fetchWorkBackground } from "@/utils/wikipedia";
 
 export async function GET(
   _request: Request,
@@ -8,12 +8,12 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const work = await fetchSongWork(id);
-    return NextResponse.json({ work });
+    const background = await fetchWorkBackground(id);
+    return NextResponse.json({ background });
   } catch (error) {
-    console.error("Song metadata work lookup failed:", error);
+    console.error("Song background lookup failed:", error);
     return NextResponse.json(
-      { error: "Song metadata work lookup failed" },
+      { error: "Song background lookup failed" },
       { status: 502 }
     );
   }
