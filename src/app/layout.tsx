@@ -4,8 +4,8 @@ import { leagueGothic, robotoCondensed, robotoMono } from "@/lib/fonts";
 import GlobalPlayer from "@/components/GlobalPlayer";
 
 export const metadata: Metadata = {
-  title: "Tunes",
-  description: "Manage and enjoy your music tunes.",
+  title: "Standards",
+  description: "Manage and enjoy your music.",
   icons: {
     icon: "/icons/icon-192x192.png",
   },

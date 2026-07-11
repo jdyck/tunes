@@ -118,7 +118,8 @@ export const searchYouTubeVideos = async (
   }
 };
 
-export const extractYouTubeID = (url: string) => {
+export const extractYouTubeID = (url: string | null | undefined) => {
+  if (!url) return null;
   const match = url.match(
     /(?:youtube\.com\/(?:embed\/|v\/|.*v=)|youtu\.be\/)([\w-]{11})/
   );

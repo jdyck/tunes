@@ -60,8 +60,8 @@ export default function SongsListPane() {
     if (user) fetchTunes(user.id);
   }, [user]);
 
-  const goToTune = (id: string) => {
-    router.push(`/tune/${id}`);
+  const goToSong = (id: string) => {
+    router.push(`/song/${id}`);
   };
 
   const visibleTunes = search.trim()
@@ -117,7 +117,7 @@ export default function SongsListPane() {
             {visibleTunes.map((tune) => (
               <li key={tune.id} className="">
                 <Link
-                  href={`/tune/${tune.id}`}
+                  href={`/song/${tune.id}`}
                   className="block border-b border-border-default h-20 p-4 hover:bg-cream-200 hover:border-b-0 hover:rounded-lg active:bg-cream-300"
                 >
                   <SongRow tune={tune} />
@@ -138,7 +138,7 @@ export default function SongsListPane() {
           onCreated={(id) => {
             setShowAddSong(false);
             if (user) fetchTunes(user.id);
-            goToTune(id);
+            goToSong(id);
           }}
         />
       )}

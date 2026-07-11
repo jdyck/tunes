@@ -246,7 +246,7 @@ export default function SongDetailContent({ id }: { id: string }) {
                 className="bg-cream-100 rounded-lg mb-4 overflow-hidden flex items-stretch"
               >
                 <Link
-                  href={`/tune/${id}/recording/${recording.id}`}
+                  href={`/song/${id}/recording/${recording.id}`}
                   className="flex flex-1 min-w-0"
                 >
                   <RecordingRow recording={recording} videoInfo={videoInfo} />
@@ -276,7 +276,7 @@ export default function SongDetailContent({ id }: { id: string }) {
         onClick={handleDelete}
         className="mt-4 w-full px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700"
       >
-        Delete Tune
+        Delete Song
       </button>
 
       {showAddRecording && (
