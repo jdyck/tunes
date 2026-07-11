@@ -1,19 +1,15 @@
 @import "tailwindcss";
 
-/* Jazz Library design tokens. Radius and shadow keys are "jazz" prefixed
-   because rounded-md/rounded-lg/shadow-lg already render throughout the app
-   with Tailwind's stock values; reusing those names here would silently
-   reskin every existing page instead of staying opt-in. */
 @theme static {
   /* ---- Base palette ---- */
-  --color-ink-900: #241a10;
-  --color-ink-800: #3a2a1a;
-  --color-ink-600: #5c4a36;
-  --color-ink-400: #8a7962;
+  --color-ink-900: #201d1b;
+  --color-ink-800: #393430;
+  --color-ink-600: #5e5b59;
+  --color-ink-400: #8a8072;
 
-  --color-cream-100: #fdf8ef;
-  --color-cream-200: #fbf1e2;
-  --color-cream-300: #f4dead;
+  --color-cream-100: #f7f2e9;
+  --color-cream-200: #f0e6d8;
+  --color-cream-300: #e3d9cc;
   --color-cream-400: #ecd28e;
 
   --color-amber-200: #f6d484;
@@ -32,11 +28,11 @@
   --color-teal-600: #0a5a57;
   --color-teal-700: #073f3d;
 
-  --color-line-100: #efe4d2;
-  --color-line-200: #e3d3b8;
+  --color-line-100: #D9D0BE;
+  --color-line-200: #D9D0BE;
 
   /* ---- Semantic aliases ---- */
-  --color-surface-app: var(--color-cream-200);
+  --color-surface-app: var(--color-cream-100);
   --color-surface-panel: var(--color-cream-100);
   --color-surface-sunken: var(--color-cream-300);
   --color-surface-brand: var(--color-amber-500);
@@ -69,9 +65,9 @@
   --color-status-danger: #a83221;
 
   /* ---- Fonts ---- */
-  --font-display: var(--font-antonio), "Arial Narrow", sans-serif;
-  --font-body: var(--font-instrument-sans), "Helvetica Neue", Arial, sans-serif;
-  --font-mono: var(--font-ibm-plex-mono), "SFMono-Regular", Menlo, monospace;
+  --font-display: var(--font-league-gothic), "Arial Narrow", sans-serif;
+  --font-body: var(--font-roboto-condensed), "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-roboto-mono), "SFMono-Regular", Menlo, monospace;
 
   /* ---- Tracking ---- */
   --tracking-display: 0.01em;
@@ -144,6 +140,57 @@
     background: var(--background);
     font-family: sans-serif;
   }
+}
+
+/* Paper-grain overlay. A single fixed element tinting the whole viewport,
+   rather than layering the texture into each surface's background. The SVG
+   data URI rasterizes once and tiles (cheap) — never apply feTurbulence as a
+   live filter/backdrop-filter. pointer-events: none lets all interaction pass
+   through. Sits above modals too; at this opacity that is invisible. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  /* Watercolor-paper mottle: large soft clouds (low baseFrequency) with faint
+     fiber detail (octaves). Alpha is flattened to opaque so only luminance
+     varies, and soft-light both lightens and darkens around the base color
+     instead of only darkening like multiply. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.4' numOctaves='100' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 2000px 2000px;
+  opacity: .07;
+  mix-blend-mode: multiply;
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  /* Watercolor-paper mottle: large soft clouds (low baseFrequency) with faint
+     fiber detail (octaves). Alpha is flattened to opaque so only luminance
+     varies, and soft-light both lightens and darkens around the base color
+     instead of only darkening like multiply. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.2' numOctaves='10' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 2000px 2000px;
+  opacity: .05;
+  mix-blend-mode: multiply;
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  /* Watercolor-paper mottle: large soft clouds (low baseFrequency) with faint
+     fiber detail (octaves). Alpha is flattened to opaque so only luminance
+     varies, and soft-light both lightens and darkens around the base color
+     instead of only darkening like multiply. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 2000px 2000px;
+  opacity: .1;
+  mix-blend-mode: multiply;
 }
 
 .yt-album-art iframe {

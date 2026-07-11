@@ -12,7 +12,7 @@ import {
   PlusCircleIcon,
 } from "@heroicons/react/20/solid";
 import { extractYouTubeID, fetchYouTubeVideoData } from "@/utils/youtube";
-import {anton, antonio, instrumentSans} from "@/lib/fonts";
+import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { usePlayer } from "@/components/GlobalPlayer";
 import AddRecordingModal from "@/components/AddRecordingModal";
 
@@ -147,7 +147,7 @@ export default function SongDetailContent({ id }: { id: string }) {
   if (!tune) return <p className="p-4">No tune found.</p>;
 
   return (
-    <div className="w-full p-4">
+    <div className="w-full p-4 bg-cream-100">
       <form
         className="w-full"
         onSubmit={(e) => {
@@ -159,7 +159,7 @@ export default function SongDetailContent({ id }: { id: string }) {
           <input
             value={title}
             onChange={handleFieldChange(setTitle)}
-            className={`text-2xl bg-transparent pb-2 ${anton.className}`}
+            className={`text-4xl uppercase bg-transparent pb-2 ${leagueGothic.className}`}
           />
           <button
             type="submit"
@@ -216,11 +216,11 @@ export default function SongDetailContent({ id }: { id: string }) {
 
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
-          <h2 className={`font-bold text-teal-700 text-xl uppercase  ${antonio.className}`}>
+          <h2 className={`font-bold text-teal-700 text-xl uppercase  ${leagueGothic.className}`}>
             Recordings
           </h2>
           <span
-            className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-teal-700 text-white text-xs ${instrumentSans.className}`}
+            className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-teal-700 text-white text-xs ${robotoCondensed.className}`}
           >
             {recordings.length}
           </span>

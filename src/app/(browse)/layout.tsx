@@ -4,11 +4,8 @@ import AccountMenu from "@/components/AccountMenu";
 import TopHeader from "@/components/TopHeader";
 import DetailPaneGate from "@/components/DetailPaneGate";
 import SongsListPane from "@/components/SongsListPane";
+import {leagueGothic, robotoCondensed} from "@/lib/fonts";
 
-// The song list never varies by URL, so it's rendered directly here rather
-// than through the `children` slot — routing it through `page.tsx`/
-// `default.tsx` caused it to remount (and refetch) on every navigation into
-// a song, since Next treats those as different component identities.
 export default function BrowseLayout({
   detail,
 }: {
@@ -22,31 +19,44 @@ export default function BrowseLayout({
       </div>
 
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 lg:h-screen bg-cream-100 border-r border-line-100">
-        <div className="p-4 flex items-center justify-between">
+        <div className="bg-[#376091] p-4 py-16 flex items-center justify-between">
           <Link
             href="/"
-            className="font-extrabold uppercase text-lg flex items-center text-green-800"
+            className={` uppercase text-lg  items-center text-cream-100 ${leagueGothic.className}`}
           >
-            <MusicalNoteIcon className="w-5 h-5 inline-block mr-1" />
-            Tunes
+            <p className={`block text-shadow w-full text-6xl `}>Standards</p>
           </Link>
           <AccountMenu />
         </div>
+        {/*<div className={`flex gap-2 py-2`}>*/}
+        {/*  <div className={`bg-[#3767A5]/90 w-12 h-12`}></div>*/}
+        {/*  <div className={`bg-[#A72F0A]/90 w-12 h-12`}></div>*/}
+        {/*  <div className={`bg-[#81C230]/90 w-12 h-12`}></div>*/}
+        {/*  <div className={`bg-[#719D3B]/90 w-12 h-12`}></div>*/}
+        {/*  <div className={`bg-cream-200 w-12 h-12`}></div>*/}
+        {/*</div>*/}
+        {/*<div className={`flex gap-2`}>*/}
+        {/*  <div className={`bg-[#CAC3B4]/90 w-12 h-12`}></div>*/}
+        {/*  <div className={`bg-[#9F998C]/90 w-12 h-12`}></div>*/}
+        {/*  <div className={`bg-[#78736A]/90 w-12 h-12`}></div>*/}
+        {/*  <div className={`bg-[#4F4B46]/90 w-12 h-12`}></div>*/}
+        {/*  <div className={`bg-[#252322]/90 w-12 h-12`}></div>*/}
+        {/*</div>*/}
+
         <nav className="px-2">
           <Link
             href="/"
-            className="block px-3 py-2 rounded-md font-semibold text-green-900 hover:bg-cream-200"
+            className="block px-3 py-2 rounded-md font-semibold hover:bg-cream-200"
           >
             Songs
           </Link>
         </nav>
-        {/* Reserved space for the fixed player bar, which docks to this
-            pane's width/position on desktop — see GlobalPlayer.tsx. */}
+
         <div className="mt-auto h-24" />
       </aside>
 
       <div className="flex-1 flex lg:h-screen lg:overflow-hidden">
-        <div className="fixed inset-x-0 top-16 bottom-0 z-10 overflow-y-auto pb-16 bg-cream-200 lg:static lg:inset-auto lg:z-auto lg:w-96 lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-line-100">
+        <div className="fixed inset-x-0 top-16 bottom-0 z-10 overflow-y-auto pb-16 lg:static lg:inset-auto lg:z-auto lg:w-96 lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r-2 lg:border-line-100">
           <SongsListPane />
         </div>
         <div className="lg:flex lg:flex-1 lg:h-full lg:overflow-hidden">

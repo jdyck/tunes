@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { anton, antonio, instrumentSans, ibmPlexMono } from "@/lib/fonts";
+import { leagueGothic, robotoCondensed, robotoMono } from "@/lib/fonts";
 import GlobalPlayer from "@/components/GlobalPlayer";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${anton.variable} ${antonio.variable} ${instrumentSans.variable} ${ibmPlexMono.variable}`}
+      className={`${leagueGothic.variable} ${robotoCondensed.variable} ${robotoMono.variable}`}
     >
       <head>
         <link rel="manifest" href="/manifest.json" />
@@ -34,7 +34,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <title>{String(metadata.title || "Default Title")}</title>
       </head>
-      <body className={`bg-cream-200 ${instrumentSans.className} font-[300]`}>
+      <body className={`bg-cream-100 ${robotoCondensed.className}`}>
         <GlobalPlayer>{children}</GlobalPlayer>
       </body>
     </html>

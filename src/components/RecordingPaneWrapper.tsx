@@ -17,7 +17,7 @@ export default function RecordingPaneWrapper({
   if (!isRecordingOpen) return null;
 
   return (
-    <div className="fixed inset-x-0 top-16 bottom-0 z-30 overflow-y-auto pb-16 bg-cream-200 lg:static lg:inset-auto lg:z-auto lg:block lg:w-96 lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-l lg:border-line-100">
+    <div className="fixed inset-x-0 top-16 bottom-0 z-30 overflow-y-auto pb-16 lg:static lg:inset-auto lg:z-auto lg:block lg:w-96 lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-l lg:border-line-100">
       {children}
     </div>
   );
