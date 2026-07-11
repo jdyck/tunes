@@ -80,19 +80,10 @@ export const saveSongWriters = async (
 export const formatWriterCredit = (
   writers: { role: SongWriterRole; people?: { name: string } | null }[]
 ): string | null => {
-  const namesForRole = (role: SongWriterRole) =>
-    writers
-      .filter((w) => w.role === role && w.people?.name)
-      .map((w) => w.people!.name);
+  const names = writers
+    .filter((w) => w.people?.name)
+    .map((w) => w.people!.name);
+  const credited = Array.from(new Set(names));
 
-  const composers = namesForRole("composer");
-  if (composers.length > 0) return composers.join(", ");
-
-  const lyricists = namesForRole("lyricist");
-  if (lyricists.length > 0) return lyricists.join(", ");
-
-  const generalWriters = namesForRole("writer");
-  if (generalWriters.length > 0) return generalWriters.join(", ");
-
-  return null;
+  return credited.length > 0 ? credited.join(", ") : null;
 };

@@ -13,6 +13,13 @@ export const formatYouTubeDuration = (isoDuration: string) => {
   return `${totalMinutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
+// Converts a raw seconds count (e.g. from ytmusic-api) to "m:ss"
+export const formatDurationSeconds = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.round(totalSeconds % 60);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+};
+
 export const fetchYouTubeVideoData = async (
   videoId: string,
   apiKey: string
@@ -76,6 +83,12 @@ export interface YouTubeSearchResult {
   channelTitle: string;
   thumbnail: string;
   isMusic: boolean;
+  // Only populated for YouTube Music results -- ytmusic-api returns these
+  // directly on the search result, so they're free. Plain YouTube search
+  // results don't have them until a per-video lookup (see
+  // fetchYouTubeVideoData) is made.
+  album?: string | null;
+  duration?: string | null;
 }
 
 export interface YouTubeSearchPage {

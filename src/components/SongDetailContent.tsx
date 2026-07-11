@@ -5,19 +5,23 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { Tune, Recording } from "@/types/types";
-import {
-  BoltIcon,
-  BoltSlashIcon,
-  PlayIcon,
-  PlusCircleIcon,
-  XMarkIcon,
-} from "@heroicons/react/20/solid";
+import { PlayIcon, PlusCircleIcon } from "@heroicons/react/20/solid";
 import { extractYouTubeID, fetchYouTubeVideoData } from "@/utils/youtube";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { usePlayer } from "@/components/GlobalPlayer";
+import { useSongsList } from "@/components/SongsListContext";
 import AddRecordingModal from "@/components/AddRecordingModal";
+import RecordingListRow from "@/components/RecordingListRow";
 import SongWritersEditor from "@/components/SongWritersEditor";
 import SongWorkResultsList from "@/components/SongWorkResultsList";
+import SaveStatusButton from "@/components/SaveStatusButton";
+import FormField from "@/components/FormField";
+import MusicBrainzLink from "@/components/MusicBrainzLink";
+import SyncFromMusicBrainzButton from "@/components/SyncFromMusicBrainzButton";
+import WikipediaBackgroundCard from "@/components/WikipediaBackgroundCard";
+import DeleteButton from "@/components/DeleteButton";
+import AsyncStateMessage from "@/components/AsyncStateMessage";
+import { useFieldChange } from "@/hooks/useFieldChange";
 import {
   WriterInput,
   fetchSongWriters,
@@ -34,6 +38,7 @@ const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 export default function SongDetailContent({ id }: { id: string }) {
   const router = useRouter();
   const { play } = usePlayer();
+  const { patchTune, removeTune } = useSongsList();
 
   const [tune, setTune] = useState<Tune | null>(null);
   const [recordings, setRecordings] = useState<Recording[]>([]);
@@ -147,6 +152,7 @@ export default function SongDetailContent({ id }: { id: string }) {
       await saveSongWriters(id, writers);
       setError(null);
       setIsSaved(true);
+      patchTune(id, { ...updatedFields, writers });
     } catch (writersError) {
       const message =
         writersError instanceof Error
@@ -246,31 +252,22 @@ export default function SongDetailContent({ id }: { id: string }) {
   const handleDelete = async () => {
     if (!id) return;
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this tune? This action cannot be undone."
-    );
-    if (!confirmed) return;
-
     const { error } = await supabase.from("tunes").delete().eq("id", id);
 
     if (error) {
       console.error("Error deleting tune:", error.message);
       setError(`Error deleting tune: ${error.message}`);
     } else {
+      removeTune(id);
       router.push("/");
     }
   };
 
-  const handleFieldChange =
-    (setter: (value: string) => void) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setter(e.target.value);
-      setIsSaved(false);
-    };
+  const handleFieldChange = useFieldChange(setIsSaved);
 
-  if (loading) return <p className="p-4">Loading tune...</p>;
-  if (error) return <p className="p-4 text-red-600">{error}</p>;
-  if (!tune) return <p className="p-4">No tune found.</p>;
+  if (loading) return <AsyncStateMessage>Loading tune...</AsyncStateMessage>;
+  if (error) return <AsyncStateMessage variant="error">{error}</AsyncStateMessage>;
+  if (!tune) return <AsyncStateMessage>No tune found.</AsyncStateMessage>;
 
   return (
     <div className="w-full p-4 bg-cream-100">
@@ -287,17 +284,7 @@ export default function SongDetailContent({ id }: { id: string }) {
             onChange={handleFieldChange(setTitle)}
             className={`text-4xl uppercase bg-transparent pb-2 ${leagueGothic.className}`}
           />
-          <button
-            type="submit"
-            title={isSaved ? "Saved" : "Unsaved changes"}
-            className="block relative shrink-0"
-          >
-            {isSaved ? (
-              <BoltIcon className="h-5 w-5 text-green-600" />
-            ) : (
-              <BoltSlashIcon className="h-5 w-5 text-red-600" />
-            )}
-          </button>
+          <SaveStatusButton isSaved={isSaved} />
         </div>
 
         <SongWritersEditor
@@ -308,29 +295,23 @@ export default function SongDetailContent({ id }: { id: string }) {
           }}
         />
 
-        <label className="block mb-1">
-          <span className="block text-xs text-ink-600">Year</span>
-          <input
-            type="text"
-            value={year}
-            onChange={handleFieldChange(setYear)}
-            className="block w-full bg-transparent"
-            placeholder="Year"
-          />
-        </label>
+        <FormField
+          label="Year"
+          type="text"
+          value={year}
+          onChange={handleFieldChange(setYear)}
+          className="block mb-1"
+          labelClassName="block text-xs text-ink-600"
+          inputClassName="block w-full bg-transparent"
+          placeholder="Year"
+        />
 
         {musicbrainzWorkId && (
           <div className="mb-3">
-            <button
-              type="button"
+            <SyncFromMusicBrainzButton
+              syncing={syncingFromMusicBrainz}
               onClick={handleUpdateFromMusicBrainz}
-              disabled={syncingFromMusicBrainz}
-              className="text-xs text-teal-700 underline disabled:opacity-70"
-            >
-              {syncingFromMusicBrainz
-                ? "Updating..."
-                : "Update from MusicBrainz"}
-            </button>
+            />
             {syncError && (
               <p className="text-sm text-ink-600 mt-1">{syncError}</p>
             )}
@@ -358,40 +339,15 @@ export default function SongDetailContent({ id }: { id: string }) {
           ) : (
             <>
               {musicbrainzWorkId && (
-                <a
-                  href={`https://musicbrainz.org/work/${musicbrainzWorkId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block text-xs text-teal-700 underline mb-1"
-                >
-                  View on MusicBrainz
-                </a>
+                <MusicBrainzLink type="work" id={musicbrainzWorkId} />
               )}
 
               {wikipediaExtract ? (
-                <div className="p-3 rounded-md border border-line-200">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm">{wikipediaExtract}</p>
-                    <button
-                      type="button"
-                      onClick={handleRemoveBackground}
-                      aria-label="Remove background"
-                      className="shrink-0"
-                    >
-                      <XMarkIcon className="h-5 w-5 text-ink-600" />
-                    </button>
-                  </div>
-                  {wikipediaUrl && (
-                    <a
-                      href={wikipediaUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-teal-700 underline"
-                    >
-                      via Wikipedia, CC BY-SA
-                    </a>
-                  )}
-                </div>
+                <WikipediaBackgroundCard
+                  extract={wikipediaExtract}
+                  url={wikipediaUrl}
+                  onRemove={handleRemoveBackground}
+                />
               ) : (
                 <button
                   type="button"
@@ -459,7 +415,7 @@ export default function SongDetailContent({ id }: { id: string }) {
                   href={`/song/${id}/recording/${recording.id}`}
                   className="flex flex-1 min-w-0"
                 >
-                  <RecordingRow recording={recording} videoInfo={videoInfo} />
+                  <RecordingListRow recording={recording} videoInfo={videoInfo} />
                 </Link>
                 {extractYouTubeID(recording.url || "") && (
                   <button
@@ -482,12 +438,11 @@ export default function SongDetailContent({ id }: { id: string }) {
         <p>No recordings found for this tune.</p>
       )}
 
-      <button
-        onClick={handleDelete}
-        className="mt-4 w-full px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700"
-      >
-        Delete Song
-      </button>
+      <DeleteButton
+        label="Song"
+        confirmMessage="Are you sure you want to delete this tune? This action cannot be undone."
+        onDelete={handleDelete}
+      />
 
       {showAddRecording && (
         <AddRecordingModal
@@ -500,39 +455,6 @@ export default function SongDetailContent({ id }: { id: string }) {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function RecordingRow({
-  recording,
-  videoInfo,
-}: {
-  recording: Recording;
-  videoInfo: any;
-}) {
-  return (
-    <div className="flex overflow-hidden relative">
-      {videoInfo?.thumbnails?.high && (
-        <div className="w-20 h-auto overflow-hidden shrink-0">
-          <img
-            src={videoInfo.thumbnails.high.url}
-            alt="Video thumbnail"
-            className="object-cover w-full h-full"
-          />
-        </div>
-      )}
-      <div className="p-4 pl-4 overflow-hidden">
-        <p className="font-semibold leading-5 line-clamp-2 overflow-hidden text-ellipsis break-words">
-          {videoInfo?.title ||
-            recording.name ||
-            recording.url ||
-            "Untitled recording"}
-        </p>
-        {recording.artist && (
-          <p className="text-sm text-ink-600">{recording.artist}</p>
-        )}
-      </div>
     </div>
   );
 }

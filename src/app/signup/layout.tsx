@@ -1,5 +1,3 @@
-import TopHeader from "@/components/TopHeader";
-
 export default function SignupLayout({
   children,
 }: {
@@ -7,8 +5,7 @@ export default function SignupLayout({
 }) {
   return (
     <>
-      <TopHeader />
-      <div className="flex px-4 max-w-screen-md m-auto pb-16">{children}</div>
+      <div className="flex px-4 max-w-3xl m-auto pb-16">{children}</div>
     </>
   );
 }

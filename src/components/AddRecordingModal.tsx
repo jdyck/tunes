@@ -6,18 +6,39 @@ import { Recording } from "@/types/types";
 import {
   fetchYouTubeVideoData,
   parseYouTubeMusicMetadata,
-  searchYouTubeVideos,
   YouTubeSearchResult,
 } from "@/utils/youtube";
 import {
-  PlusCircleIcon,
-  MusicalNoteIcon,
-  VideoCameraIcon,
-} from "@heroicons/react/20/solid";
+  searchYoutube,
+  SEARCH_PLATFORMS,
+  SearchPlatformId,
+} from "@/utils/youtubeSearchClient";
 import { usePlayer } from "@/components/GlobalPlayer";
 import Modal from "@/components/Modal";
+import YtMusicSearchResultRow from "@/components/YtMusicSearchResultRow";
+import YoutubeSearchResultRow from "@/components/YoutubeSearchResultRow";
+import PrimaryButton from "@/components/PrimaryButton";
+import FormField from "@/components/FormField";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+
+interface PlatformSearchState {
+  query: string;
+  results: YouTubeSearchResult[];
+  searching: boolean;
+  error: string | null;
+  nextPageToken: string | null;
+  loadingMore: boolean;
+}
+
+const emptyPlatformState = (query: string): PlatformSearchState => ({
+  query,
+  results: [],
+  searching: false,
+  error: null,
+  nextPageToken: null,
+  loadingMore: false,
+});
 
 export default function AddRecordingModal({
   tuneId,
@@ -32,159 +53,182 @@ export default function AddRecordingModal({
 }) {
   const { play } = usePlayer();
 
-  const [name, setName] = useState("");
-  const [notes, setNotes] = useState("");
-  const [url, setUrl] = useState("");
-  const [kind, setKind] = useState<Recording["kind"]>(null);
-  const [artist, setArtist] = useState("");
-  const [year, setYear] = useState("");
-  const [album, setAlbum] = useState("");
-  const [duration, setDuration] = useState("");
-  const [key, setKey] = useState("");
-  const [tempo, setTempo] = useState("");
-  const [tags, setTags] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [addingVideoId, setAddingVideoId] = useState<string | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState(`${tuneTitle} `);
-  const [searchResults, setSearchResults] = useState<YouTubeSearchResult[]>(
-    []
-  );
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [showAllResults, setShowAllResults] = useState(false);
+  const [activePlatform, setActivePlatform] =
+    useState<SearchPlatformId>("ytmusic");
+  const [platformStates, setPlatformStates] = useState<
+    Record<SearchPlatformId, PlatformSearchState>
+  >(() => ({
+    ytmusic: emptyPlatformState(`${tuneTitle} `),
+    youtube: emptyPlatformState(""),
+  }));
   const [currentPage, setCurrentPage] = useState(0);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
+
+  const search = platformStates[activePlatform];
+
+  const updatePlatform = (
+    id: SearchPlatformId,
+    patch: Partial<PlatformSearchState>
+  ) => {
+    setPlatformStates((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], ...patch },
+    }));
+  };
 
   const RESULTS_PAGE_SIZE = 10;
 
-  const visibleResults = showAllResults
-    ? searchResults
-    : searchResults.filter((result) => result.isMusic);
-
   const totalPages = Math.max(
     1,
-    Math.ceil(visibleResults.length / RESULTS_PAGE_SIZE)
+    Math.ceil(search.results.length / RESULTS_PAGE_SIZE)
   );
-  const pagedResults = visibleResults.slice(
+  const pagedResults = search.results.slice(
     currentPage * RESULTS_PAGE_SIZE,
     (currentPage + 1) * RESULTS_PAGE_SIZE
   );
 
-  const handleSearch = async () => {
-    setSearchError(null);
+  const handleSelectPlatform = (id: SearchPlatformId) => {
+    if (id === activePlatform) return;
 
-    if (!searchQuery.trim()) {
-      return;
+    if (id === "youtube" && !platformStates.youtube.query.trim()) {
+      updatePlatform("youtube", { query: platformStates.ytmusic.query });
     }
-    if (!YOUTUBE_API_KEY) {
-      setSearchError("YouTube search is not configured.");
-      return;
-    }
-
-    setSearching(true);
-    const { results, nextPageToken: token } = await searchYouTubeVideos(
-      searchQuery,
-      YOUTUBE_API_KEY
-    );
-    setSearchResults(results);
-    setNextPageToken(token);
+    setActivePlatform(id);
     setCurrentPage(0);
-    setSearching(false);
+  };
+
+  const handleSearch = async () => {
+    const id = activePlatform;
+    const query = platformStates[id].query;
+    if (!query.trim()) {
+      return;
+    }
+
+    updatePlatform(id, { searching: true, error: null });
+    try {
+      const { results, nextPageToken } = await searchYoutube(query, id);
+      updatePlatform(id, { results, nextPageToken, searching: false });
+      setCurrentPage(0);
+    } catch (error) {
+      updatePlatform(id, {
+        searching: false,
+        error:
+          error instanceof Error ? error.message : "YouTube search failed.",
+      });
+    }
   };
 
   const handleLoadMore = async () => {
-    if (!YOUTUBE_API_KEY || !nextPageToken) {
+    const id = activePlatform;
+    const { query, nextPageToken } = platformStates[id];
+    if (!nextPageToken) {
       return;
     }
 
-    setLoadingMore(true);
-    const { results, nextPageToken: token } = await searchYouTubeVideos(
-      searchQuery,
-      YOUTUBE_API_KEY,
-      nextPageToken
-    );
-    setSearchResults((prev) => {
-      const byId = new Map(prev.map((result) => [result.videoId, result]));
-      for (const result of results) {
-        byId.set(result.videoId, result);
-      }
-      return Array.from(byId.values());
-    });
-    setNextPageToken(token);
-    setLoadingMore(false);
-  };
-
-  const handleSelectResult = async (result: YouTubeSearchResult) => {
-    setUrl(`https://www.youtube.com/watch?v=${result.videoId}`);
-    setKind(result.isMusic ? "released" : "video_capture");
-    setName(result.title);
-    setArtist(result.channelTitle.replace(/ - Topic$/, ""));
-    setSearchResults([]);
-    setSearchQuery("");
-    setNextPageToken(null);
-
-    if (YOUTUBE_API_KEY) {
-      const videoData = await fetchYouTubeVideoData(
-        result.videoId,
-        YOUTUBE_API_KEY
+    updatePlatform(id, { loadingMore: true });
+    try {
+      const { results, nextPageToken: token } = await searchYoutube(
+        query,
+        id,
+        nextPageToken
       );
-      if (videoData?.duration) {
-        setDuration(videoData.duration);
-      }
-      if (videoData?.description) {
-        const { album, releaseYear } = parseYouTubeMusicMetadata(
-          videoData.description
+      setPlatformStates((prev) => {
+        const byId = new Map(
+          prev[id].results.map((result) => [result.videoId, result])
         );
-        if (album) setAlbum(album);
-        if (releaseYear) setYear(releaseYear);
-      }
+        for (const result of results) {
+          byId.set(result.videoId, result);
+        }
+        return {
+          ...prev,
+          [id]: {
+            ...prev[id],
+            results: Array.from(byId.values()),
+            nextPageToken: token,
+            loadingMore: false,
+          },
+        };
+      });
+    } catch (error) {
+      updatePlatform(id, {
+        loadingMore: false,
+        error:
+          error instanceof Error ? error.message : "YouTube search failed.",
+      });
     }
   };
 
-  const handleAddRecording = async () => {
+  const insertRecording = async (
+    newRecording: Omit<Recording, "id" | "user_id">
+  ) => {
     setErrorMessage(null);
 
     const { data: sessionData, error: sessionError } =
       await supabase.auth.getSession();
     if (sessionError || !sessionData.session?.user) {
       setErrorMessage("User not authenticated.");
-      return;
+      return false;
     }
 
-    const userId = sessionData.session.user.id;
-
-    const newRecording: Omit<Recording, "id"> = {
-      tune_id: tuneId,
-      user_id: userId,
-      name,
-      notes: notes || null,
-      url: url || null,
-      kind,
-      artist: artist || null,
-      year: year || null,
-      album: album || null,
-      duration: duration || null,
-      key: key || null,
-      tempo: tempo ? parseInt(tempo, 10) : null,
-      tags: tags
-        ? tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-        : null,
-    };
-
-    setSaving(true);
-    const { error } = await supabase.from("recordings").insert(newRecording);
-    setSaving(false);
+    const { error } = await supabase.from("recordings").insert({
+      ...newRecording,
+      user_id: sessionData.session.user.id,
+    });
 
     if (error) {
       setErrorMessage("Failed to add recording: " + error.message);
-    } else {
-      onAdded();
+      return false;
     }
+
+    return true;
+  };
+
+  const handleQuickAdd = async (result: YouTubeSearchResult) => {
+    setAddingVideoId(result.videoId);
+
+    const kind: Recording["kind"] = result.isMusic
+      ? "released"
+      : "video_capture";
+    const url = `https://www.youtube.com/watch?v=${result.videoId}`;
+
+    let album = result.album ?? null;
+    let duration = result.duration ?? null;
+    let year: string | null = null;
+    let notes: string | null = null;
+
+    if (activePlatform === "youtube" && YOUTUBE_API_KEY) {
+      const videoData = await fetchYouTubeVideoData(
+        result.videoId,
+        YOUTUBE_API_KEY
+      );
+      if (videoData?.duration) duration = videoData.duration;
+      if (videoData?.description) {
+        notes = videoData.description;
+        const parsed = parseYouTubeMusicMetadata(videoData.description);
+        if (parsed.album) album = parsed.album;
+        if (parsed.releaseYear) year = parsed.releaseYear;
+      }
+    }
+
+    const ok = await insertRecording({
+      tune_id: tuneId,
+      name: result.title,
+      notes,
+      url,
+      kind,
+      artist: result.channelTitle.replace(/ - Topic$/, ""),
+      year,
+      album,
+      duration,
+      key: null,
+      tempo: null,
+      tags: null,
+    });
+
+    setAddingVideoId(null);
+    if (ok) onAdded();
   };
 
   return (
@@ -192,99 +236,74 @@ export default function AddRecordingModal({
       {errorMessage && <p className="text-red-600 mb-2">{errorMessage}</p>}
 
       <div className="w-full">
-        <label>
-          Search YouTube
-          <input
-            className="block w-full p-2 rounded-md border border-line-200 mb-2"
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleSearch();
-              }
-            }}
-          />
-        </label>
-        <button
-          onClick={handleSearch}
-          disabled={searching}
-          className="mb-4 bg-slate-700 text-white px-3 py-2 rounded-lg"
-        >
-          {searching ? "Searching..." : "Search"}
-        </button>
+        <div className="flex gap-1 mb-2" role="tablist" aria-label="Search platform">
+          {SEARCH_PLATFORMS.map((platform) => (
+            <button
+              key={platform.id}
+              type="button"
+              role="tab"
+              aria-selected={activePlatform === platform.id}
+              onClick={() => handleSelectPlatform(platform.id)}
+              className={`px-3 py-1 rounded-full text-sm border ${
+                activePlatform === platform.id
+                  ? "bg-slate-700 text-white border-slate-700"
+                  : "bg-transparent text-ink-600 border-line-200"
+              }`}
+            >
+              {platform.label}
+            </button>
+          ))}
+        </div>
+        <FormField
+          label={`Search ${SEARCH_PLATFORMS.find((p) => p.id === activePlatform)?.label ?? ""}`}
+          value={search.query}
+          onChange={(e) =>
+            updatePlatform(activePlatform, { query: e.target.value })
+          }
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleSearch();
+            }
+          }}
+          inputClassName="block w-full p-2 rounded-md border border-line-200 mb-2"
+        />
+        <div className="flex items-center gap-2 mb-4">
+          <PrimaryButton onClick={handleSearch} disabled={search.searching} className="px-3 py-2">
+            {search.searching ? "Searching..." : "Search"}
+          </PrimaryButton>
+        </div>
+        {search.error && (
+          <p className="text-sm text-amber-700 mb-4">
+            {activePlatform === "ytmusic"
+              ? "YouTube Music search isn't working right now. Try the YouTube tab above instead."
+              : search.error}
+          </p>
+        )}
       </div>
 
-      {searchError && <p className="text-red-600">{searchError}</p>}
-
-      {searchResults.length > 0 && (
+      {search.results.length > 0 && (
         <>
-          <label className="block mb-2">
-            <input
-              type="checkbox"
-              checked={showAllResults}
-              onChange={(e) => {
-                setShowAllResults(e.target.checked);
-                setCurrentPage(0);
-              }}
-            />{" "}
-            Show all results (not just Music)
-          </label>
-
-          {visibleResults.length === 0 && (
-            <p className="mb-4">
-              No Music results. Check the box above to see all results.
-            </p>
-          )}
-
           <ul className="mb-4">
-            {pagedResults.map((result) => (
-              <li key={result.videoId} className="mb-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      play({
-                        name: result.title,
-                        artist: result.channelTitle.replace(/ - Topic$/, ""),
-                        url: `https://www.youtube.com/watch?v=${result.videoId}`,
-                        kind: result.isMusic ? "released" : "video_capture",
-                      })
-                    }
-                    className="shrink-0"
-                    title="Preview"
-                  >
-                    {result.thumbnail && (
-                      <img
-                        src={result.thumbnail}
-                        alt=""
-                        width={60}
-                        height={45}
-                      />
-                    )}
-                  </button>
-                  {result.isMusic ? (
-                    <MusicalNoteIcon className="h-4 w-4 text-ink-400 shrink-0" />
-                  ) : (
-                    <VideoCameraIcon className="h-4 w-4 text-ink-400 shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate">{result.title}</p>
-                    <p className="truncate text-xs text-ink-600">
-                      {result.channelTitle.replace(/ - Topic$/, "")}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectResult(result)}
-                    title="Use this result"
-                  >
-                    <PlusCircleIcon className="h-6 w-6 text-green-600" />
-                  </button>
-                </div>
-              </li>
-            ))}
+            {pagedResults.map((result) => {
+              const rowProps = {
+                result,
+                adding: addingVideoId === result.videoId,
+                onPlay: () =>
+                  play({
+                    name: result.title,
+                    artist: result.channelTitle.replace(/ - Topic$/, ""),
+                    url: `https://www.youtube.com/watch?v=${result.videoId}`,
+                    kind: result.isMusic ? "released" : "video_capture",
+                  }),
+                onAdd: () => handleQuickAdd(result),
+              };
+              return activePlatform === "ytmusic" ? (
+                <YtMusicSearchResultRow key={result.videoId} {...rowProps} />
+              ) : (
+                <YoutubeSearchResultRow key={result.videoId} {...rowProps} />
+              );
+            })}
           </ul>
 
           {totalPages > 1 && (
@@ -311,128 +330,17 @@ export default function AddRecordingModal({
             </div>
           )}
 
-          {nextPageToken && (
-            <button
-              type="button"
+          {search.nextPageToken && (
+            <PrimaryButton
               onClick={handleLoadMore}
-              disabled={loadingMore}
-              className="mb-4 bg-slate-700 text-white px-3 py-2 rounded-lg"
+              disabled={search.loadingMore}
+              className="mb-4 px-3 py-2"
             >
-              {loadingMore ? "Loading..." : "Load next 50 results"}
-            </button>
+              {search.loadingMore ? "Loading..." : "Load next 50 results"}
+            </PrimaryButton>
           )}
         </>
       )}
-
-      {kind && (
-        <p className="mb-4">
-          Selected match: {kind === "released" ? "Music" : "Video"}
-        </p>
-      )}
-
-      <label className="block mb-3">
-        <span className="block text-sm mb-1">Name</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </label>
-      <label className="block mb-3">
-        <span className="block text-sm mb-1">Artist</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="text"
-          value={artist}
-          onChange={(e) => setArtist(e.target.value)}
-        />
-      </label>
-      <label className="block mb-3">
-        <span className="block text-sm mb-1">Album</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="text"
-          value={album}
-          onChange={(e) => setAlbum(e.target.value)}
-        />
-      </label>
-      <label className="block mb-3">
-        <span className="block text-sm mb-1">Year</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="text"
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-        />
-      </label>
-      <label className="block mb-3">
-        <span className="block text-sm mb-1">Duration</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="text"
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-        />
-      </label>
-      <label className="block mb-3">
-        <span className="block text-sm mb-1">Key</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="text"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-        />
-      </label>
-      <label className="block mb-3">
-        <span className="block text-sm mb-1">Tempo (BPM)</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="number"
-          value={tempo}
-          onChange={(e) => setTempo(e.target.value)}
-        />
-      </label>
-      <label className="block mb-3">
-        <span className="block text-sm mb-1">Tags (comma separated)</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="text"
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-        />
-      </label>
-      <label className="block mb-3">
-        <span className="block text-sm mb-1">Notes</span>
-        <textarea
-          className="block w-full p-2 rounded-md border border-line-200"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-      </label>
-      <label className="block mb-4">
-        <span className="block text-sm mb-1">
-          URL (or paste a link directly)
-        </span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="url"
-          value={url}
-          onChange={(e) => {
-            setUrl(e.target.value);
-            setKind(null);
-          }}
-        />
-      </label>
-
-      <button
-        onClick={handleAddRecording}
-        disabled={saving}
-        className="block w-full bg-slate-700 text-white p-3 rounded-lg disabled:opacity-70"
-      >
-        {saving ? "Adding..." : "Add Recording"}
-      </button>
     </Modal>
   );
 }
