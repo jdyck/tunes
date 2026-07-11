@@ -7,11 +7,26 @@ export interface User extends SupabaseUser {}
 export interface Tune {
   id?: string;
   name: string;
-  composer?: string;
-  lyricist?: string | null;
   year?: string | null;
   notes: string;
   user_id: string;
+  song_writers?: SongWriter[];
+}
+
+export type SongWriterRole = "composer" | "lyricist" | "writer";
+
+export interface Person {
+  id: string;
+  name: string;
+}
+
+export interface SongWriter {
+  id?: string;
+  tune_id: string;
+  person_id: string;
+  role: SongWriterRole;
+  sort_order?: number | null;
+  people?: Person; // present when fetched via embedded select
 }
 
 export interface Recording {

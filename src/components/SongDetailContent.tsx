@@ -15,6 +15,12 @@ import { extractYouTubeID, fetchYouTubeVideoData } from "@/utils/youtube";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { usePlayer } from "@/components/GlobalPlayer";
 import AddRecordingModal from "@/components/AddRecordingModal";
+import SongWritersEditor from "@/components/SongWritersEditor";
+import {
+  WriterInput,
+  fetchSongWriters,
+  saveSongWriters,
+} from "@/utils/songWriters";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -28,8 +34,7 @@ export default function SongDetailContent({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [title, setTitle] = useState("");
-  const [composer, setComposer] = useState("");
-  const [lyricist, setLyricist] = useState("");
+  const [writers, setWriters] = useState<WriterInput[]>([]);
   const [year, setYear] = useState("");
   const [isSaved, setIsSaved] = useState(true);
   const [youtubeData, setYoutubeData] = useState<{ [key: string]: any }>({});
@@ -49,9 +54,8 @@ export default function SongDetailContent({ id }: { id: string }) {
       setTune(tuneData as Tune);
       setNotes(tuneData?.notes || "");
       setTitle(tuneData?.name || "");
-      setComposer(tuneData?.composer || "");
-      setLyricist(tuneData?.lyricist || "");
       setYear(tuneData?.year || "");
+      setWriters(await fetchSongWriters(id));
 
       const { data: recordingsData, error: recordingsError } = await supabase
         .from("recordings")
@@ -98,8 +102,6 @@ export default function SongDetailContent({ id }: { id: string }) {
     const updatedFields: Partial<Tune> = {
       notes,
       name: title,
-      composer,
-      lyricist: lyricist || null,
       year: year || null,
     };
 
@@ -111,9 +113,20 @@ export default function SongDetailContent({ id }: { id: string }) {
     if (error) {
       console.error("Error saving data:", error.message);
       setError(`Error saving data: ${error.message}`);
-    } else {
+      return;
+    }
+
+    try {
+      await saveSongWriters(id, writers);
       setError(null);
       setIsSaved(true);
+    } catch (writersError) {
+      const message =
+        writersError instanceof Error
+          ? writersError.message
+          : String(writersError);
+      console.error("Error saving writers:", message);
+      setError(`Error saving writers: ${message}`);
     }
   };
 
@@ -174,36 +187,24 @@ export default function SongDetailContent({ id }: { id: string }) {
           </button>
         </div>
 
-        <div className="flex justify-between gap-4 mb-1">
-          <label className="flex-1">
-            <span className="block text-xs text-ink-600">Composer</span>
-            <input
-              value={composer}
-              onChange={handleFieldChange(setComposer)}
-              className="block w-full bg-transparent"
-              placeholder="Enter composer name"
-            />
-          </label>
-          <label className="flex-1">
-            <span className="block text-xs text-ink-600">Lyricist</span>
-            <input
-              value={lyricist}
-              onChange={handleFieldChange(setLyricist)}
-              className="block w-full bg-transparent"
-              placeholder="Enter lyricist name"
-            />
-          </label>
-          <label className="text-right">
-            <span className="block text-xs text-ink-600">Year</span>
-            <input
-              type="text"
-              value={year}
-              onChange={handleFieldChange(setYear)}
-              className="block w-full bg-transparent text-right"
-              placeholder="Year"
-            />
-          </label>
-        </div>
+        <SongWritersEditor
+          value={writers}
+          onChange={(next) => {
+            setWriters(next);
+            setIsSaved(false);
+          }}
+        />
+
+        <label className="block mb-1">
+          <span className="block text-xs text-ink-600">Year</span>
+          <input
+            type="text"
+            value={year}
+            onChange={handleFieldChange(setYear)}
+            className="block w-full bg-transparent"
+            placeholder="Year"
+          />
+        </label>
 
         <textarea
           value={notes}

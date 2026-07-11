@@ -10,6 +10,7 @@ import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { PlusCircleIcon, MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import AddSongModal from "@/components/AddSongModal";
 import {PlusIcon} from "@heroicons/react/24/solid";
+import { formatWriterCredit } from "@/utils/songWriters";
 
 export default function SongsListPane() {
   const router = useRouter();
@@ -45,7 +46,7 @@ export default function SongsListPane() {
   const fetchTunes = async (userId: string) => {
     const { data, error } = await supabase
       .from("tunes")
-      .select("*")
+      .select("*, song_writers(role, sort_order, people(name))")
       .eq("user_id", userId);
 
     if (error) {
@@ -147,6 +148,7 @@ export default function SongsListPane() {
 }
 
 function SongRow({ tune }: { tune: Tune }) {
+  const credit = formatWriterCredit(tune.song_writers ?? []);
   return (
     <div className={robotoCondensed.className}>
       <div className="flex justify-between items-start gap-2 tracking-wider">
@@ -155,8 +157,8 @@ function SongRow({ tune }: { tune: Tune }) {
           <span className="text-sm text-ink-900">{tune.year}</span>
         )}
       </div>
-      {tune.composer && (
-        <div className="text-sm tracking-wide text-ink-600">{tune.composer}</div>
+      {credit && (
+        <div className="text-sm tracking-wide text-ink-600">{credit}</div>
       )}
     </div>
   );
