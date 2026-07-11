@@ -25,18 +25,14 @@ export default function SongWorkResultsList({
                 )}
               </p>
               <p className="truncate text-xs text-ink-600">
-                {result.composers.length > 0 || result.lyricists.length > 0
-                  ? [
-                      result.composers.length > 0 &&
-                        `Composer: ${result.composers.join(", ")}`,
-                      result.lyricists.length > 0 &&
-                        `Lyricist: ${result.lyricists.join(", ")}`,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")
-                  : result.writers.length > 0
-                    ? `Written by: ${result.writers.join(", ")}`
-                    : "No writer credits found"}
+                {(() => {
+                  const credited = Array.from(
+                    new Set([...result.composers, ...result.lyricists, ...result.writers])
+                  );
+                  return credited.length > 0
+                    ? credited.join(", ")
+                    : "No writer credits found";
+                })()}
               </p>
             </div>
             <button type="button" onClick={() => onSelect(result)} title="Use this match">

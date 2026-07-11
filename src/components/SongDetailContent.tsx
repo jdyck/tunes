@@ -15,6 +15,7 @@ import {
 import { extractYouTubeID, fetchYouTubeVideoData } from "@/utils/youtube";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { usePlayer } from "@/components/GlobalPlayer";
+import { useSongsList } from "@/components/SongsListContext";
 import AddRecordingModal from "@/components/AddRecordingModal";
 import SongWritersEditor from "@/components/SongWritersEditor";
 import SongWorkResultsList from "@/components/SongWorkResultsList";
@@ -34,6 +35,7 @@ const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 export default function SongDetailContent({ id }: { id: string }) {
   const router = useRouter();
   const { play } = usePlayer();
+  const { patchTune, removeTune } = useSongsList();
 
   const [tune, setTune] = useState<Tune | null>(null);
   const [recordings, setRecordings] = useState<Recording[]>([]);
@@ -147,6 +149,7 @@ export default function SongDetailContent({ id }: { id: string }) {
       await saveSongWriters(id, writers);
       setError(null);
       setIsSaved(true);
+      patchTune(id, { ...updatedFields, writers });
     } catch (writersError) {
       const message =
         writersError instanceof Error
@@ -257,6 +260,7 @@ export default function SongDetailContent({ id }: { id: string }) {
       console.error("Error deleting tune:", error.message);
       setError(`Error deleting tune: ${error.message}`);
     } else {
+      removeTune(id);
       router.push("/");
     }
   };

@@ -1,22 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
-import { Tune } from "@/types/types";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { PlusCircleIcon, MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import AddSongModal from "@/components/AddSongModal";
 import {PlusIcon} from "@heroicons/react/24/solid";
 import { formatWriterCredit } from "@/utils/songWriters";
+import { useSongsList } from "@/components/SongsListContext";
+import { Tune } from "@/types/types";
 
 export default function SongsListPane() {
   const router = useRouter();
+  const pathname = usePathname();
+  const { tunes, loading, fetchTunes } = useSongsList();
 
-  const [tunes, setTunes] = useState<Tune[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loadingUser, setLoadingUser] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [search, setSearch] = useState("");
@@ -42,20 +43,6 @@ export default function SongsListPane() {
       router.replace("/login");
     }
   }, [loadingUser, user, router]);
-
-  const fetchTunes = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("tunes")
-      .select("*, song_writers(role, sort_order, people(name))")
-      .eq("user_id", userId);
-
-    if (error) {
-      console.error("Error fetching tunes:", error.message);
-    } else {
-      setTunes((data as Tune[]).sort((a, b) => a.name.localeCompare(b.name)));
-    }
-    setLoading(false);
-  };
 
   useEffect(() => {
     if (user) fetchTunes(user.id);
@@ -115,16 +102,24 @@ export default function SongsListPane() {
           <p>Loading songs...</p>
         ) : visibleTunes.length > 0 ? (
           <ul>
-            {visibleTunes.map((tune) => (
-              <li key={tune.id} className="">
-                <Link
-                  href={`/song/${tune.id}`}
-                  className="block border-b border-border-default h-20 p-4 hover:bg-cream-200 hover:border-b-0 hover:rounded-lg active:bg-cream-300"
-                >
-                  <SongRow tune={tune} />
-                </Link>
-              </li>
-            ))}
+            {visibleTunes.map((tune) => {
+              const isActive = pathname.startsWith(`/song/${tune.id}`);
+              return (
+                <li key={tune.id} className="">
+                  <Link
+                    href={`/song/${tune.id}`}
+                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-cream-200 hover:border-b-0 hover:rounded-lg active:bg-cream-300 ${
+                      isActive ? "bg-cream-200" : ""
+                    }`}
+                  >
+                    <SongRow tune={tune} />
+                    {isActive && (
+                      <div className="w-2 h-full absolute bg-red-500 shrink-0" />
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         ) : tunes.length > 0 ? (
           <p>No songs match “{search}”.</p>
@@ -150,15 +145,15 @@ export default function SongsListPane() {
 function SongRow({ tune }: { tune: Tune }) {
   const credit = formatWriterCredit(tune.song_writers ?? []);
   return (
-    <div className={robotoCondensed.className}>
+    <div className={`pl-6 flex-1 min-w-0 ${robotoCondensed.className}`}>
       <div className="flex justify-between items-start gap-2 tracking-wider">
-        <span className={`${leagueGothic.className} uppercase text-xl`}>{tune.name}</span>
+        <span className={`${leagueGothic.className} uppercase text-xl truncate min-w-0`}>{tune.name}</span>
         {tune.year && (
-          <span className="text-sm text-ink-900">{tune.year}</span>
+          <span className="text-sm text-ink-900 shrink-0">{tune.year}</span>
         )}
       </div>
       {credit && (
-        <div className="text-sm tracking-wide text-ink-600">{credit}</div>
+        <div className="text-sm tracking-wide text-ink-600 truncate">{credit}</div>
       )}
     </div>
   );
