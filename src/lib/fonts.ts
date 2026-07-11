@@ -1,37 +1,24 @@
-// Import fonts from next/font/google
-import { Anton, Antonio, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
+import { League_Gothic, Roboto_Condensed, Roboto_Mono } from "next/font/google";
 
-// Jazz Library design tokens: display face
-const antonio = Antonio({
+const leagueGothic = League_Gothic({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
-  variable: "--font-antonio",
+  variable: "--font-league-gothic"
 });
 
-// Jazz Library design tokens: song headline face (single black weight)
-const anton = Anton({
+const robotoCondensed = Roboto_Condensed({
   subsets: ["latin"],
-  weight: ["400"],
-  display: "swap",
-  variable: "--font-anton",
-});
-
-// Jazz Library design tokens: body face
-const instrumentSans = Instrument_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   style: ["normal", "italic"],
   display: "swap",
-  variable: "--font-instrument-sans",
+  variable: "--font-roboto-condensed",
 });
 
-// Jazz Library design tokens: mono face
-const ibmPlexMono = IBM_Plex_Mono({
+const robotoMono = Roboto_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   display: "swap",
-  variable: "--font-ibm-plex-mono",
+  variable: "--font-roboto-mono",
 });
 
-export { anton, antonio, instrumentSans, ibmPlexMono };
+export { leagueGothic, robotoCondensed, robotoMono };

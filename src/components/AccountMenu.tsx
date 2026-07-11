@@ -57,7 +57,7 @@ export default function AccountMenu() {
         aria-label="Account menu"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="text-green-800 block"
+        className="text-cream-100 block"
       >
         <UserCircleIcon className="w-7 h-7" />
       </button>

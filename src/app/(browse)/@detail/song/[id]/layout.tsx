@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import SongDetailContent from "@/components/SongDetailContent";
 import RecordingPaneWrapper from "@/components/RecordingPaneWrapper";
 
-export default function TuneDetailLayout({
+export default function SongDetailLayout({
   children,
   recording,
 }: {
@@ -12,14 +12,14 @@ export default function TuneDetailLayout({
   recording?: React.ReactNode;
 }) {
   const { id } = useParams();
-  const tuneId = Array.isArray(id) ? id[0] : id;
+  const songId = Array.isArray(id) ? id[0] : id;
 
-  if (!tuneId) return null;
+  if (!songId) return null;
 
   return (
     <>
-      <div className="fixed inset-x-0 top-16 bottom-0 z-20 overflow-y-auto pb-16 bg-cream-200 lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-line-100">
-        <SongDetailContent id={tuneId} />
+      <div className="fixed inset-x-0 top-16 bottom-0 z-20 overflow-y-auto pb-16 lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-line-100">
+        <SongDetailContent id={songId} />
         {children}
       </div>
       <RecordingPaneWrapper>{recording}</RecordingPaneWrapper>

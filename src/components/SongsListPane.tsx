@@ -6,9 +6,11 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Tune } from "@/types/types";
-import {anton, antonio, instrumentSans} from "@/lib/fonts";
+import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { PlusCircleIcon, MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import AddSongModal from "@/components/AddSongModal";
+import {PlusIcon} from "@heroicons/react/24/solid";
+import { formatWriterCredit } from "@/utils/songWriters";
 
 export default function SongsListPane() {
   const router = useRouter();
@@ -44,7 +46,7 @@ export default function SongsListPane() {
   const fetchTunes = async (userId: string) => {
     const { data, error } = await supabase
       .from("tunes")
-      .select("*")
+      .select("*, song_writers(role, sort_order, people(name))")
       .eq("user_id", userId);
 
     if (error) {
@@ -59,8 +61,8 @@ export default function SongsListPane() {
     if (user) fetchTunes(user.id);
   }, [user]);
 
-  const goToTune = (id: string) => {
-    router.push(`/tune/${id}`);
+  const goToSong = (id: string) => {
+    router.push(`/song/${id}`);
   };
 
   const visibleTunes = search.trim()
@@ -75,14 +77,21 @@ export default function SongsListPane() {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="flex items-center justify-between p-4">
-        <h1 className={`font-bold text-5xl uppercase ${antonio.className}`}>
+      <div className="flex items-center justify-between p-8">
+        <h1 className={` text-7xl uppercase ${leagueGothic.className}`}>
           Songs
         </h1>
         <button
           onClick={() => setShowAddSong(true)}
           aria-label="Add song"
-          className="text-green-700"
+          className={`border-[2] border-[#AF2011]/90 text-[#AF2011]/90 p-2 py-1.75  rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
+        >
+          <PlusIcon className="h-6 w-6 " />
+          <span>Add Song</span>
+        </button>
+        <button
+          onClick={() => setShowAddSong(true)}
+          className="text-[#AF2011] lg:hidden"
         >
           <PlusCircleIcon className="h-7 w-7" />
         </button>
@@ -107,10 +116,10 @@ export default function SongsListPane() {
         ) : visibleTunes.length > 0 ? (
           <ul>
             {visibleTunes.map((tune) => (
-              <li key={tune.id} className="mb-3">
+              <li key={tune.id} className="">
                 <Link
-                  href={`/tune/${tune.id}`}
-                  className="block bg-cream-100 p-3 rounded-lg"
+                  href={`/song/${tune.id}`}
+                  className="block border-b border-border-default h-20 p-4 hover:bg-cream-200 hover:border-b-0 hover:rounded-lg active:bg-cream-300"
                 >
                   <SongRow tune={tune} />
                 </Link>
@@ -130,7 +139,7 @@ export default function SongsListPane() {
           onCreated={(id) => {
             setShowAddSong(false);
             if (user) fetchTunes(user.id);
-            goToTune(id);
+            goToSong(id);
           }}
         />
       )}
@@ -139,16 +148,17 @@ export default function SongsListPane() {
 }
 
 function SongRow({ tune }: { tune: Tune }) {
+  const credit = formatWriterCredit(tune.song_writers ?? []);
   return (
-    <div className={instrumentSans.className}>
-      <div className="flex justify-between items-start gap-2">
-        <span className="font-[400]">{tune.name}</span>
+    <div className={robotoCondensed.className}>
+      <div className="flex justify-between items-start gap-2 tracking-wider">
+        <span className={`${leagueGothic.className} uppercase text-xl`}>{tune.name}</span>
         {tune.year && (
-          <span className="text-sm text-ink-600 shrink-0">{tune.year}</span>
+          <span className="text-sm text-ink-900">{tune.year}</span>
         )}
       </div>
-      {tune.composer && (
-        <div className="text-sm text-ink-600">{tune.composer}</div>
+      {credit && (
+        <div className="text-sm tracking-wide text-ink-600">{credit}</div>
       )}
     </div>
   );
