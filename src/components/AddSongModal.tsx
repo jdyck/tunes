@@ -4,16 +4,25 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Tune } from "@/types/types";
 import { SongWorkSearchResult } from "@/utils/musicbrainz";
+import { WorkBackground } from "@/utils/wikipedia";
 import { WriterInput, saveSongWriters } from "@/utils/songWriters";
-import {
-  searchSongMetadata,
-  fetchWorkDetail,
-  fetchWorkBackground,
-} from "@/utils/songMetadataClient";
-import { XMarkIcon } from "@heroicons/react/20/solid";
+import { searchSongMetadata, fetchWorkPreview } from "@/utils/songMetadataClient";
 import Modal from "@/components/Modal";
 import SongWritersEditor from "@/components/SongWritersEditor";
 import SongWorkResultsList from "@/components/SongWorkResultsList";
+import FormField from "@/components/FormField";
+import MusicBrainzLink from "@/components/MusicBrainzLink";
+import WikipediaBackgroundCard from "@/components/WikipediaBackgroundCard";
+import PrimaryButton from "@/components/PrimaryButton";
+
+const creditedNames = (result: SongWorkSearchResult): string[] =>
+  Array.from(new Set([...result.composers, ...result.lyricists, ...result.writers]));
+
+const writersFromResult = (result: SongWorkSearchResult): WriterInput[] => [
+  ...result.composers.map((name) => ({ name, role: "composer" as const })),
+  ...result.lyricists.map((name) => ({ name, role: "lyricist" as const })),
+  ...result.writers.map((name) => ({ name, role: "writer" as const })),
+];
 
 export default function AddSongModal({
   onClose,
@@ -23,22 +32,29 @@ export default function AddSongModal({
   onCreated: (id: string) => void;
 }) {
   const [name, setName] = useState("");
-  const [writers, setWriters] = useState<WriterInput[]>([]);
-  const [year, setYear] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [searchResults, setSearchResults] = useState<SongWorkSearchResult[]>(
     []
   );
+  const [hasSearched, setHasSearched] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
-  const [wikipediaExtract, setWikipediaExtract] = useState<string | null>(null);
-  const [wikipediaUrl, setWikipediaUrl] = useState<string | null>(null);
-  const [lookingUpBackground, setLookingUpBackground] = useState(false);
-  const [backgroundError, setBackgroundError] = useState<string | null>(null);
+  // The result the user tapped "Add" on, now shown on the read-only
+  // confirm screen while its year/background are fetched.
+  const [previewResult, setPreviewResult] = useState<SongWorkSearchResult | null>(
+    null
+  );
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewYear, setPreviewYear] = useState<string | null>(null);
+  const [previewBackground, setPreviewBackground] =
+    useState<WorkBackground | null>(null);
+
+  const [manualMode, setManualMode] = useState(false);
+  const [manualWriters, setManualWriters] = useState<WriterInput[]>([]);
+  const [manualYear, setManualYear] = useState("");
 
   const handleSearch = async () => {
     setSearchError(null);
@@ -55,50 +71,42 @@ export default function AddSongModal({
       setSearchResults([]);
     }
     setSearching(false);
+    setHasSearched(true);
   };
 
-  const handleSelectResult = async (result: SongWorkSearchResult) => {
-    setName(result.title);
-    setWriters([
-      ...result.composers.map((name) => ({ name, role: "composer" as const })),
-      ...result.lyricists.map((name) => ({ name, role: "lyricist" as const })),
-      ...result.writers.map((name) => ({ name, role: "writer" as const })),
-    ]);
-    setSearchResults([]);
-    setSelectedWorkId(result.workId);
-    setWikipediaExtract(null);
-    setWikipediaUrl(null);
+  const handleStartPreview = async (result: SongWorkSearchResult) => {
+    setPreviewResult(result);
+    setPreviewYear(null);
+    setPreviewBackground(null);
+    setPreviewLoading(true);
 
-    const workDetail = await fetchWorkDetail(result.workId);
-    if (workDetail?.year) setYear(workDetail.year);
-  };
-
-  const handleLookUpBackground = async () => {
-    if (!selectedWorkId) return;
-
-    setBackgroundError(null);
-    setLookingUpBackground(true);
-    const background = await fetchWorkBackground(selectedWorkId);
-    setLookingUpBackground(false);
-
-    if (!background) {
-      setWikipediaExtract(null);
-      setWikipediaUrl(null);
-      setBackgroundError("No Wikipedia background found for this song.");
-      return;
+    try {
+      const { work, background } = await fetchWorkPreview(result.workId);
+      setPreviewYear(work?.year ?? null);
+      setPreviewBackground(background);
+    } catch {
+      // Best-effort: confirm screen still works with just the search
+      // result's title/writers if year/background couldn't be fetched.
     }
-
-    setWikipediaExtract(background.extract);
-    setWikipediaUrl(background.url);
+    setPreviewLoading(false);
   };
 
-  const handleAdd = async () => {
+  const handleCancelPreview = () => {
+    setPreviewResult(null);
+    setPreviewYear(null);
+    setPreviewBackground(null);
+    setPreviewLoading(false);
+  };
+
+  const createSong = async (song: {
+    name: string;
+    year: string | null;
+    writers: WriterInput[];
+    wikipediaExtract: string | null;
+    wikipediaUrl: string | null;
+    workId: string | null;
+  }) => {
     setErrorMessage("");
-
-    if (!name.trim()) {
-      setErrorMessage("Name is required.");
-      return;
-    }
 
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData.session?.user;
@@ -109,12 +117,12 @@ export default function AddSongModal({
 
     setSaving(true);
     const tune: Partial<Tune> = {
-      name,
-      year: year || null,
+      name: song.name,
+      year: song.year,
       user_id: user.id,
-      wikipedia_extract: wikipediaExtract,
-      wikipedia_url: wikipediaUrl,
-      musicbrainz_work_id: selectedWorkId,
+      wikipedia_extract: song.wikipediaExtract,
+      wikipedia_url: song.wikipediaUrl,
+      musicbrainz_work_id: song.workId,
     };
 
     const { data, error } = await supabase
@@ -130,7 +138,7 @@ export default function AddSongModal({
     }
 
     try {
-      await saveSongWriters(data.id, writers);
+      await saveSongWriters(data.id, song.writers);
     } catch (writersError) {
       setSaving(false);
       setErrorMessage(
@@ -146,112 +154,173 @@ export default function AddSongModal({
     onCreated(data.id);
   };
 
+  const handleConfirmPreview = () => {
+    if (!previewResult) return;
+    createSong({
+      name: previewResult.title,
+      year: previewYear,
+      writers: writersFromResult(previewResult),
+      wikipediaExtract: previewBackground?.extract ?? null,
+      wikipediaUrl: previewBackground?.url ?? null,
+      workId: previewResult.workId,
+    });
+  };
+
+  const handleManualAdd = () => {
+    if (!name.trim()) {
+      setErrorMessage("Name is required.");
+      return;
+    }
+    createSong({
+      name,
+      year: manualYear || null,
+      writers: manualWriters,
+      wikipediaExtract: null,
+      wikipediaUrl: null,
+      workId: null,
+    });
+  };
+
+  if (previewResult) {
+    const credited = creditedNames(previewResult);
+
+    return (
+      <Modal title="Add a Song" onClose={onClose}>
+        {errorMessage && <p className="text-red-600 mb-2">{errorMessage}</p>}
+
+        <h3 className="font-semibold">{previewResult.title}</h3>
+        {previewResult.disambiguation && (
+          <p className="text-xs text-ink-600 mb-2">
+            {previewResult.disambiguation}
+          </p>
+        )}
+        <p className="text-sm text-ink-600 mb-3">
+          {credited.length > 0 ? credited.join(", ") : "No writer credits found"}
+        </p>
+
+        {previewLoading ? (
+          <p className="text-sm text-ink-600 mb-4">
+            Looking up year and background...
+          </p>
+        ) : (
+          <>
+            <p className="text-sm mb-3">
+              <span className="text-ink-600">Year: </span>
+              {previewYear || "Unknown"}
+            </p>
+
+            {previewBackground ? (
+              <WikipediaBackgroundCard
+                extract={previewBackground.extract}
+                url={previewBackground.url}
+                className="p-3 rounded-md border border-line-200 mb-4"
+              />
+            ) : (
+              <p className="text-sm text-ink-600 mb-4">
+                No Wikipedia background found.
+              </p>
+            )}
+          </>
+        )}
+
+        <MusicBrainzLink
+          type="work"
+          id={previewResult.workId}
+          className="block text-xs text-teal-700 underline mb-4"
+        />
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleCancelPreview}
+            disabled={saving}
+            className="flex-1 border border-line-200 p-3 rounded-lg disabled:opacity-70"
+          >
+            Cancel
+          </button>
+          <PrimaryButton
+            onClick={handleConfirmPreview}
+            disabled={saving || previewLoading}
+            className="flex-1 p-3 disabled:opacity-70"
+          >
+            {saving ? "Adding..." : "Confirm"}
+          </PrimaryButton>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal title="Add a Song" onClose={onClose}>
       {errorMessage && <p className="text-red-600 mb-2">{errorMessage}</p>}
-      <label className="block mb-2">
-        <span className="block text-sm mb-1">Name</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleSearch();
-            }
-          }}
-          autoFocus
-        />
-      </label>
-      <button
-        type="button"
+      <FormField
+        label="Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleSearch();
+          }
+        }}
+        autoFocus
+        className="block mb-2"
+        labelClassName="block text-sm mb-1"
+        inputClassName="block w-full p-2 rounded-md border border-line-200"
+      />
+      <PrimaryButton
         onClick={handleSearch}
         disabled={searching || !name.trim()}
-        className="mb-3 bg-slate-700 text-white px-3 py-2 rounded-lg disabled:opacity-70"
+        className="mb-3 px-3 py-2 disabled:opacity-70"
       >
-        {searching ? "Looking up..." : "Look up composer/lyricist"}
-      </button>
+        {searching ? "Looking up..." : "Search"}
+      </PrimaryButton>
 
       {searchError && <p className="text-red-600 mb-3">{searchError}</p>}
 
-      <SongWorkResultsList results={searchResults} onSelect={handleSelectResult} />
-
-      <SongWritersEditor value={writers} onChange={setWriters} />
-
-      <label className="block mb-4">
-        <span className="block text-sm mb-1">Year</span>
-        <input
-          className="block w-full p-2 rounded-md border border-line-200"
-          type="text"
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-        />
-      </label>
-
-      {selectedWorkId && (
-        <div className="mb-4">
-          <a
-            href={`https://musicbrainz.org/work/${selectedWorkId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="block text-xs text-teal-700 underline mb-1"
-          >
-            View on MusicBrainz
-          </a>
-          {wikipediaExtract ? (
-            <div className="p-3 rounded-md border border-line-200">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm">{wikipediaExtract}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWikipediaExtract(null);
-                    setWikipediaUrl(null);
-                  }}
-                  aria-label="Remove background"
-                  className="shrink-0"
-                >
-                  <XMarkIcon className="h-5 w-5 text-ink-600" />
-                </button>
-              </div>
-              {wikipediaUrl && (
-                <a
-                  href={wikipediaUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-teal-700 underline"
-                >
-                  via Wikipedia, CC BY-SA
-                </a>
-              )}
-            </div>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={handleLookUpBackground}
-                disabled={lookingUpBackground}
-                className="text-sm text-teal-700 underline disabled:opacity-70"
-              >
-                {lookingUpBackground ? "Looking up..." : "Look up background"}
-              </button>
-              {backgroundError && (
-                <p className="text-sm text-ink-600 mt-1">{backgroundError}</p>
-              )}
-            </>
+      {hasSearched && !searching && (
+        <>
+          {searchResults.length === 0 && !searchError && (
+            <p className="text-sm text-ink-600 mb-3">No matches found.</p>
           )}
-        </div>
+          <SongWorkResultsList
+            results={searchResults}
+            onSelect={handleStartPreview}
+          />
+          {!manualMode && (
+            <button
+              type="button"
+              onClick={() => setManualMode(true)}
+              className="text-sm text-teal-700 underline mb-4"
+            >
+              Can&apos;t find it? Add manually
+            </button>
+          )}
+        </>
       )}
 
-      <button
-        onClick={handleAdd}
-        disabled={saving}
-        className="block w-full bg-slate-700 text-white p-3 rounded-lg disabled:opacity-70"
-      >
-        {saving ? "Adding..." : "Add Song"}
-      </button>
+      {manualMode && (
+        <>
+          <SongWritersEditor value={manualWriters} onChange={setManualWriters} />
+
+          <FormField
+            label="Year"
+            value={manualYear}
+            onChange={(e) => setManualYear(e.target.value)}
+            className="block mb-4"
+            labelClassName="block text-sm mb-1"
+            inputClassName="block w-full p-2 rounded-md border border-line-200"
+          />
+
+          <PrimaryButton
+            onClick={handleManualAdd}
+            disabled={saving}
+            className="block w-full p-3 disabled:opacity-70"
+          >
+            {saving ? "Adding..." : "Add Song"}
+          </PrimaryButton>
+        </>
+      )}
     </Modal>
   );
 }

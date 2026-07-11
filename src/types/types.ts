@@ -49,4 +49,5 @@ export interface Recording {
   key?: string | null;
   tempo?: number | null;
   tags?: string[] | null;
+  musicbrainz_recording_id?: string | null;
 }

@@ -14,6 +14,7 @@ export default function RecordingDetailPage() {
   return (
     <RecordingDetailContent
       id={recId}
+      songId={songId}
       onClose={() => router.push(`/song/${songId}`)}
     />
   );

@@ -34,3 +34,20 @@ export const fetchWorkBackground = async (
   const data = await response.json();
   return data.background || null;
 };
+
+export interface SongWorkPreview {
+  work: SongWorkDetail | null;
+  background: WorkBackground | null;
+}
+
+// Fetches year/writers and Wikipedia background together in a single
+// request -- used by AddSongModal's confirm screen, which needs both at
+// once. See the /preview route for why this is one call instead of two.
+export const fetchWorkPreview = async (
+  workId: string
+): Promise<SongWorkPreview> => {
+  const response = await fetch(`/api/song-metadata/work/${workId}/preview`);
+  if (!response.ok) return { work: null, background: null };
+  const data = await response.json();
+  return { work: data.work || null, background: data.background || null };
+};

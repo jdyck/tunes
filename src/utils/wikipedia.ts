@@ -70,6 +70,18 @@ const fetchWikipediaSummary = async (
   };
 };
 
+// Follows Wikidata -> Wikipedia to find a plain-language background summary,
+// given a QID already known (e.g. pulled off a work's url-rels by the
+// caller). Returns null at either missing hop.
+export const fetchBackgroundForWikidataId = async (
+  wikidataId: string
+): Promise<WorkBackground | null> => {
+  const enTitle = await fetchEnglishWikipediaTitle(wikidataId);
+  if (!enTitle) return null;
+
+  return fetchWikipediaSummary(enTitle);
+};
+
 // Follows work -> Wikidata -> Wikipedia to find a plain-language background
 // summary. Returns null at any missing hop (most works aren't linked to
 // Wikidata at all) rather than guessing or erroring.
@@ -79,8 +91,5 @@ export const fetchWorkBackground = async (
   const wikidataId = await fetchWikidataIdForWork(workId);
   if (!wikidataId) return null;
 
-  const enTitle = await fetchEnglishWikipediaTitle(wikidataId);
-  if (!enTitle) return null;
-
-  return fetchWikipediaSummary(enTitle);
+  return fetchBackgroundForWikidataId(wikidataId);
 };
