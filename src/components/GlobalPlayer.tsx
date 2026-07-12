@@ -15,8 +15,7 @@ import {
   PauseIcon,
   XMarkIcon,
   ChevronUpIcon,
-  ChevronDownIcon,
-  MusicalNoteIcon,
+  ChevronDownIcon
 } from "@heroicons/react/20/solid";
 
 export interface Playable {
@@ -189,9 +188,9 @@ export default function GlobalPlayer({
     <PlayerContext.Provider value={{ play }}>
       {children}
 
-      <div className="fixed bottom-0 inset-x-0 lg:inset-x-auto lg:left-0 lg:w-64 bg-cream-100 border-t border-line-100 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] z-40">
+      <div className="fixed bottom-0 inset-x-0 lg:inset-x-auto lg:left-0 lg:w-64 bg-cream-100 border-t lg:border-r border-line-100 z-40">
         {recording ? (
-          <div className="max-w-screen-md mx-auto px-4 py-2 flex items-center gap-3">
+          <div className="max-w-3xl mx-auto px-4 py-2 flex items-center gap-3">
             <button
               onClick={togglePlayPause}
               aria-label={isPlaying ? "Pause" : "Play"}
@@ -249,9 +248,14 @@ export default function GlobalPlayer({
             </button>
           </div>
         ) : (
-          <div className="max-w-screen-md mx-auto px-4 py-3 flex items-center gap-3 text-ink-400">
-            <MusicalNoteIcon className="w-5 h-5 shrink-0" />
-            <p className="text-sm">Nothing playing</p>
+          <div className="max-w-3xl mx-auto px-4 py-3 items-center gap-3 text-ink-400">
+            <div className={`flex gap-3`}>
+              <div className={`bg-ink-800 w-10 h-10`}></div>
+              <div className={`text-xs`}>
+                <p className={`font-bold`}>Title</p>
+                <p>Artist</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -259,8 +263,8 @@ export default function GlobalPlayer({
       <div
         className={
           recording && isVideoVisible
-            ? "yt-album-art fixed bottom-[68px] left-2 w-32 sm:w-40 lg:left-0 lg:w-64 aspect-square bg-black rounded-md lg:rounded-none overflow-hidden shadow-lg z-40"
-            : "fixed -left-[9999px] top-0 w-80 aspect-video"
+            ? "yt-album-art fixed bottom-17 left-2 w-32 sm:w-40 lg:left-0 lg:w-64 aspect-square bg-black rounded-md lg:rounded-none overflow-hidden shadow-lg z-40"
+            : "fixed left-[-9999px] top-0 w-80 aspect-video"
         }
       >
         <div className="w-full h-full" ref={hostRef} />

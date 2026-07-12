@@ -33,6 +33,7 @@ import {
   fetchWorkDetail,
   fetchWorkBackground,
 } from "@/utils/songMetadataClient";
+import {ArrowLeftIcon} from "@heroicons/react/16/solid";
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 export default function SongDetailContent({ id }: { id: string }) {
@@ -271,6 +272,9 @@ export default function SongDetailContent({ id }: { id: string }) {
 
   return (
     <div className="w-full p-4 bg-cream-100">
+      <Link href="/">
+        <ArrowLeftIcon className={`h-14 w-14`}/>
+        </Link>
       <form
         className="w-full"
         onSubmit={(e) => {
