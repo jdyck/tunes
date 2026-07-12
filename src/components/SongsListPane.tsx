@@ -97,7 +97,7 @@ export default function SongsListPane() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-4 pb-12">
         {loading ? (
           <p>Loading songs...</p>
         ) : visibleTunes.length > 0 ? (
