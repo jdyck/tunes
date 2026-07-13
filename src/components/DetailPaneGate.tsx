@@ -15,14 +15,19 @@ export default function DetailPaneGate({
 }) {
   const pathname = usePathname();
   const hasSong = /^\/song\//.test(pathname);
+  const hasComponent = /^\/dev\/components\/[^/]+/.test(pathname);
 
-  if (!hasSong) {
-    return (
-      <div className="hidden lg:flex lg:w-full lg:h-full lg:items-center lg:justify-center p-8 text-center text-ink-400">
-        <p>Choose a song, or add a song to get started.</p>
-      </div>
-    );
+  if (hasSong || hasComponent) {
+    return <>{children}</>;
   }
 
-  return <>{children}</>;
+  const message = pathname.startsWith("/dev/components")
+    ? "Pick a component from the menu."
+    : "Choose a song, or add a song to get started.";
+
+  return (
+    <div className="hidden lg:flex lg:w-full lg:h-full lg:items-center lg:justify-center p-8 text-center text-ink-400">
+      <p>{message}</p>
+    </div>
+  );
 }

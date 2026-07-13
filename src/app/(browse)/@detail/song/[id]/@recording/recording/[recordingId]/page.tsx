@@ -1,11 +1,10 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import RecordingDetailContent from "@/components/RecordingDetailContent";
 
 export default function RecordingDetailPage() {
   const { id, recordingId } = useParams();
-  const router = useRouter();
   const songId = Array.isArray(id) ? id[0] : id;
   const recId = Array.isArray(recordingId) ? recordingId[0] : recordingId;
 
@@ -15,7 +14,7 @@ export default function RecordingDetailPage() {
     <RecordingDetailContent
       id={recId}
       songId={songId}
-      onClose={() => router.push(`/song/${songId}`)}
+      backHref={`/song/${songId}`}
     />
   );
 }
