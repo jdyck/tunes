@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Recording } from "@/types/types";
 import { fetchYouTubeVideoData, extractYouTubeID } from "@/utils/youtube";
-import { PlayIcon, XMarkIcon } from "@heroicons/react/20/solid";
+import { PlayIcon } from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/GlobalPlayer";
+import BackLink from "@/components/BackLink";
 import { RecordingMatchResult } from "@/utils/musicbrainz";
 import {
   fetchRecordingDetail,
@@ -26,12 +28,13 @@ const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 export default function RecordingDetailContent({
   id,
   songId,
-  onClose,
+  backHref,
 }: {
   id: string;
   songId: string;
-  onClose: () => void;
+  backHref: string;
 }) {
+  const router = useRouter();
   const { play } = usePlayer();
 
   const [recording, setRecording] = useState<Recording | null>(null);
@@ -277,7 +280,7 @@ export default function RecordingDetailContent({
       console.error("Error deleting recording:", error.message);
       setError(`Error deleting recording: ${error.message}`);
     } else {
-      onClose();
+      router.push(backHref);
     }
   };
 
@@ -291,14 +294,7 @@ export default function RecordingDetailContent({
 
   return (
     <div className="w-full min-h-full p-4 bg-cream-100">
-      <button
-        onClick={onClose}
-        aria-label="Close recording"
-        className="mb-4 text-sm text-ink-600 hover:text-ink-800 flex items-center gap-1"
-      >
-        <XMarkIcon className="w-4 h-4" />
-        Close
-      </button>
+      <BackLink href={backHref} label="Back to song" />
 
       {videoId && recording && (
         <button
