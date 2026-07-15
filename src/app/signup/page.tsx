@@ -90,7 +90,7 @@ export default function SignupPage() {
           )}
         </button>
       </form>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-mojo-600">{error}</p>}
       <Link href="/login" className="text-green-800 underline text-xs">
         Already have an account? Log in
       </Link>

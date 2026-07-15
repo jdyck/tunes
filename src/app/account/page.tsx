@@ -86,7 +86,7 @@ export default function AccountPage() {
       {status && (
         <p
           className={`mt-3 text-sm ${
-            status.type === "error" ? "text-red-600" : "text-green-700"
+            status.type === "error" ? "text-mojo-600" : "text-green-700"
           }`}
         >
           {status.message}

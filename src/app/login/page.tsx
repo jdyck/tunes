@@ -48,17 +48,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 w-[300px]">
+    <div className="flex flex-col gap-4 w-75">
       <form onSubmit={handleLogin} className="flex flex-col gap-4">
         <input
-          className="p-1"
+          className="p-2 border border-border-default rounded"
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <input
-          className="p-1"
+          className="p-2 border border-border-default rounded"
           type="password"
           placeholder="Password"
           value={password}
@@ -67,7 +67,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loggingIn}
-          className="bg-slate-800 text-white uppercase text-xs p-1.5 rounded flex items-center justify-center gap-2 disabled:opacity-70"
+          className="bg-azure-600 text-white uppercase text-lg p-1.5 rounded flex items-center justify-center gap-2 disabled:opacity-70"
         >
           {loggingIn ? (
             <>
@@ -78,12 +78,12 @@ export default function LoginPage() {
           )}
         </button>
       </form>
-      {loginError && <p className="text-sm text-red-600">{loginError}</p>}
-      <div className="flex justify-between text-xs">
-        <Link href="/forgot-password" className="text-green-800 underline">
+      {loginError && <p className="text-sm text-mojo-600">{loginError}</p>}
+      <div className="flex justify-between">
+        <Link href="/forgot-password" className="text-azure-600 underline">
           Forgot your password?
         </Link>
-        <Link href="/signup" className="text-green-800 underline">
+        <Link href="/signup" className="text-azure-600 underline">
           Sign up
         </Link>
       </div>

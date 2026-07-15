@@ -293,7 +293,7 @@ export default function RecordingDetailContent({
     return <AsyncStateMessage>No recording found.</AsyncStateMessage>;
 
   return (
-    <div className="w-full min-h-full p-4 bg-cream-100">
+    <div className="w-full min-h-full p-4 bg-merino-100">
       <BackLink href={backHref} label="Back to song" />
 
       {videoId && recording && (

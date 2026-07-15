@@ -21,7 +21,7 @@ export default function RecordingThumbnail({
   if (!src || failed) {
     return (
       <div
-        className={`flex items-center justify-center bg-cream-200 ${className}`}
+        className={`flex items-center justify-center bg-merino-200 ${className}`}
       >
         <MusicalNoteIcon className="h-5 w-5 text-ink-400" />
       </div>

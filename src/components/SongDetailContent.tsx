@@ -260,7 +260,7 @@ export default function SongDetailContent({ id }: { id: string }) {
       setError(`Error deleting tune: ${error.message}`);
     } else {
       removeTune(id);
-      router.push("/");
+      router.push("/songs");
     }
   };
 
@@ -271,8 +271,8 @@ export default function SongDetailContent({ id }: { id: string }) {
   if (!tune) return <AsyncStateMessage>No tune found.</AsyncStateMessage>;
 
   return (
-    <div className="w-full p-4 bg-cream-100">
-      <BackLink href="/" label="Back to songs" />
+    <div className="w-full p-4 bg-merino-100">
+      <BackLink href="/songs" label="Back to songs" />
       <form
         className="w-full"
         onSubmit={(e) => {
@@ -411,7 +411,7 @@ export default function SongDetailContent({ id }: { id: string }) {
             return (
               <li
                 key={recording.id}
-                className="bg-cream-100 rounded-lg mb-4 overflow-hidden flex items-stretch"
+                className="bg-merino-100 rounded-lg mb-4 overflow-hidden flex items-stretch"
               >
                 <Link
                   href={`/song/${id}/recording/${recording.id}`}

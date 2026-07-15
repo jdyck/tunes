@@ -233,7 +233,7 @@ export default function AddRecordingModal({
 
   return (
     <Modal title="Add a Recording" onClose={onClose}>
-      {errorMessage && <p className="text-red-600 mb-2">{errorMessage}</p>}
+      {errorMessage && <p className="text-mojo-600 mb-2">{errorMessage}</p>}
 
       <div className="w-full">
         <div className="flex gap-1 mb-2" role="tablist" aria-label="Search platform">

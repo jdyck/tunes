@@ -7,6 +7,7 @@ export interface User extends SupabaseUser {}
 export interface Tune {
   id?: string;
   name: string;
+  created_at?: string | null;
   year?: string | null;
   notes: string;
   user_id: string;
