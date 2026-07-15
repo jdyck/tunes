@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { Tune, Recording } from "@/types/types";
-import { PlayIcon, PlusCircleIcon } from "@heroicons/react/20/solid";
+import {
+  ChevronRightIcon,
+  PlayIcon,
+  PlusCircleIcon,
+} from "@heroicons/react/20/solid";
 import { extractYouTubeID, fetchYouTubeVideoData } from "@/utils/youtube";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { usePlayer } from "@/components/GlobalPlayer";
@@ -35,6 +39,18 @@ import {
 } from "@/utils/songMetadataClient";
 import BackLink from "@/components/BackLink";
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+
+const formatWriterInputCredit = (writers: WriterInput[]) => {
+  const names = writers
+    .map((writer) => writer.name.trim())
+    .filter(Boolean);
+  const credited = Array.from(new Set(names));
+
+  return credited.length > 0 ? credited.join(", ") : null;
+};
+
+const normalizeTitleText = (value: string) =>
+  value.replace(/\u00a0/g, " ").replace(/\s*\n\s*/g, " ");
 
 export default function SongDetailContent({ id }: { id: string }) {
   const router = useRouter();
@@ -66,6 +82,8 @@ export default function SongDetailContent({ id }: { id: string }) {
   const [isSaved, setIsSaved] = useState(true);
   const [youtubeData, setYoutubeData] = useState<{ [key: string]: any }>({});
   const [showAddRecording, setShowAddRecording] = useState(false);
+  const [showWritersEditor, setShowWritersEditor] = useState(false);
+  const titleRef = useRef<HTMLDivElement | null>(null);
 
   const fetchTuneAndRecordings = async () => {
     try {
@@ -122,9 +140,17 @@ export default function SongDetailContent({ id }: { id: string }) {
     if (!id) return;
     setLoading(true);
     setError(null);
+    setShowWritersEditor(false);
     fetchTuneAndRecordings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    const titleElement = titleRef.current;
+    if (!titleElement || titleElement.textContent === title) return;
+
+    titleElement.textContent = title;
+  }, [title]);
 
   const handleSave = async () => {
     if (!id || !tune) return;
@@ -266,9 +292,16 @@ export default function SongDetailContent({ id }: { id: string }) {
 
   const handleFieldChange = useFieldChange(setIsSaved);
 
+  const handleTitleInput = (e: React.FormEvent<HTMLDivElement>) => {
+    setTitle(normalizeTitleText(e.currentTarget.textContent ?? ""));
+    setIsSaved(false);
+  };
+
   if (loading) return <AsyncStateMessage>Loading tune...</AsyncStateMessage>;
   if (error) return <AsyncStateMessage variant="error">{error}</AsyncStateMessage>;
   if (!tune) return <AsyncStateMessage>No tune found.</AsyncStateMessage>;
+
+  const writerCredit = formatWriterInputCredit(writers);
 
   return (
     <div className="w-full p-4 bg-merino-100">
@@ -280,22 +313,52 @@ export default function SongDetailContent({ id }: { id: string }) {
           handleSave();
         }}
       >
-        <div className="flex justify-between items-center mb-3">
-          <input
-            value={title}
-            onChange={handleFieldChange(setTitle)}
-            className={`text-4xl uppercase bg-transparent pb-2 ${leagueGothic.className}`}
-          />
+        <div className="flex justify-between items-start gap-3 mb-3">
+          <div
+            ref={titleRef}
+            contentEditable
+            suppressContentEditableWarning
+            role="textbox"
+            aria-label="Song title"
+            onInput={handleTitleInput}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault();
+            }}
+            onPaste={(e) => {
+              e.preventDefault();
+              const text = e.clipboardData
+                .getData("text/plain")
+                .replace(/\s*\n\s*/g, " ");
+              document.execCommand("insertText", false, text);
+            }}
+            className={`w-full min-w-0 break-words [text-wrap:balance] text-4xl uppercase leading-[1.15] bg-transparent pb-3 outline-none ${leagueGothic.className}`}
+          >
+            {title}
+          </div>
           <SaveStatusButton isSaved={isSaved} />
         </div>
 
-        <SongWritersEditor
-          value={writers}
-          onChange={(next) => {
-            setWriters(next);
-            setIsSaved(false);
-          }}
-        />
+        {showWritersEditor ? (
+          <SongWritersEditor
+            value={writers}
+            onClose={() => setShowWritersEditor(false)}
+            onChange={(next) => {
+              setWriters(next);
+              setIsSaved(false);
+            }}
+          />
+        ) : (
+          <div className="mb-4">
+            <span className="block text-sm mb-1">Writers</span>
+            <button
+              type="button"
+              onClick={() => setShowWritersEditor(true)}
+              className="block w-full text-left text-ink-700 hover:text-ink-900"
+            >
+              {writerCredit || "Add writers"}
+            </button>
+          </div>
+        )}
 
         <FormField
           label="Year"
@@ -411,7 +474,7 @@ export default function SongDetailContent({ id }: { id: string }) {
             return (
               <li
                 key={recording.id}
-                className="bg-merino-100 rounded-lg mb-4 overflow-hidden flex items-stretch"
+                className="flex items-stretch border-b border-border-default hover:border-b-0 hover:bg-merino-200 active:bg-merino-300 [&:has(+_li:hover)]:border-b-0"
               >
                 <Link
                   href={`/song/${id}/recording/${recording.id}`}
@@ -427,11 +490,18 @@ export default function SongDetailContent({ id }: { id: string }) {
                       play(recording);
                     }}
                     aria-label="Play recording"
-                    className="p-3 text-green-800 shrink-0 self-center"
+                    className="p-3 text-green-800 hover:text-green-900 shrink-0 self-center"
                   >
                     <PlayIcon className="w-6 h-6" />
                   </button>
                 )}
+                <Link
+                  href={`/song/${id}/recording/${recording.id}`}
+                  aria-label="Open recording details"
+                  className="p-3 text-ink-700 hover:text-ink-900 shrink-0 self-center"
+                >
+                  <ChevronRightIcon className="w-6 h-6" />
+                </Link>
               </li>
             );
           })}

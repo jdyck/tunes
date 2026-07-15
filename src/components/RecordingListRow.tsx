@@ -8,9 +8,12 @@ export default function RecordingListRow({
   recording: Recording;
   videoInfo: any;
 }) {
+  const isMusicRecording = recording.kind === "released";
+  const thumbnailClassName = isMusicRecording ? "w-20 h-20" : "w-24 h-16";
+
   return (
     <div className="flex overflow-hidden relative">
-      <div className="w-20 h-16 overflow-hidden shrink-0">
+      <div className={`${thumbnailClassName} overflow-hidden shrink-0`}>
         <RecordingThumbnail
           src={videoInfo?.thumbnails?.high?.url}
           alt="Video thumbnail"
