@@ -6,7 +6,7 @@ export default function AsyncStateMessage({
   children: React.ReactNode;
 }) {
   return (
-    <p className={variant === "error" ? "p-4 text-red-600" : "p-4"}>
+    <p className={variant === "error" ? "p-4 text-mojo-600" : "p-4"}>
       {children}
     </p>
   );

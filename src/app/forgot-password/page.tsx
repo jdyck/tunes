@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
           )}
         </button>
       </form>
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-3 text-sm text-mojo-600">{error}</p>}
       <Link
         href="/login"
         className="text-green-800 underline text-xs mt-4 inline-block"

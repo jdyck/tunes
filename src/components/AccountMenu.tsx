@@ -57,7 +57,7 @@ export default function AccountMenu() {
         aria-label="Account menu"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="text-cream-100 block"
+        className="text-merino-100 block"
       >
         <UserCircleIcon className="w-7 h-7" />
       </button>
@@ -65,7 +65,7 @@ export default function AccountMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-1 w-56 bg-cream-100 rounded-lg shadow-lg py-2 text-sm z-10"
+          className="absolute right-0 mt-1 w-56 bg-merino-100 rounded-lg shadow-lg py-2 text-sm z-10"
         >
           <p className="px-4 py-1 text-xs text-ink-600 truncate">
             {user.email}
@@ -74,14 +74,14 @@ export default function AccountMenu() {
             href="/account"
             role="menuitem"
             onClick={() => setOpen(false)}
-            className="block px-4 py-2 hover:bg-cream-200"
+            className="block px-4 py-2 hover:bg-merino-200"
           >
             Change password
           </Link>
           <button
             role="menuitem"
             onClick={handleLogout}
-            className="block w-full text-left px-4 py-2 hover:bg-cream-200"
+            className="block w-full text-left px-4 py-2 hover:bg-merino-200"
           >
             Log out
           </button>

@@ -11,7 +11,7 @@ export default function DevComponentsDetailLayout({
   }
 
   return (
-    <div className="bg-cream-100 fixed inset-x-0 top-0 bottom-0 z-20 overflow-y-auto pb-16 lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-line-100 p-8">
+    <div className="bg-merino-100 fixed inset-x-0 top-0 bottom-0 z-20 overflow-y-auto pb-16 lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-line-100 p-8">
       <BackLink href="/dev/components" label="Back to components" />
       {children}
     </div>

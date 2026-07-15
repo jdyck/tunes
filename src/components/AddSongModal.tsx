@@ -186,7 +186,7 @@ export default function AddSongModal({
 
     return (
       <Modal title="Add a Song" onClose={onClose}>
-        {errorMessage && <p className="text-red-600 mb-2">{errorMessage}</p>}
+        {errorMessage && <p className="text-mojo-600 mb-2">{errorMessage}</p>}
 
         <h3 className="font-semibold">{previewResult.title}</h3>
         {previewResult.disambiguation && (
@@ -252,7 +252,7 @@ export default function AddSongModal({
 
   return (
     <Modal title="Add a Song" onClose={onClose}>
-      {errorMessage && <p className="text-red-600 mb-2">{errorMessage}</p>}
+      {errorMessage && <p className="text-mojo-600 mb-2">{errorMessage}</p>}
       <FormField
         label="Name"
         value={name}
@@ -276,7 +276,7 @@ export default function AddSongModal({
         {searching ? "Looking up..." : "Search"}
       </PrimaryButton>
 
-      {searchError && <p className="text-red-600 mb-3">{searchError}</p>}
+      {searchError && <p className="text-mojo-600 mb-3">{searchError}</p>}
 
       {hasSearched && !searching && (
         <>

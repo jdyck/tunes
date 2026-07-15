@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { leagueGothic, robotoCondensed, robotoMono } from "@/lib/fonts";
-import GlobalPlayer from "@/components/GlobalPlayer";
+import GlobalPlayerGate from "@/components/GlobalPlayerGate";
 
 export const metadata: Metadata = {
   title: "Standards",
@@ -34,8 +34,8 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <title>{String(metadata.title || "Default Title")}</title>
       </head>
-      <body className={`bg-cream-100 ${robotoCondensed.className}`}>
-        <GlobalPlayer>{children}</GlobalPlayer>
+      <body className={`bg-merino-100 ${robotoCondensed.className}`}>
+        <GlobalPlayerGate>{children}</GlobalPlayerGate>
       </body>
     </html>
   );
