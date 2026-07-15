@@ -215,6 +215,7 @@ body::after {
   opacity: .05;
   mix-blend-mode: multiply;
 }
+
 body::after {
   content: "";
   position: fixed;

@@ -29,6 +29,17 @@ const sortLabels: Record<SortKey, string> = {
   added: "Added",
 };
 
+const titleForSorting = (title: string) => {
+  const filingTitle = title
+    .trim()
+    .replace(/^(?:\([^)]*\)\s*)+/, "")
+    .replace(/^[^A-Za-z0-9]+/, "")
+    .replace(/^(?:a|an|the)\s+/i, "")
+    .trim();
+
+  return filingTitle || title;
+};
+
 export default function SongsListPane() {
   const router = useRouter();
   const pathname = usePathname();
@@ -39,7 +50,7 @@ export default function SongsListPane() {
   const [search, setSearch] = useState("");
   const [showAddSong, setShowAddSong] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("title");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showSortMenu, setShowSortMenu] = useState(false);
 
   useEffect(() => {
@@ -81,7 +92,9 @@ export default function SongsListPane() {
       let comparison = 0;
 
       if (sortKey === "title") {
-        comparison = a.name.localeCompare(b.name);
+        comparison =
+          titleForSorting(a.name).localeCompare(titleForSorting(b.name)) ||
+          a.name.localeCompare(b.name);
       } else if (sortKey === "writers") {
         comparison = (formatWriterCredit(a.song_writers ?? []) ?? "").localeCompare(
           formatWriterCredit(b.song_writers ?? []) ?? ""
@@ -205,7 +218,7 @@ export default function SongsListPane() {
             {visibleTunes.map((tune) => {
               const isActive = pathname.startsWith(`/song/${tune.id}`);
               return (
-                <li key={tune.id} className="">
+                <li key={tune.id} className="[&:has(+_li:hover)>a]:border-b-0">
                   <Link
                     href={`/song/${tune.id}`}
                     className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-merino-200 hover:border-b-0 hover:rounded-lg active:bg-merino-300 ${

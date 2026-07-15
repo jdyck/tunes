@@ -13,9 +13,11 @@ const ROLE_OPTIONS: { value: SongWriterRole; label: string }[] = [
 export default function SongWritersEditor({
   value,
   onChange,
+  onClose,
 }: {
   value: WriterInput[];
   onChange: (next: WriterInput[]) => void;
+  onClose?: () => void;
 }) {
   const updateRow = (index: number, patch: Partial<WriterInput>) => {
     onChange(value.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -31,7 +33,19 @@ export default function SongWritersEditor({
 
   return (
     <div className="mb-4">
-      <span className="block text-sm mb-1">Writers</span>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="block text-sm">Writers</span>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close writers editor"
+            className="rounded-sm p-1 text-ink-600 hover:bg-merino-200 hover:text-ink-900"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        )}
+      </div>
       {value.map((row, index) => (
         <div key={index} className="flex items-center gap-2 mb-2">
           <input

@@ -28,7 +28,7 @@ export default function BrowseLayoutShell({
         >
           <MiddlePaneGate />
         </div>
-        <div className="lg:flex lg:flex-1 lg:h-full lg:overflow-hidden">
+        <div className="lg:relative lg:flex lg:flex-1 lg:min-w-0 lg:h-full lg:overflow-hidden">
           <DetailPaneGate>{detail}</DetailPaneGate>
         </div>
       </div>
