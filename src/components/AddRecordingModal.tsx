@@ -19,6 +19,9 @@ import YtMusicSearchResultRow from "@/components/YtMusicSearchResultRow";
 import YoutubeSearchResultRow from "@/components/YoutubeSearchResultRow";
 import PrimaryButton from "@/components/PrimaryButton";
 import FormField from "@/components/FormField";
+import AddRecordingMatchSuggestion from "@/components/AddRecordingMatchSuggestion";
+import { RecordingMatchResult } from "@/utils/musicbrainz";
+import { searchRecordingMetadata } from "@/utils/recordingMetadataClient";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -40,6 +43,16 @@ const emptyPlatformState = (query: string): PlatformSearchState => ({
   loadingMore: false,
 });
 
+interface ResolvedFields {
+  kind: Recording["kind"];
+  url: string;
+  artist: string;
+  album: string | null;
+  duration: string | null;
+  year: string | null;
+  notes: string | null;
+}
+
 export default function AddRecordingModal({
   tuneId,
   tuneTitle,
@@ -55,6 +68,11 @@ export default function AddRecordingModal({
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [addingVideoId, setAddingVideoId] = useState<string | null>(null);
+  const [pendingMatch, setPendingMatch] = useState<{
+    result: YouTubeSearchResult;
+    fields: ResolvedFields;
+    match: RecordingMatchResult;
+  } | null>(null);
 
   const [activePlatform, setActivePlatform] =
     useState<SearchPlatformId>("ytmusic");
@@ -185,9 +203,9 @@ export default function AddRecordingModal({
     return true;
   };
 
-  const handleQuickAdd = async (result: YouTubeSearchResult) => {
-    setAddingVideoId(result.videoId);
-
+  const resolveFields = async (
+    result: YouTubeSearchResult
+  ): Promise<ResolvedFields> => {
     const kind: Recording["kind"] = result.isMusic
       ? "released"
       : "video_capture";
@@ -212,16 +230,109 @@ export default function AddRecordingModal({
       }
     }
 
+    return {
+      kind,
+      url,
+      artist: result.channelTitle.replace(/ - Topic$/, ""),
+      album,
+      duration,
+      year,
+      notes,
+    };
+  };
+
+  // Selecting a result resolves its YouTube metadata first, then checks
+  // MusicBrainz for a likely match using that metadata (title/artist/
+  // duration/album) -- surfacing the same duration+album+year ranking used
+  // on an existing recording's "Change match", but before anything is
+  // written, so a compilation/reissue album never gets persisted only to be
+  // fixed later. Falls straight through to a plain insert when nothing
+  // comes back, so the common case stays a single click.
+  const handleSelectResult = async (result: YouTubeSearchResult) => {
+    setAddingVideoId(result.videoId);
+    const fields = await resolveFields(result);
+
+    let match: RecordingMatchResult | null = null;
+    try {
+      const matches = await searchRecordingMetadata(
+        result.title,
+        fields.artist,
+        fields.duration,
+        fields.album
+      );
+      match = matches[0] ?? null;
+    } catch {
+      match = null;
+    }
+
+    if (match) {
+      setAddingVideoId(null);
+      setPendingMatch({ result, fields, match });
+      return;
+    }
+
     const ok = await insertRecording({
       tune_id: tuneId,
       name: result.title,
-      notes,
-      url,
-      kind,
-      artist: result.channelTitle.replace(/ - Topic$/, ""),
-      year,
-      album,
-      duration,
+      notes: fields.notes,
+      url: fields.url,
+      kind: fields.kind,
+      artist: fields.artist,
+      year: fields.year,
+      album: fields.album,
+      duration: fields.duration,
+      key: null,
+      tempo: null,
+      tags: null,
+    });
+
+    setAddingVideoId(null);
+    if (ok) onAdded();
+  };
+
+  const handleConfirmMatch = async () => {
+    if (!pendingMatch) return;
+    const { fields, match } = pendingMatch;
+    setAddingVideoId(pendingMatch.result.videoId);
+    setPendingMatch(null);
+
+    const ok = await insertRecording({
+      tune_id: tuneId,
+      name: match.title || pendingMatch.result.title,
+      notes: fields.notes,
+      url: fields.url,
+      kind: fields.kind,
+      artist: match.artistCredit || fields.artist,
+      year: match.year || fields.year,
+      album: match.album || fields.album,
+      duration: match.duration || fields.duration,
+      key: null,
+      tempo: null,
+      tags: null,
+      musicbrainz_recording_id: match.recordingId,
+      musicbrainz_release_id: match.albumReleaseId,
+    });
+
+    setAddingVideoId(null);
+    if (ok) onAdded();
+  };
+
+  const handleAddWithoutMatch = async () => {
+    if (!pendingMatch) return;
+    const { result, fields } = pendingMatch;
+    setAddingVideoId(result.videoId);
+    setPendingMatch(null);
+
+    const ok = await insertRecording({
+      tune_id: tuneId,
+      name: result.title,
+      notes: fields.notes,
+      url: fields.url,
+      kind: fields.kind,
+      artist: fields.artist,
+      year: fields.year,
+      album: fields.album,
+      duration: fields.duration,
       key: null,
       tempo: null,
       tags: null,
@@ -286,6 +397,19 @@ export default function AddRecordingModal({
         <>
           <ul className="mb-4">
             {pagedResults.map((result) => {
+              if (pendingMatch?.result.videoId === result.videoId) {
+                return (
+                  <li key={result.videoId} className="mb-2">
+                    <AddRecordingMatchSuggestion
+                      match={pendingMatch.match}
+                      onConfirm={handleConfirmMatch}
+                      onSkip={handleAddWithoutMatch}
+                      onCancel={() => setPendingMatch(null)}
+                    />
+                  </li>
+                );
+              }
+
               const rowProps = {
                 result,
                 adding: addingVideoId === result.videoId,
@@ -296,7 +420,7 @@ export default function AddRecordingModal({
                     url: `https://www.youtube.com/watch?v=${result.videoId}`,
                     kind: result.isMusic ? "released" : "video_capture",
                   }),
-                onAdd: () => handleQuickAdd(result),
+                onAdd: () => handleSelectResult(result),
               };
               return activePlatform === "ytmusic" ? (
                 <YtMusicSearchResultRow key={result.videoId} {...rowProps} />

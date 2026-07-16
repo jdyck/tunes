@@ -1,6 +1,8 @@
 "use client";
 
 import { RecordingMatchResult } from "@/utils/musicbrainz";
+import { coverArtUrl } from "@/utils/recordingMetadataClient";
+import RecordingThumbnail from "@/components/RecordingThumbnail";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 
 export default function RecordingMatchResultsList({
@@ -17,6 +19,11 @@ export default function RecordingMatchResultsList({
       {results.map((result) => (
         <li key={result.recordingId} className="mb-2">
           <div className="flex items-center gap-2">
+            <RecordingThumbnail
+              src={coverArtUrl(result.albumReleaseId)}
+              alt=""
+              className="w-10 h-10 rounded shrink-0"
+            />
             <div className="flex-1 min-w-0">
               <p className="truncate">
                 {result.title}
