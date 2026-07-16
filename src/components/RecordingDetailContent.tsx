@@ -10,11 +10,13 @@ import { usePlayer } from "@/components/GlobalPlayer";
 import BackLink from "@/components/BackLink";
 import { RecordingMatchResult } from "@/utils/musicbrainz";
 import {
+  coverArtUrl,
   fetchRecordingDetail,
   searchRecordingMetadata,
 } from "@/utils/recordingMetadataClient";
 import RecordingMatchSuggestion from "@/components/RecordingMatchSuggestion";
 import RecordingMatchResultsList from "@/components/RecordingMatchResultsList";
+import RecordingThumbnail from "@/components/RecordingThumbnail";
 import SaveStatusButton from "@/components/SaveStatusButton";
 import FormField from "@/components/FormField";
 import MusicBrainzLink from "@/components/MusicBrainzLink";
@@ -56,6 +58,9 @@ export default function RecordingDetailContent({
   const [musicbrainzRecordingId, setMusicbrainzRecordingId] = useState<
     string | null
   >(null);
+  const [musicbrainzReleaseId, setMusicbrainzReleaseId] = useState<
+    string | null
+  >(null);
   const [matchStatus, setMatchStatus] = useState<
     "idle" | "searching" | "suggested" | "dismissed" | "no-results"
   >("idle");
@@ -67,6 +72,7 @@ export default function RecordingDetailContent({
     []
   );
   const [manualSearching, setManualSearching] = useState(false);
+  const [ignoreAlbumForMatch, setIgnoreAlbumForMatch] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
   const [syncingFromMusicBrainz, setSyncingFromMusicBrainz] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -104,6 +110,7 @@ export default function RecordingDetailContent({
         setTags((recordingData.tags || []).join(", "));
         setVideoId(extractYouTubeID(recordingData.url));
         setMusicbrainzRecordingId(recordingData.musicbrainz_recording_id || null);
+        setMusicbrainzReleaseId(recordingData.musicbrainz_release_id || null);
 
         const { data: tuneData } = await supabase
           .from("tunes")
@@ -143,7 +150,7 @@ export default function RecordingDetailContent({
     let cancelled = false;
     setMatchStatus("searching");
 
-    searchRecordingMetadata(songTitle, artist, duration)
+    searchRecordingMetadata(songTitle, artist, duration, album)
       .then((results) => {
         if (cancelled) return;
         if (results.length > 0) {
@@ -164,7 +171,7 @@ export default function RecordingDetailContent({
     // including it would make the effect re-run (and cancel itself, via the
     // cleanup above) the instant it flips to "searching".
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, songTitle, artist, duration, musicbrainzRecordingId]);
+  }, [loading, songTitle, artist, duration, album, musicbrainzRecordingId]);
 
   const handleSave = async () => {
     if (!id || !recording) return;
@@ -187,6 +194,7 @@ export default function RecordingDetailContent({
               .filter(Boolean)
           : null,
         musicbrainz_recording_id: musicbrainzRecordingId,
+        musicbrainz_release_id: musicbrainzReleaseId,
       })
       .eq("id", id);
 
@@ -206,6 +214,7 @@ export default function RecordingDetailContent({
   // confirm button and picking a result from manual search.
   const applyMatch = (match: RecordingMatchResult) => {
     setMusicbrainzRecordingId(match.recordingId);
+    setMusicbrainzReleaseId(match.albumReleaseId);
     if (match.artistCredit) setArtist(match.artistCredit);
     if (match.album) setAlbum(match.album);
     if (match.year) setYear(match.year);
@@ -225,6 +234,7 @@ export default function RecordingDetailContent({
   const handleOpenManualSearch = () => {
     setShowManualSearch(true);
     setManualQuery(songTitle || name);
+    setIgnoreAlbumForMatch(false);
     setMatchError(null);
   };
 
@@ -234,7 +244,14 @@ export default function RecordingDetailContent({
     setManualSearching(true);
     setMatchError(null);
     try {
-      setManualResults(await searchRecordingMetadata(manualQuery, artist, duration));
+      setManualResults(
+        await searchRecordingMetadata(
+          manualQuery,
+          artist,
+          duration,
+          ignoreAlbumForMatch ? null : album
+        )
+      );
     } catch {
       setMatchError("Couldn't search MusicBrainz. Try again later.");
     }
@@ -259,6 +276,7 @@ export default function RecordingDetailContent({
 
     if (match.artistCredit) setArtist(match.artistCredit);
     if (match.album) setAlbum(match.album);
+    setMusicbrainzReleaseId(match.albumReleaseId);
     if (match.year) setYear(match.year);
     if (match.duration) setDuration(match.duration);
     setIsSaved(false);
@@ -268,6 +286,7 @@ export default function RecordingDetailContent({
     setShowManualSearch(true);
     setManualQuery(songTitle || name);
     setManualResults([]);
+    setIgnoreAlbumForMatch(false);
     setMatchError(null);
   };
 
@@ -313,6 +332,13 @@ export default function RecordingDetailContent({
         }}
       >
         <div className="flex justify-between items-center mb-4">
+          {musicbrainzReleaseId && (
+            <RecordingThumbnail
+              src={coverArtUrl(musicbrainzReleaseId)}
+              alt=""
+              className="w-16 h-16 rounded shrink-0 mr-3"
+            />
+          )}
           <input
             value={name}
             onChange={handleFieldChange(setName)}
@@ -351,6 +377,16 @@ export default function RecordingDetailContent({
                   className="block w-full p-1.5 rounded-md"
                 />
               </label>
+              {album && (
+                <label className="flex items-center gap-1.5 mb-2 text-xs text-ink-600">
+                  <input
+                    type="checkbox"
+                    checked={ignoreAlbumForMatch}
+                    onChange={(e) => setIgnoreAlbumForMatch(e.target.checked)}
+                  />
+                  {`"${album}" might be a compilation -- don't use it to match`}
+                </label>
+              )}
               <button
                 type="button"
                 onClick={handleManualSearch}

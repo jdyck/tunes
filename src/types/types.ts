@@ -51,4 +51,5 @@ export interface Recording {
   tempo?: number | null;
   tags?: string[] | null;
   musicbrainz_recording_id?: string | null;
+  musicbrainz_release_id?: string | null;
 }

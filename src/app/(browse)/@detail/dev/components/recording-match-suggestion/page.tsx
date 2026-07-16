@@ -5,11 +5,12 @@ import { RecordingMatchResult } from "@/utils/musicbrainz";
 
 const match: RecordingMatchResult = {
   recordingId: "demo-1",
-  title: "Autumn Leaves",
-  artistCredit: "Bill Evans Trio",
-  album: "Portrait in Jazz",
-  year: "1960",
-  duration: "5:04",
+  title: "Have You Met Miss Jones?",
+  artistCredit: "Frank Sinatra",
+  album: "Sinatra Swings",
+  albumReleaseId: "e2bd0fa3-6eb0-41cd-8565-44aee7a305cd",
+  year: "1961",
+  duration: "2:35",
   score: 100,
 };
 
