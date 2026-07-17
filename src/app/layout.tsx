@@ -25,21 +25,22 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`bg-black ${leagueGothic.variable} ${robotoCondensed.variable} ${robotoMono.variable}`}
+      className={`bg-merino-100 overscroll-none ${leagueGothic.variable} ${robotoCondensed.variable} ${robotoMono.variable}`}
     >
     <head>
       <link rel="manifest" href="/manifest.json" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
-      <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-      <meta name="theme-color" content="#000000" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      <meta name="theme-color" content="#f7f2e9" />
 
       <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       <title>{String(metadata.title || "Default Title")}</title>
     </head>
-    <body className={`bg-black ${robotoCondensed.className}`}>
-    <div className="w-full h-full bg-merino-100">
+    <body className={`bg-merino-100 overscroll-none ${robotoCondensed.className}`}>
+    <div className="w-full h-full pt-[env(safe-area-inset-top)] bg-merino-100">
       <GlobalPlayerGate>{children}</GlobalPlayerGate>
     </div>
+    <div className="paper-grain" aria-hidden="true" />
     </body>
     </html>
   );

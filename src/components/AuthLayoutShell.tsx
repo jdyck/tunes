@@ -6,7 +6,7 @@ export default function AuthLayoutShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-azure-600">
+    <div className="flex flex-col items-center justify-center min-h-full bg-azure-600">
       <div>
         <h1 className={`text-merino-100 text-7xl uppercase ${leagueGothic.className}`}>Standards</h1>
       </div>

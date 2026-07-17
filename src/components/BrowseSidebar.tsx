@@ -6,7 +6,7 @@ import { leagueGothic } from "@/lib/fonts";
 export default function BrowseSidebar() {
   return (
     <aside className="flex flex-col lg:w-64 lg:shrink-0 lg:h-full bg-merino-100 border-r border-line-100">
-      <div className="bg-azure-600 p-4 py-16 flex items-center justify-between">
+      <div className="bg-azure-600 p-4 py-16 flex items-center justify-between -mt-15">
         <Link
           href="/"
           className={` uppercase text-lg  items-center text-merino-100 ${leagueGothic.className}`}
