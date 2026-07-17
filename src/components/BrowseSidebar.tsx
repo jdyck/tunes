@@ -1,11 +1,12 @@
 import Link from "next/link";
 import AccountMenu from "@/components/AccountMenu";
+import NavLink from "@/components/NavLink";
 import { leagueGothic } from "@/lib/fonts";
 
 export default function BrowseSidebar() {
   return (
-    <aside className="flex flex-col lg:w-64 lg:shrink-0 lg:h-screen bg-merino-100 border-r border-line-100">
-      <div className="bg-azure-600 p-4 lg:py-16 flex items-center justify-between">
+    <aside className="flex flex-col lg:w-64 lg:shrink-0 lg:h-full bg-merino-100 border-r border-line-100">
+      <div className="bg-azure-600 p-4 py-16 flex items-center justify-between -mt-15">
         <Link
           href="/"
           className={` uppercase text-lg  items-center text-merino-100 ${leagueGothic.className}`}
@@ -15,20 +16,10 @@ export default function BrowseSidebar() {
         <AccountMenu />
       </div>
 
-      <nav className="px-2">
-        <Link
-          href="/songs"
-          className="block px-3 py-2 rounded-md font-semibold hover:bg-merino-200"
-        >
-          Songs
-        </Link>
+      <nav className="flex flex-col gap-1 p-6">
+        <NavLink href="/songs">Songs</NavLink>
         {process.env.NODE_ENV === "development" && (
-          <Link
-            href="/dev/components"
-            className="block px-3 py-2 rounded-md font-semibold hover:bg-merino-200"
-          >
-            Components
-          </Link>
+          <NavLink href="/dev/components">Components</NavLink>
         )}
       </nav>
 

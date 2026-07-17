@@ -18,7 +18,7 @@ export default function ComponentsListPane() {
         </h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-12">
+      <div className="flex-1 overflow-y-auto overscroll-none px-4 pb-12">
         <ul>
           {componentRegistry.map((c) => {
             const isActive = pathname === `/dev/components/${c.slug}`;

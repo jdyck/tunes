@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { leagueGothic, robotoCondensed, robotoMono } from "@/lib/fonts";
 import GlobalPlayerGate from "@/components/GlobalPlayerGate";
@@ -11,32 +11,37 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
-  children,
-}: Readonly<{
+                                     children,
+                                   }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
     <html
       lang="en"
-      className={`${leagueGothic.variable} ${robotoCondensed.variable} ${robotoMono.variable}`}
+      className={`bg-merino-100 overscroll-none ${leagueGothic.variable} ${robotoCondensed.variable} ${robotoMono.variable}`}
     >
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="theme-color" content="#166534" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no"
-        />
+    <head>
+      <link rel="manifest" href="/manifest.json" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      <meta name="theme-color" content="#f7f2e9" />
 
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        <title>{String(metadata.title || "Default Title")}</title>
-      </head>
-      <body className={`bg-merino-100 ${robotoCondensed.className}`}>
-        <GlobalPlayerGate>{children}</GlobalPlayerGate>
-      </body>
+      <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      <title>{String(metadata.title || "Default Title")}</title>
+    </head>
+    <body className={`bg-merino-100 overscroll-none ${robotoCondensed.className}`}>
+    <div className="w-full h-full pt-[env(safe-area-inset-top)] bg-merino-100">
+      <GlobalPlayerGate>{children}</GlobalPlayerGate>
+    </div>
+    <div className="paper-grain" aria-hidden="true" />
+    </body>
     </html>
   );
 }

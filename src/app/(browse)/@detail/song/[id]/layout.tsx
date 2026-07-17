@@ -18,7 +18,7 @@ export default function SongDetailLayout({
 
   return (
     <>
-      <div className="fixed inset-x-0 top-0 bottom-0 z-20 overflow-y-auto pb-16 lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:min-w-[500px] lg:h-full lg:overflow-y-auto lg:pb-0 lg:border-r lg:border-line-100">
+      <div className="fixed inset-x-0 top-0 bottom-0 z-20 overflow-y-auto overscroll-none pt-[env(safe-area-inset-top)] pb-[calc(4rem+env(safe-area-inset-bottom))] lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:min-w-[500px] lg:h-full lg:overflow-y-auto lg:pt-0 lg:pb-0 lg:border-r lg:border-line-100">
         <SongDetailContent id={songId} />
         {children}
       </div>
