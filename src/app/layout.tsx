@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { leagueGothic, robotoCondensed, robotoMono } from "@/lib/fonts";
 import GlobalPlayerGate from "@/components/GlobalPlayerGate";
@@ -11,32 +11,36 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
-  children,
-}: Readonly<{
+                                     children,
+                                   }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
     <html
       lang="en"
-      className={`${leagueGothic.variable} ${robotoCondensed.variable} ${robotoMono.variable}`}
+      className={`bg-black ${leagueGothic.variable} ${robotoCondensed.variable} ${robotoMono.variable}`}
     >
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="theme-color" content="#166534" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no"
-        />
+    <head>
+      <link rel="manifest" href="/manifest.json" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      <meta name="theme-color" content="#000000" />
 
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        <title>{String(metadata.title || "Default Title")}</title>
-      </head>
-      <body className={`bg-merino-100 ${robotoCondensed.className}`}>
-        <GlobalPlayerGate>{children}</GlobalPlayerGate>
-      </body>
+      <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      <title>{String(metadata.title || "Default Title")}</title>
+    </head>
+    <body className={`bg-black ${robotoCondensed.className}`}>
+    <div className="w-full h-full bg-merino-100">
+      <GlobalPlayerGate>{children}</GlobalPlayerGate>
+    </div>
+    </body>
     </html>
   );
 }

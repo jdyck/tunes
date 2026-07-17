@@ -162,20 +162,22 @@
 
 @layer base {
   :root {
-    --background: #ffffff;
     --foreground: var(--color-ink-900);
   }
 
   /* @media (prefers-color-scheme: dark) {
     :root {
-      --background: #0a0a0a;
       --foreground: #ededed;
     }
   } */
 
+  html,
+  body {
+    height: 100%;
+  }
+
   body {
     color: var(--foreground);
-    background: var(--background);
     font-family: sans-serif;
   }
 }
@@ -185,38 +187,9 @@
    data URI rasterizes once and tiles (cheap) — never apply feTurbulence as a
    live filter/backdrop-filter. pointer-events: none lets all interaction pass
    through. Sits above modals too; at this opacity that is invisible. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  /* Watercolor-paper mottle: large soft clouds (low baseFrequency) with faint
-     fiber detail (octaves). Alpha is flattened to opaque so only luminance
-     varies, and soft-light both lightens and darkens around the base color
-     instead of only darkening like multiply. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.4' numOctaves='100' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 2000px 2000px;
-  opacity: .07;
-  mix-blend-mode: multiply;
-}
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  /* Watercolor-paper mottle: large soft clouds (low baseFrequency) with faint
-     fiber detail (octaves). Alpha is flattened to opaque so only luminance
-     varies, and soft-light both lightens and darkens around the base color
-     instead of only darkening like multiply. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.2' numOctaves='10' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 2000px 2000px;
-  opacity: .05;
-  mix-blend-mode: multiply;
-}
 
-body::after {
+
+html::after {
   content: "";
   position: fixed;
   inset: 0;
@@ -228,7 +201,7 @@ body::after {
      instead of only darkening like multiply. */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 2000px 2000px;
-  opacity: .1;
+  opacity: .15;
   mix-blend-mode: multiply;
 }
 
