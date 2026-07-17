@@ -13,6 +13,17 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Testing on your phone
+
+The dev server has no HTTPS cert for your local network IP, which breaks on iOS. Easiest fix is a quick tunnel instead:
+
+```bash
+brew install cloudflared
+cloudflared tunnel --url http://localhost:3000
+```
+
+Open the printed `https://*.trycloudflare.com` URL on your phone. The link is a random, unlisted subdomain — fine to use solo or share with a few trusted people, but kill the tunnel (`Ctrl-C`) when you're done rather than leaving it running.
+
 You'll need a `.env.local` with:
 
 ```
