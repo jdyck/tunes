@@ -1,8 +1,8 @@
 "use client";
 
-import { RecordingMatchResult } from "@/utils/musicbrainz";
-import { coverArtUrl } from "@/utils/recordingMetadataClient";
-import RecordingThumbnail from "@/components/RecordingThumbnail";
+import { RecordingMatchResult } from "@/lib/musicbrainz";
+import { coverArtUrl } from "@/lib/recordingMetadataClient";
+import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 
 export default function RecordingMatchResultsList({

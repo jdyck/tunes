@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Modal from "@/components/Modal";
-import PrimaryButton from "@/components/PrimaryButton";
+import Modal from "@/components/ui/Modal";
+import PrimaryButton from "@/components/ui/PrimaryButton";
 
 export default function ModalDemoPage() {
   const [open, setOpen] = useState(false);

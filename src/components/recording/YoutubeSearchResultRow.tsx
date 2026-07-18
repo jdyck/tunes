@@ -1,12 +1,12 @@
 "use client";
 
-import { YouTubeSearchResult } from "@/utils/youtube";
+import { YouTubeSearchResult } from "@/lib/youtube";
 import {
   MusicalNoteIcon,
   PlayCircleIcon,
   PlusCircleIcon,
 } from "@heroicons/react/20/solid";
-import RecordingThumbnail from "@/components/RecordingThumbnail";
+import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
 
 export default function YoutubeSearchResultRow({
   result,

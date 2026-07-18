@@ -1,6 +1,6 @@
 "use client";
 
-import { WriterInput } from "@/utils/songWriters";
+import { WriterInput } from "@/lib/songWriters";
 import { SongWriterRole } from "@/types/types";
 import { XMarkIcon } from "@heroicons/react/20/solid";
 

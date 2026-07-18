@@ -3,8 +3,8 @@
 // Thin client-side wrappers around the /api/song-metadata routes, shared
 // between AddSongModal and SongDetailContent.
 
-import { SongWorkDetail, SongWorkSearchResult } from "@/utils/musicbrainz";
-import { WorkBackground } from "@/utils/wikipedia";
+import { SongWorkDetail, SongWorkSearchResult } from "@/lib/musicbrainz";
+import { WorkBackground } from "@/lib/wikipedia";
 
 export const searchSongMetadata = async (
   title: string

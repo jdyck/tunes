@@ -17,11 +17,15 @@ src/app/             Next.js App Router (route = folder path)
     songs/               songs list route
   login/, signup/, forgot-password/, account/   auth + account pages
   api/                 metadata proxy routes (song-metadata, recording-metadata, youtube-search)
-src/components/      shared React components (e.g. GlobalPlayer, the persistent player)
+src/components/      shared React components, grouped by feature
+  ui/                  generic primitives (Spinner, Modal, FormField…) + cross-feature domain bits (MusicBrainzLink)
+  layout/              shells, panes, gates (BrowseLayoutShell, DetailPaneGate…)
+  player/              GlobalPlayer + its gate
+  song/, recording/    feature components; future features (playlists, lead sheets) get their own folder
 src/hooks/           shared React hooks
-src/lib/             effectful/stateful modules (supabaseClient, fonts, componentRegistry)
+src/lib/             effectful/stateful modules — anything that fetches, talks to supabase, or holds state (supabaseClient, fonts, metadata clients, componentRegistry)
 src/types/           shared TS types
-src/utils/           pure helpers (e.g. youtube.ts)
+src/utils/           pure functions only (e.g. ytmusic.ts)
 docs/                domain model, ADRs, direction notes (issues + ideas by subject) — see docs/README.md
 ```
 

@@ -1,23 +1,23 @@
 "use client";
 
-import { RecordingMatchResult } from "@/utils/musicbrainz";
-import { coverArtUrl } from "@/utils/recordingMetadataClient";
-import RecordingThumbnail from "@/components/RecordingThumbnail";
+import { RecordingMatchResult } from "@/lib/musicbrainz";
+import { coverArtUrl } from "@/lib/recordingMetadataClient";
+import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
 
-export default function AddRecordingMatchSuggestion({
+export default function RecordingMatchSuggestion({
   match,
   onConfirm,
-  onSkip,
-  onCancel,
+  onReject,
+  onSearchManually,
 }: {
   match: RecordingMatchResult;
-  onConfirm: () => void;
-  onSkip: () => void;
-  onCancel: () => void;
+  onConfirm: (match: RecordingMatchResult) => void;
+  onReject: () => void;
+  onSearchManually: () => void;
 }) {
   return (
-    <div className="p-3 rounded-md border border-line-200 flex gap-3">
+    <div className="p-3 rounded-md border border-line-200 mb-4 flex gap-3">
       <RecordingThumbnail
         src={coverArtUrl(match.albumReleaseId)}
         alt=""
@@ -38,27 +38,27 @@ export default function AddRecordingMatchSuggestion({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={() => onConfirm(match)}
             className="flex items-center gap-1 text-sm text-teal-700"
           >
             <CheckCircleIcon className="h-5 w-5" />
-            Use this match
+            Confirm
           </button>
           <button
             type="button"
-            onClick={onSkip}
+            onClick={onReject}
             className="flex items-center gap-1 text-sm text-ink-600"
           >
             <XCircleIcon className="h-5 w-5" />
-            Add without it
+            Not a match
           </button>
         </div>
         <button
           type="button"
-          onClick={onCancel}
+          onClick={onSearchManually}
           className="block text-xs text-ink-600 underline mt-2"
         >
-          Cancel
+          Search manually instead
         </button>
       </div>
     </div>

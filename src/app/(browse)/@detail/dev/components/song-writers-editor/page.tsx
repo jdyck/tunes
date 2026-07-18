@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import SongWritersEditor from "@/components/SongWritersEditor";
-import { WriterInput } from "@/utils/songWriters";
+import SongWritersEditor from "@/components/song/SongWritersEditor";
+import { WriterInput } from "@/lib/songWriters";
 
 export default function SongWritersEditorDemoPage() {
   const [writers, setWriters] = useState<WriterInput[]>([

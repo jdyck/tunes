@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import BackLink from "@/components/BackLink";
+import BackLink from "@/components/ui/BackLink";
 
 export default function DevComponentsDetailLayout({
   children,

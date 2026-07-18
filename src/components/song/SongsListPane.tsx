@@ -12,12 +12,12 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
 } from "@heroicons/react/20/solid";
-import AddSongModal from "@/components/AddSongModal";
+import AddSongModal from "@/components/song/AddSongModal";
 import { PlusIcon } from "@heroicons/react/24/solid";
-import { formatWriterCredit } from "@/utils/songWriters";
-import { useSongsList } from "@/components/SongsListContext";
+import { formatWriterCredit } from "@/lib/songWriters";
+import { useSongsList } from "@/components/song/SongsListContext";
 import { Song } from "@/types/types";
-import BackLink from "@/components/BackLink";
+import BackLink from "@/components/ui/BackLink";
 
 type SortKey = "title" | "writers" | "date" | "added";
 type SortDirection = "asc" | "desc";

@@ -1,5 +1,5 @@
 import { Recording } from "@/types/types";
-import RecordingThumbnail from "@/components/RecordingThumbnail";
+import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
 
 export default function RecordingListRow({
   recording,

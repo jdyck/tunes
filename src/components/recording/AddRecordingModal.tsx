@@ -7,21 +7,21 @@ import {
   fetchYouTubeVideoData,
   parseYouTubeMusicMetadata,
   YouTubeSearchResult,
-} from "@/utils/youtube";
+} from "@/lib/youtube";
 import {
   searchYoutube,
   SEARCH_PLATFORMS,
   SearchPlatformId,
-} from "@/utils/youtubeSearchClient";
-import { usePlayer } from "@/components/GlobalPlayer";
-import Modal from "@/components/Modal";
-import YtMusicSearchResultRow from "@/components/YtMusicSearchResultRow";
-import YoutubeSearchResultRow from "@/components/YoutubeSearchResultRow";
-import PrimaryButton from "@/components/PrimaryButton";
-import FormField from "@/components/FormField";
-import AddRecordingMatchSuggestion from "@/components/AddRecordingMatchSuggestion";
-import { RecordingMatchResult } from "@/utils/musicbrainz";
-import { searchRecordingMetadata } from "@/utils/recordingMetadataClient";
+} from "@/lib/youtubeSearchClient";
+import { usePlayer } from "@/components/player/GlobalPlayer";
+import Modal from "@/components/ui/Modal";
+import YtMusicSearchResultRow from "@/components/recording/YtMusicSearchResultRow";
+import YoutubeSearchResultRow from "@/components/recording/YoutubeSearchResultRow";
+import PrimaryButton from "@/components/ui/PrimaryButton";
+import FormField from "@/components/ui/FormField";
+import AddRecordingMatchSuggestion from "@/components/recording/AddRecordingMatchSuggestion";
+import { RecordingMatchResult } from "@/lib/musicbrainz";
+import { searchRecordingMetadata } from "@/lib/recordingMetadataClient";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 

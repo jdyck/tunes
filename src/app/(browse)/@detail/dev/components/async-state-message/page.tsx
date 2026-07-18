@@ -1,4 +1,4 @@
-import AsyncStateMessage from "@/components/AsyncStateMessage";
+import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 
 export default function AsyncStateMessageDemoPage() {
   return (

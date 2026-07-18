@@ -3,7 +3,7 @@
 // Thin client-side wrapper around the /api/youtube-search route, same
 // pattern as recordingMetadataClient.ts.
 
-import { YouTubeSearchResult } from "@/utils/youtube";
+import { YouTubeSearchResult } from "@/lib/youtube";
 
 export type SearchPlatformId = "ytmusic" | "youtube";
 

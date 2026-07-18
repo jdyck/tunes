@@ -1,8 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import SongDetailContent from "@/components/SongDetailContent";
-import RecordingPaneGate from "@/components/RecordingPaneGate";
+import SongDetailContent from "@/components/song/SongDetailContent";
+import RecordingPaneGate from "@/components/layout/RecordingPaneGate";
 
 export default function SongDetailLayout({
   children,

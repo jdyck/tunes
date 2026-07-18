@@ -10,34 +10,34 @@ import {
   PlayIcon,
   PlusCircleIcon,
 } from "@heroicons/react/20/solid";
-import { extractYouTubeID, fetchYouTubeVideoData } from "@/utils/youtube";
+import { extractYouTubeID, fetchYouTubeVideoData } from "@/lib/youtube";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
-import { usePlayer } from "@/components/GlobalPlayer";
-import { useSongsList } from "@/components/SongsListContext";
-import AddRecordingModal from "@/components/AddRecordingModal";
-import RecordingListRow from "@/components/RecordingListRow";
-import SongWritersEditor from "@/components/SongWritersEditor";
-import SongWorkResultsList from "@/components/SongWorkResultsList";
-import SaveStatusButton from "@/components/SaveStatusButton";
-import FormField from "@/components/FormField";
-import MusicBrainzLink from "@/components/MusicBrainzLink";
-import SyncFromMusicBrainzButton from "@/components/SyncFromMusicBrainzButton";
-import WikipediaBackgroundCard from "@/components/WikipediaBackgroundCard";
-import DeleteButton from "@/components/DeleteButton";
-import AsyncStateMessage from "@/components/AsyncStateMessage";
+import { usePlayer } from "@/components/player/GlobalPlayer";
+import { useSongsList } from "@/components/song/SongsListContext";
+import AddRecordingModal from "@/components/recording/AddRecordingModal";
+import RecordingListRow from "@/components/recording/RecordingListRow";
+import SongWritersEditor from "@/components/song/SongWritersEditor";
+import SongWorkResultsList from "@/components/song/SongWorkResultsList";
+import SaveStatusButton from "@/components/ui/SaveStatusButton";
+import FormField from "@/components/ui/FormField";
+import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
+import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton";
+import WikipediaBackgroundCard from "@/components/song/WikipediaBackgroundCard";
+import DeleteButton from "@/components/ui/DeleteButton";
+import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import { useFieldChange } from "@/hooks/useFieldChange";
 import {
   WriterInput,
   fetchSongWriters,
   saveSongWriters,
-} from "@/utils/songWriters";
-import { SongWorkSearchResult } from "@/utils/musicbrainz";
+} from "@/lib/songWriters";
+import { SongWorkSearchResult } from "@/lib/musicbrainz";
 import {
   searchSongMetadata,
   fetchWorkDetail,
   fetchWorkBackground,
-} from "@/utils/songMetadataClient";
-import BackLink from "@/components/BackLink";
+} from "@/lib/songMetadataClient";
+import BackLink from "@/components/ui/BackLink";
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 const formatWriterInputCredit = (writers: WriterInput[]) => {

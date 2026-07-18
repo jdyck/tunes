@@ -1,4 +1,4 @@
-import BrowseSidebar from "@/components/BrowseSidebar";
+import BrowseSidebar from "@/components/layout/BrowseSidebar";
 
 export default function BrowseSidebarDemoPage() {
   return (

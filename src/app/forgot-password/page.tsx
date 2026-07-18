@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import Spinner from "@/components/Spinner";
+import Spinner from "@/components/ui/Spinner";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");

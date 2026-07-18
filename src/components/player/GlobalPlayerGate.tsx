@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import GlobalPlayer from "@/components/GlobalPlayer";
+import GlobalPlayer from "@/components/player/GlobalPlayer";
 
 const routesWithoutPlayer = new Set(["/login", "/signup", "/account"]);
 

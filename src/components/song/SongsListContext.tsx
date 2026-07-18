@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Song } from "@/types/types";
-import { WriterInput } from "@/utils/songWriters";
+import { WriterInput } from "@/lib/songWriters";
 
 interface SongsListContextValue {
   songs: Song[];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import FormField from "@/components/FormField";
+import FormField from "@/components/ui/FormField";
 
 export default function FormFieldDemoPage() {
   const [artist, setArtist] = useState("Ella Fitzgerald");

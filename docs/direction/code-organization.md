@@ -13,19 +13,19 @@ Structural cleanups scoped July 2026. Tasks marked **blocked on Decision X** mus
 
 ## Tasks
 
-### Fix stale AGENTS.md repo layout (no decisions pending — do first)
+### Fix stale AGENTS.md repo layout — **DONE (July 2026)**
 
 The "Repo layout" section still lists `add-tune/`, `tune/[id]/`, `tune/[id]/add-recording/`, `recording/[id]/` as live routes. Reality: routes live under `src/app/(browse)/` with parallel slots — `(browse)/@detail/song/[id]`, nested `@recording` slot for `recording/[recordingId]`, `(browse)/songs`, plus `account/`, `api/` metadata routes, and a dev-only component gallery at `(browse)/@detail/dev/components` (gated by `MiddlePaneGate` to development builds). Also missing: `src/hooks/`. Update the layout block to match `find src/app -type d` reality; keep it lean. Also update the stale route bullet in [song-user-song-split.md](song-user-song-split.md) if not already done. See [ADR-0005](../adr/0005-responsive-layout-parallel-intercepting-routes.md) for why the layout is shaped this way.
 
-### Rename `RecordingPaneWrapper` → `RecordingPaneGate` (no decisions pending)
+### Rename `RecordingPaneWrapper` → `RecordingPaneGate` — **DONE (July 2026)**
 
 Its own comment says it mirrors `DetailPaneGate`; it is a gate. Pure rename: file, component, imports. No behavior change.
 
-### Convert `src/lib/supabaseClient.js` to TypeScript (no decisions pending)
+### Convert `src/lib/supabaseClient.js` to TypeScript — **DONE (July 2026)**
 
 Last remaining `.js` file. Rename to `.ts`, add types for the exported client. No behavior change; verify `npm run build` passes.
 
-### Rename `MiddlePaneGate` → `ListPaneSwitch` (unblocked)
+### Rename `MiddlePaneGate` → `ListPaneSwitch` — **DONE (July 2026)**
 
 Pure rename; update the `(browse)/layout.tsx` import.
 
@@ -33,11 +33,11 @@ Pure rename; update the `(browse)/layout.tsx` import.
 
 Type, identifiers, table (`public.songs`), and columns (`song_id`) all renamed; migration `20260718000000_rename_tunes_to_songs.sql` applied to the remote DB. The field-shape split remains future work ([song-user-song-split.md](song-user-song-split.md)).
 
-### Group `src/components/` into folders (unblocked — Decision B confirmed)
+### Group `src/components/` into folders — **DONE (July 2026)**
 
 Mechanical move + import updates per the scheme in Decision B. Do it in one commit with no other changes so the diff is reviewable as pure moves. Update AGENTS.md's layout section in the same change.
 
-### Apply the `lib`/`utils` rule (unblocked — Decision E confirmed)
+### Apply the `lib`/`utils` rule — **DONE (July 2026)**
 
 Move the effectful modules from `src/utils` into `src/lib`: `songMetadataClient.ts`, `recordingMetadataClient.ts`, `youtubeSearchClient.ts` (fetch wrappers). Pure helpers (`youtube.ts`, `songWriters.ts`, `wikipedia.ts`/`musicbrainz.ts` if pure — check for fetch calls; if they fetch, they move too). Update imports; record the rule in AGENTS.md's layout section (`lib` = effectful/stateful, `utils` = pure functions) in the same change. Can be combined with the components-folder move commit-series but keep each move commit pure.
 

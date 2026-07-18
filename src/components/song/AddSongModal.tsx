@@ -3,17 +3,17 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Song } from "@/types/types";
-import { SongWorkSearchResult } from "@/utils/musicbrainz";
-import { WorkBackground } from "@/utils/wikipedia";
-import { WriterInput, saveSongWriters } from "@/utils/songWriters";
-import { searchSongMetadata, fetchWorkPreview } from "@/utils/songMetadataClient";
-import Modal from "@/components/Modal";
-import SongWritersEditor from "@/components/SongWritersEditor";
-import SongWorkResultsList from "@/components/SongWorkResultsList";
-import FormField from "@/components/FormField";
-import MusicBrainzLink from "@/components/MusicBrainzLink";
-import WikipediaBackgroundCard from "@/components/WikipediaBackgroundCard";
-import PrimaryButton from "@/components/PrimaryButton";
+import { SongWorkSearchResult } from "@/lib/musicbrainz";
+import { WorkBackground } from "@/lib/wikipedia";
+import { WriterInput, saveSongWriters } from "@/lib/songWriters";
+import { searchSongMetadata, fetchWorkPreview } from "@/lib/songMetadataClient";
+import Modal from "@/components/ui/Modal";
+import SongWritersEditor from "@/components/song/SongWritersEditor";
+import SongWorkResultsList from "@/components/song/SongWorkResultsList";
+import FormField from "@/components/ui/FormField";
+import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
+import WikipediaBackgroundCard from "@/components/song/WikipediaBackgroundCard";
+import PrimaryButton from "@/components/ui/PrimaryButton";
 
 const creditedNames = (result: SongWorkSearchResult): string[] =>
   Array.from(new Set([...result.composers, ...result.lyricists, ...result.writers]));

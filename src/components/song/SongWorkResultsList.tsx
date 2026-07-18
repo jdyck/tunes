@@ -1,6 +1,6 @@
 "use client";
 
-import { SongWorkSearchResult } from "@/utils/musicbrainz";
+import { SongWorkSearchResult } from "@/lib/musicbrainz";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 
 export default function SongWorkResultsList({

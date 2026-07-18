@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { Recording } from "@/types/types";
-import { extractYouTubeID } from "@/utils/youtube";
+import { extractYouTubeID } from "@/lib/youtube";
 import {
   PlayIcon,
   PauseIcon,

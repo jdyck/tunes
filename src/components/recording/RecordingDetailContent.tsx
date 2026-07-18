@@ -4,25 +4,25 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Recording } from "@/types/types";
-import { fetchYouTubeVideoData, extractYouTubeID } from "@/utils/youtube";
+import { fetchYouTubeVideoData, extractYouTubeID } from "@/lib/youtube";
 import { PlayIcon } from "@heroicons/react/20/solid";
-import { usePlayer } from "@/components/GlobalPlayer";
-import BackLink from "@/components/BackLink";
-import { RecordingMatchResult } from "@/utils/musicbrainz";
+import { usePlayer } from "@/components/player/GlobalPlayer";
+import BackLink from "@/components/ui/BackLink";
+import { RecordingMatchResult } from "@/lib/musicbrainz";
 import {
   coverArtUrl,
   fetchRecordingDetail,
   searchRecordingMetadata,
-} from "@/utils/recordingMetadataClient";
-import RecordingMatchSuggestion from "@/components/RecordingMatchSuggestion";
-import RecordingMatchResultsList from "@/components/RecordingMatchResultsList";
-import RecordingThumbnail from "@/components/RecordingThumbnail";
-import SaveStatusButton from "@/components/SaveStatusButton";
-import FormField from "@/components/FormField";
-import MusicBrainzLink from "@/components/MusicBrainzLink";
-import SyncFromMusicBrainzButton from "@/components/SyncFromMusicBrainzButton";
-import DeleteButton from "@/components/DeleteButton";
-import AsyncStateMessage from "@/components/AsyncStateMessage";
+} from "@/lib/recordingMetadataClient";
+import RecordingMatchSuggestion from "@/components/recording/RecordingMatchSuggestion";
+import RecordingMatchResultsList from "@/components/recording/RecordingMatchResultsList";
+import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
+import SaveStatusButton from "@/components/ui/SaveStatusButton";
+import FormField from "@/components/ui/FormField";
+import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
+import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton";
+import DeleteButton from "@/components/ui/DeleteButton";
+import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import { useFieldChange } from "@/hooks/useFieldChange";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;

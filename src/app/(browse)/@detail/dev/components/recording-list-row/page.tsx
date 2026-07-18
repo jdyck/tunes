@@ -1,4 +1,4 @@
-import RecordingListRow from "@/components/RecordingListRow";
+import RecordingListRow from "@/components/recording/RecordingListRow";
 import { Recording } from "@/types/types";
 
 const recording: Recording = {

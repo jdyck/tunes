@@ -1,9 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import BrowseSidebar from "@/components/BrowseSidebar";
-import DetailPaneGate from "@/components/DetailPaneGate";
-import ListPaneSwitch from "@/components/ListPaneSwitch";
+import BrowseSidebar from "@/components/layout/BrowseSidebar";
+import DetailPaneGate from "@/components/layout/DetailPaneGate";
+import ListPaneSwitch from "@/components/layout/ListPaneSwitch";
 
 export default function BrowseLayoutShell({
   detail,

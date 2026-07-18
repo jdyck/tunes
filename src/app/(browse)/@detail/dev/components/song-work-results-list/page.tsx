@@ -1,7 +1,7 @@
 "use client";
 
-import SongWorkResultsList from "@/components/SongWorkResultsList";
-import { SongWorkSearchResult } from "@/utils/musicbrainz";
+import SongWorkResultsList from "@/components/song/SongWorkResultsList";
+import { SongWorkSearchResult } from "@/lib/musicbrainz";
 
 const results: SongWorkSearchResult[] = [
   {

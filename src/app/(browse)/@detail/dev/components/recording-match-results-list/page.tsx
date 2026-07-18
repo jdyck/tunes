@@ -1,7 +1,7 @@
 "use client";
 
-import RecordingMatchResultsList from "@/components/RecordingMatchResultsList";
-import { RecordingMatchResult } from "@/utils/musicbrainz";
+import RecordingMatchResultsList from "@/components/recording/RecordingMatchResultsList";
+import { RecordingMatchResult } from "@/lib/musicbrainz";
 
 const results: RecordingMatchResult[] = [
   {

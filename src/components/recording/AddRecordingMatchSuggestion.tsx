@@ -1,23 +1,23 @@
 "use client";
 
-import { RecordingMatchResult } from "@/utils/musicbrainz";
-import { coverArtUrl } from "@/utils/recordingMetadataClient";
-import RecordingThumbnail from "@/components/RecordingThumbnail";
+import { RecordingMatchResult } from "@/lib/musicbrainz";
+import { coverArtUrl } from "@/lib/recordingMetadataClient";
+import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
 
-export default function RecordingMatchSuggestion({
+export default function AddRecordingMatchSuggestion({
   match,
   onConfirm,
-  onReject,
-  onSearchManually,
+  onSkip,
+  onCancel,
 }: {
   match: RecordingMatchResult;
-  onConfirm: (match: RecordingMatchResult) => void;
-  onReject: () => void;
-  onSearchManually: () => void;
+  onConfirm: () => void;
+  onSkip: () => void;
+  onCancel: () => void;
 }) {
   return (
-    <div className="p-3 rounded-md border border-line-200 mb-4 flex gap-3">
+    <div className="p-3 rounded-md border border-line-200 flex gap-3">
       <RecordingThumbnail
         src={coverArtUrl(match.albumReleaseId)}
         alt=""
@@ -38,27 +38,27 @@ export default function RecordingMatchSuggestion({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => onConfirm(match)}
+            onClick={onConfirm}
             className="flex items-center gap-1 text-sm text-teal-700"
           >
             <CheckCircleIcon className="h-5 w-5" />
-            Confirm
+            Use this match
           </button>
           <button
             type="button"
-            onClick={onReject}
+            onClick={onSkip}
             className="flex items-center gap-1 text-sm text-ink-600"
           >
             <XCircleIcon className="h-5 w-5" />
-            Not a match
+            Add without it
           </button>
         </div>
         <button
           type="button"
-          onClick={onSearchManually}
+          onClick={onCancel}
           className="block text-xs text-ink-600 underline mt-2"
         >
-          Search manually instead
+          Cancel
         </button>
       </div>
     </div>

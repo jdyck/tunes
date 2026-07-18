@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { leagueGothic, robotoCondensed, robotoMono } from "@/lib/fonts";
-import GlobalPlayerGate from "@/components/GlobalPlayerGate";
+import GlobalPlayerGate from "@/components/player/GlobalPlayerGate";
 
 export const metadata: Metadata = {
   title: "Standards",

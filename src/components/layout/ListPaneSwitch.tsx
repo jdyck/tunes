@@ -1,8 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import SongsListPane from "@/components/SongsListPane";
-import ComponentsListPane from "@/components/ComponentsListPane";
+import SongsListPane from "@/components/song/SongsListPane";
+import ComponentsListPane from "@/components/layout/ComponentsListPane";
 
 export default function ListPaneSwitch() {
   const pathname = usePathname();

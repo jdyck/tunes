@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { fetchSongWork } from "@/utils/musicbrainz";
-import { fetchBackgroundForWikidataId } from "@/utils/wikipedia";
+import { fetchSongWork } from "@/lib/musicbrainz";
+import { fetchBackgroundForWikidataId } from "@/lib/wikipedia";
 
 // Combines the work detail (year, writers) and Wikipedia background lookups
 // behind one request -- both are needed together for AddSongModal's confirm

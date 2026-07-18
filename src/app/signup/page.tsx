@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import Spinner from "@/components/Spinner";
+import Spinner from "@/components/ui/Spinner";
 
 export default function SignupPage() {
   const router = useRouter();

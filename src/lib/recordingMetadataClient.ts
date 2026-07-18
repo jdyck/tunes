@@ -3,7 +3,7 @@
 // Thin client-side wrappers around the /api/recording-metadata routes,
 // shared between RecordingDetailContent and its match-suggestion UI.
 
-import { RecordingMatchResult } from "@/utils/musicbrainz";
+import { RecordingMatchResult } from "@/lib/musicbrainz";
 
 export const searchRecordingMetadata = async (
   title: string,

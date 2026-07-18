@@ -1,6 +1,6 @@
 import Link from "next/link";
-import AccountMenu from "@/components/AccountMenu";
-import NavLink from "@/components/NavLink";
+import AccountMenu from "@/components/layout/AccountMenu";
+import NavLink from "@/components/ui/NavLink";
 import { leagueGothic } from "@/lib/fonts";
 
 export default function BrowseSidebar() {

@@ -1,4 +1,4 @@
-import SaveStatusButton from "@/components/SaveStatusButton";
+import SaveStatusButton from "@/components/ui/SaveStatusButton";
 
 export default function SaveStatusButtonDemoPage() {
   return (

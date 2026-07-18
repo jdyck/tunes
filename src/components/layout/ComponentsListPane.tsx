@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { leagueGothic } from "@/lib/fonts";
 import { componentRegistry } from "@/lib/componentRegistry";
-import BackLink from "@/components/BackLink";
+import BackLink from "@/components/ui/BackLink";
 
 export default function ComponentsListPane() {
   const pathname = usePathname();

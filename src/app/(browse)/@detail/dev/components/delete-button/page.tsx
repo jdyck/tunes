@@ -1,6 +1,6 @@
 "use client";
 
-import DeleteButton from "@/components/DeleteButton";
+import DeleteButton from "@/components/ui/DeleteButton";
 
 export default function DeleteButtonDemoPage() {
   return (
