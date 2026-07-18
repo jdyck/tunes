@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import FormStatusMessage from "@/components/ui/FormStatusMessage";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import Spinner from "@/components/ui/Spinner";
@@ -71,7 +72,7 @@ export default function ForgotPasswordPage() {
           )}
         </button>
       </form>
-      {error && <p className="mt-3 text-sm text-mojo-600">{error}</p>}
+      {error && <FormStatusMessage className="mt-3">{error}</FormStatusMessage>}
       <Link
         href="/login"
         className="text-green-800 underline text-xs mt-4 inline-block"

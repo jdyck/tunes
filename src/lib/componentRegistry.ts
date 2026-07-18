@@ -20,6 +20,10 @@ export const componentRegistry = [
     name: "FormField",
   },
   {
+    slug: "form-status-message",
+    name: "FormStatusMessage",
+  },
+  {
     slug: "global-player",
     name: "GlobalPlayer",
   },

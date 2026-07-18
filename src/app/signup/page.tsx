@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import FormStatusMessage from "@/components/ui/FormStatusMessage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -90,7 +91,7 @@ export default function SignupPage() {
           )}
         </button>
       </form>
-      {error && <p className="text-sm text-mojo-600">{error}</p>}
+      {error && <FormStatusMessage>{error}</FormStatusMessage>}
       <Link href="/login" className="text-green-800 underline text-xs">
         Already have an account? Log in
       </Link>
