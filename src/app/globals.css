@@ -38,6 +38,18 @@
   --color-merino-900: #603e2e;
   --color-merino-950: #331f17;
 
+  --color-old-lace-50: #fcf6e8;
+  --color-old-lace-100: #f8ebcd;
+  --color-old-lace-200: #f0d597;
+  --color-old-lace-300: #e8bb61;
+  --color-old-lace-400: #e2a33d;
+  --color-old-lace-500: #da8526;
+  --color-old-lace-600: #c1651e;
+  --color-old-lace-700: #a0491d;
+  --color-old-lace-800: #83391d;
+  --color-old-lace-900: #6c301b;
+  --color-old-lace-950: #3d170b;
+
   --color-mojo-50: #fdf4ef;
   --color-mojo-100: #fae7da;
   --color-mojo-200: #f3ccb5;
@@ -70,7 +82,7 @@
   --color-line-200: #D9D0BE;
 
   /* ---- Semantic aliases ---- */
-  --color-surface-app: var(--color-merino-100);
+  --color-surface-app: var(--color-old-lace-50);
   --color-surface-panel: var(--color-merino-100);
   --color-surface-sunken: var(--color-merino-300);
   --color-surface-brand: var(--color-azure-500);
@@ -196,7 +208,7 @@
 html::after {
   content: "";
   position: absolute;
-  top: 0px;
+  top: 0;
   height: 100vh;
   width: 100vw;
   z-index: 9999;
@@ -207,7 +219,7 @@ html::after {
      instead of only darkening like multiply. */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 2000px 2000px;
-  opacity: .185;
+  opacity: .09;
   mix-blend-mode: multiply;
 }
 

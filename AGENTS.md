@@ -40,6 +40,8 @@ npm run start    # run production build
 
 No test suite exists yet (see [docs/direction/testing.md](docs/direction/testing.md)).
 
+Login credentials for local dev are in `.env.local` (not checked in).
+
 ## Rules and guardrails
 
 - **Terminology**: use "Song" in new code/UI copy, not "Tune" — the domain was renamed ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)) but existing code/DB (`Tune` type, `public.tunes` table, `/tune`, `/add-tune` routes) hasn't caught up yet ([docs/direction/song-user-song-split.md](docs/direction/song-user-song-split.md)). Don't treat that existing code as the preferred pattern to copy; don't rename it unprompted either — it's a real migration, not a drive-by fix.
