@@ -1,7 +1,7 @@
 "use client";
 
-import RecordingMatchSuggestion from "@/components/RecordingMatchSuggestion";
-import { RecordingMatchResult } from "@/utils/musicbrainz";
+import RecordingMatchSuggestion from "@/components/recording/RecordingMatchSuggestion";
+import { RecordingMatchResult } from "@/lib/musicbrainz";
 
 const match: RecordingMatchResult = {
   recordingId: "demo-1",

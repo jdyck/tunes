@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import WikipediaBackgroundCard from "@/components/WikipediaBackgroundCard";
+import WikipediaBackgroundCard from "@/components/song/WikipediaBackgroundCard";
 
 const extract =
   '"Autumn Leaves" is the English-language lyrical adaptation of the French song "Les Feuilles mortes" composed by Joseph Kosma in 1945.';

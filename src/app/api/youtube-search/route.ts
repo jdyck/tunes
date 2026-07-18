@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchYtMusic } from "@/utils/ytmusic";
-import { searchYouTubeVideos } from "@/utils/youtube";
+import { searchYouTubeVideos } from "@/lib/youtube";
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 

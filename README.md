@@ -1,4 +1,4 @@
-# Tunes
+# Standards
 
 A personal tool for tracking a musician's repertoire — songs, personal notes, and liked recordings — kept separate from casual listening playlists. Solo project, early stage.
 

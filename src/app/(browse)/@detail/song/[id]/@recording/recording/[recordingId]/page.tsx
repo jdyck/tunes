@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import RecordingDetailContent from "@/components/RecordingDetailContent";
+import RecordingDetailContent from "@/components/recording/RecordingDetailContent";
 
 export default function RecordingDetailPage() {
   const { id, recordingId } = useParams();

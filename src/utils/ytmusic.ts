@@ -6,7 +6,7 @@
 // YouTube Data API -- see src/app/api/youtube-search/route.ts.
 
 import YTMusic from "ytmusic-api";
-import { YouTubeSearchResult, formatDurationSeconds } from "@/utils/youtube";
+import { YouTubeSearchResult, formatDurationSeconds } from "@/lib/youtube";
 
 const SEARCH_TIMEOUT_MS = 4000;
 

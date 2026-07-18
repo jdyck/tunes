@@ -1,7 +1,7 @@
 "use client";
 
-import { usePlayer } from "@/components/GlobalPlayer";
-import PrimaryButton from "@/components/PrimaryButton";
+import { usePlayer } from "@/components/player/GlobalPlayer";
+import PrimaryButton from "@/components/ui/PrimaryButton";
 
 export default function GlobalPlayerDemoPage() {
   const { play } = usePlayer();

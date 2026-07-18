@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import FormStatusMessage from "@/components/ui/FormStatusMessage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import Spinner from "@/components/Spinner";
+import Spinner from "@/components/ui/Spinner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -78,7 +79,7 @@ export default function LoginPage() {
           )}
         </button>
       </form>
-      {loginError && <p className="text-sm text-mojo-600">{loginError}</p>}
+      {loginError && <FormStatusMessage>{loginError}</FormStatusMessage>}
       <div className="flex justify-between">
         <Link href="/forgot-password" className="text-azure-600 underline">
           Forgot your password?

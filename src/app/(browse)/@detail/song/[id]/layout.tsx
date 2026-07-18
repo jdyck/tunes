@@ -1,8 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import SongDetailContent from "@/components/SongDetailContent";
-import RecordingPaneWrapper from "@/components/RecordingPaneWrapper";
+import SongDetailContent from "@/components/song/SongDetailContent";
+import RecordingPaneGate from "@/components/layout/RecordingPaneGate";
 
 export default function SongDetailLayout({
   children,
@@ -22,7 +22,7 @@ export default function SongDetailLayout({
         <SongDetailContent id={songId} />
         {children}
       </div>
-      <RecordingPaneWrapper>{recording}</RecordingPaneWrapper>
+      <RecordingPaneGate>{recording}</RecordingPaneGate>
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import FormStatusMessage from "@/components/ui/FormStatusMessage";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -84,13 +85,9 @@ export default function AccountPage() {
         </button>
       </form>
       {status && (
-        <p
-          className={`mt-3 text-sm ${
-            status.type === "error" ? "text-mojo-600" : "text-green-700"
-          }`}
-        >
+        <FormStatusMessage type={status.type} className="mt-3">
           {status.message}
-        </p>
+        </FormStatusMessage>
       )}
     </div>
   );

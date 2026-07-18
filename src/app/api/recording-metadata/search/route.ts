@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchRecordingMatches } from "@/utils/musicbrainz";
+import { searchRecordingMatches } from "@/lib/musicbrainz";
 
 export async function GET(request: NextRequest) {
   const title = request.nextUrl.searchParams.get("title")?.trim();

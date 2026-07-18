@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import YtMusicSearchResultRow from "@/components/YtMusicSearchResultRow";
-import { YouTubeSearchResult } from "@/utils/youtube";
+import YtMusicSearchResultRow from "@/components/recording/YtMusicSearchResultRow";
+import { YouTubeSearchResult } from "@/lib/youtube";
 
 const result: YouTubeSearchResult = {
   videoId: "demo0000000",

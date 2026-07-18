@@ -1,4 +1,4 @@
-import AuthLayoutShell from "@/components/AuthLayoutShell";
+import AuthLayoutShell from "@/components/layout/AuthLayoutShell";
 
 export default function SignupLayout({
   children,

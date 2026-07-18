@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchRecordingMatch } from "@/utils/musicbrainz";
+import { fetchRecordingMatch } from "@/lib/musicbrainz";
 
 export async function GET(
   _request: Request,

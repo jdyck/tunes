@@ -1,4 +1,4 @@
-import MusicBrainzLink from "@/components/MusicBrainzLink";
+import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
 
 export default function MusicBrainzLinkDemoPage() {
   return (

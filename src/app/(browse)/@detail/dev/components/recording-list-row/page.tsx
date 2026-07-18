@@ -1,9 +1,9 @@
-import RecordingListRow from "@/components/RecordingListRow";
+import RecordingListRow from "@/components/recording/RecordingListRow";
 import { Recording } from "@/types/types";
 
 const recording: Recording = {
   id: "demo",
-  tune_id: "demo-tune",
+  song_id: "demo-song",
   user_id: "demo-user",
   name: "Autumn Leaves",
   artist: "Bill Evans Trio",

@@ -42,6 +42,9 @@ next-env.d.ts
 # secrets
 /secrets
 
+# local session/handoff notes (never committed)
+/notes
+
 # editor/tooling
 .idea
 .claude

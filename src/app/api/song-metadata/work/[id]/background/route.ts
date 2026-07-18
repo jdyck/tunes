@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchWorkBackground } from "@/utils/wikipedia";
+import { fetchWorkBackground } from "@/lib/wikipedia";
 
 export async function GET(
   _request: Request,
