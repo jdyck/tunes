@@ -29,9 +29,9 @@ Last remaining `.js` file. Rename to `.ts`, add types for the exported client. N
 
 Pure rename; update the `(browse)/layout.tsx` import.
 
-### `Tune` → `Song` type rename (unblocked — approved interim step)
+### `Tune` → `Song` rename — **DONE (July 2026)**
 
-Rename the `Tune` interface in `src/types/types.ts` to `Song`, update imports in `SongDetailContent`, `SongsListContext`, `SongsListPane`, `RecordingDetailContent`, `AddSongModal`, `utils/wikipedia.ts`, `utils/musicbrainz.ts`. Do **not** touch the `public.tunes` table, Supabase queries' table names, or the field shape — that's the real split ([song-user-song-split.md](song-user-song-split.md)).
+Type, identifiers, table (`public.songs`), and columns (`song_id`) all renamed; migration `20260718000000_rename_tunes_to_songs.sql` applied to the remote DB. The field-shape split remains future work ([song-user-song-split.md](song-user-song-split.md)).
 
 ### Group `src/components/` into folders (unblocked — Decision B confirmed)
 

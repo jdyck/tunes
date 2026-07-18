@@ -112,12 +112,12 @@ export default function RecordingDetailContent({
         setMusicbrainzRecordingId(recordingData.musicbrainz_recording_id || null);
         setMusicbrainzReleaseId(recordingData.musicbrainz_release_id || null);
 
-        const { data: tuneData } = await supabase
-          .from("tunes")
+        const { data: songData } = await supabase
+          .from("songs")
           .select("name")
           .eq("id", songId)
           .single();
-        setSongTitle(tuneData?.name || null);
+        setSongTitle(songData?.name || null);
 
         setLoading(false);
       } catch (err) {

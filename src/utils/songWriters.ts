@@ -15,12 +15,12 @@ interface SongWriterRow {
 }
 
 export const fetchSongWriters = async (
-  tuneId: string
+  songId: string
 ): Promise<WriterInput[]> => {
   const { data, error } = await supabase
     .from("song_writers")
     .select("role, sort_order, people(name)")
-    .eq("tune_id", tuneId)
+    .eq("song_id", songId)
     .order("sort_order");
 
   if (error) throw error;
@@ -54,13 +54,13 @@ const findOrCreatePerson = async (name: string): Promise<string> => {
 // local row list without incremental add/remove/reorder diffing, same
 // approach already used for Recording.tags.
 export const saveSongWriters = async (
-  tuneId: string,
+  songId: string,
   writers: WriterInput[]
 ): Promise<void> => {
   const { error: deleteError } = await supabase
     .from("song_writers")
     .delete()
-    .eq("tune_id", tuneId);
+    .eq("song_id", songId);
   if (deleteError) throw deleteError;
 
   const namedWriters = writers.filter((w) => w.name.trim());
@@ -68,7 +68,7 @@ export const saveSongWriters = async (
   for (const [index, writer] of namedWriters.entries()) {
     const personId = await findOrCreatePerson(writer.name.trim());
     const { error: insertError } = await supabase.from("song_writers").insert({
-      tune_id: tuneId,
+      song_id: songId,
       person_id: personId,
       role: writer.role,
       sort_order: index,

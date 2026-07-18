@@ -54,13 +54,13 @@ interface ResolvedFields {
 }
 
 export default function AddRecordingModal({
-  tuneId,
-  tuneTitle,
+  songId,
+  songTitle,
   onClose,
   onAdded,
 }: {
-  tuneId: string;
-  tuneTitle: string;
+  songId: string;
+  songTitle: string;
   onClose: () => void;
   onAdded: () => void;
 }) {
@@ -79,7 +79,7 @@ export default function AddRecordingModal({
   const [platformStates, setPlatformStates] = useState<
     Record<SearchPlatformId, PlatformSearchState>
   >(() => ({
-    ytmusic: emptyPlatformState(`${tuneTitle} `),
+    ytmusic: emptyPlatformState(`${songTitle} `),
     youtube: emptyPlatformState(""),
   }));
   const [currentPage, setCurrentPage] = useState(0);
@@ -272,7 +272,7 @@ export default function AddRecordingModal({
     }
 
     const ok = await insertRecording({
-      tune_id: tuneId,
+      song_id: songId,
       name: result.title,
       notes: fields.notes,
       url: fields.url,
@@ -297,7 +297,7 @@ export default function AddRecordingModal({
     setPendingMatch(null);
 
     const ok = await insertRecording({
-      tune_id: tuneId,
+      song_id: songId,
       name: match.title || pendingMatch.result.title,
       notes: fields.notes,
       url: fields.url,
@@ -324,7 +324,7 @@ export default function AddRecordingModal({
     setPendingMatch(null);
 
     const ok = await insertRecording({
-      tune_id: tuneId,
+      song_id: songId,
       name: result.title,
       notes: fields.notes,
       url: fields.url,

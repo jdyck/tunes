@@ -7,7 +7,7 @@ export default function DeleteButtonDemoPage() {
     <div className="max-w-sm">
       <DeleteButton
         label="Song"
-        confirmMessage="Are you sure you want to delete this tune? This action cannot be undone."
+        confirmMessage="Are you sure you want to delete this song? This action cannot be undone."
         onDelete={() => console.log("[demo] delete confirmed")}
       />
     </div>

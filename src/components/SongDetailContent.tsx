@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import { Tune, Recording } from "@/types/types";
+import { Song, Recording } from "@/types/types";
 import {
   ChevronRightIcon,
   PlayIcon,
@@ -55,9 +55,9 @@ const normalizeTitleText = (value: string) =>
 export default function SongDetailContent({ id }: { id: string }) {
   const router = useRouter();
   const { play } = usePlayer();
-  const { patchTune, removeTune } = useSongsList();
+  const { patchSong, removeSong } = useSongsList();
 
-  const [tune, setTune] = useState<Tune | null>(null);
+  const [song, setSong] = useState<Song | null>(null);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,30 +85,30 @@ export default function SongDetailContent({ id }: { id: string }) {
   const [showWritersEditor, setShowWritersEditor] = useState(false);
   const titleRef = useRef<HTMLDivElement | null>(null);
 
-  const fetchTuneAndRecordings = async () => {
+  const fetchSongAndRecordings = async () => {
     try {
-      const { data: tuneData, error: tuneError } = await supabase
-        .from("tunes")
+      const { data: songData, error: songError } = await supabase
+        .from("songs")
         .select("*")
         .eq("id", id)
         .single();
 
-      if (tuneError)
-        throw new Error(`Error fetching tune: ${tuneError.message}`);
+      if (songError)
+        throw new Error(`Error fetching song: ${songError.message}`);
 
-      setTune(tuneData as Tune);
-      setNotes(tuneData?.notes || "");
-      setTitle(tuneData?.name || "");
-      setYear(tuneData?.year || "");
-      setWikipediaExtract(tuneData?.wikipedia_extract || null);
-      setWikipediaUrl(tuneData?.wikipedia_url || null);
-      setMusicbrainzWorkId(tuneData?.musicbrainz_work_id || null);
+      setSong(songData as Song);
+      setNotes(songData?.notes || "");
+      setTitle(songData?.name || "");
+      setYear(songData?.year || "");
+      setWikipediaExtract(songData?.wikipedia_extract || null);
+      setWikipediaUrl(songData?.wikipedia_url || null);
+      setMusicbrainzWorkId(songData?.musicbrainz_work_id || null);
       setWriters(await fetchSongWriters(id));
 
       const { data: recordingsData, error: recordingsError } = await supabase
         .from("recordings")
         .select("*")
-        .eq("tune_id", id)
+        .eq("song_id", id)
         .order("sortOrder");
 
       if (recordingsError)
@@ -141,7 +141,7 @@ export default function SongDetailContent({ id }: { id: string }) {
     setLoading(true);
     setError(null);
     setShowWritersEditor(false);
-    fetchTuneAndRecordings();
+    fetchSongAndRecordings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -153,9 +153,9 @@ export default function SongDetailContent({ id }: { id: string }) {
   }, [title]);
 
   const handleSave = async () => {
-    if (!id || !tune) return;
+    if (!id || !song) return;
 
-    const updatedFields: Partial<Tune> = {
+    const updatedFields: Partial<Song> = {
       notes,
       name: title,
       year: year || null,
@@ -165,7 +165,7 @@ export default function SongDetailContent({ id }: { id: string }) {
     };
 
     const { error } = await supabase
-      .from("tunes")
+      .from("songs")
       .update(updatedFields)
       .eq("id", id);
 
@@ -179,7 +179,7 @@ export default function SongDetailContent({ id }: { id: string }) {
       await saveSongWriters(id, writers);
       setError(null);
       setIsSaved(true);
-      patchTune(id, { ...updatedFields, writers });
+      patchSong(id, { ...updatedFields, writers });
     } catch (writersError) {
       const message =
         writersError instanceof Error
@@ -279,13 +279,13 @@ export default function SongDetailContent({ id }: { id: string }) {
   const handleDelete = async () => {
     if (!id) return;
 
-    const { error } = await supabase.from("tunes").delete().eq("id", id);
+    const { error } = await supabase.from("songs").delete().eq("id", id);
 
     if (error) {
-      console.error("Error deleting tune:", error.message);
-      setError(`Error deleting tune: ${error.message}`);
+      console.error("Error deleting song:", error.message);
+      setError(`Error deleting song: ${error.message}`);
     } else {
-      removeTune(id);
+      removeSong(id);
       router.push("/songs");
     }
   };
@@ -297,9 +297,9 @@ export default function SongDetailContent({ id }: { id: string }) {
     setIsSaved(false);
   };
 
-  if (loading) return <AsyncStateMessage>Loading tune...</AsyncStateMessage>;
+  if (loading) return <AsyncStateMessage>Loading song...</AsyncStateMessage>;
   if (error) return <AsyncStateMessage variant="error">{error}</AsyncStateMessage>;
-  if (!tune) return <AsyncStateMessage>No tune found.</AsyncStateMessage>;
+  if (!song) return <AsyncStateMessage>No song found.</AsyncStateMessage>;
 
   const writerCredit = formatWriterInputCredit(writers);
 
@@ -509,23 +509,23 @@ export default function SongDetailContent({ id }: { id: string }) {
           })}
         </ul>
       ) : (
-        <p>No recordings found for this tune.</p>
+        <p>No recordings found for this song.</p>
       )}
 
       <DeleteButton
         label="Song"
-        confirmMessage="Are you sure you want to delete this tune? This action cannot be undone."
+        confirmMessage="Are you sure you want to delete this song? This action cannot be undone."
         onDelete={handleDelete}
       />
 
       {showAddRecording && (
         <AddRecordingModal
-          tuneId={id}
-          tuneTitle={title}
+          songId={id}
+          songTitle={title}
           onClose={() => setShowAddRecording(false)}
           onAdded={() => {
             setShowAddRecording(false);
-            fetchTuneAndRecordings();
+            fetchSongAndRecordings();
           }}
         />
       )}

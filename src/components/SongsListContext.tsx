@@ -2,18 +2,18 @@
 
 import { createContext, useCallback, useContext, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Tune } from "@/types/types";
+import { Song } from "@/types/types";
 import { WriterInput } from "@/utils/songWriters";
 
 interface SongsListContextValue {
-  tunes: Tune[];
+  songs: Song[];
   loading: boolean;
-  fetchTunes: (userId: string) => Promise<void>;
-  patchTune: (
+  fetchSongs: (userId: string) => Promise<void>;
+  patchSong: (
     id: string,
-    patch: Partial<Omit<Tune, "song_writers">> & { writers?: WriterInput[] }
+    patch: Partial<Omit<Song, "song_writers">> & { writers?: WriterInput[] }
   ) => void;
-  removeTune: (id: string) => void;
+  removeSong: (id: string) => void;
 }
 
 const SongsListContext = createContext<SongsListContextValue | null>(null);
@@ -23,41 +23,41 @@ export function SongsListProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [tunes, setTunes] = useState<Tune[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchTunes = useCallback(async (userId: string) => {
+  const fetchSongs = useCallback(async (userId: string) => {
     const { data, error } = await supabase
-      .from("tunes")
+      .from("songs")
       .select("*, song_writers(role, sort_order, people(name))")
       .eq("user_id", userId);
 
     if (error) {
-      console.error("Error fetching tunes:", error.message);
+      console.error("Error fetching songs:", error.message);
     } else {
-      setTunes((data as Tune[]).sort((a, b) => a.name.localeCompare(b.name)));
+      setSongs((data as Song[]).sort((a, b) => a.name.localeCompare(b.name)));
     }
     setLoading(false);
   }, []);
 
-  const patchTune = useCallback(
+  const patchSong = useCallback(
     (
       id: string,
-      patch: Partial<Omit<Tune, "song_writers">> & { writers?: WriterInput[] }
+      patch: Partial<Omit<Song, "song_writers">> & { writers?: WriterInput[] }
     ) => {
       const { writers, ...fields } = patch;
-      setTunes((prev) =>
-        prev.map((tune) =>
-          tune.id === id
+      setSongs((prev) =>
+        prev.map((song) =>
+          song.id === id
             ? {
-                ...tune,
+                ...song,
                 ...fields,
                 ...(writers
                   ? {
                       song_writers: writers
                         .filter((w) => w.name.trim())
                         .map((w) => ({
-                          tune_id: id,
+                          song_id: id,
                           person_id: "",
                           role: w.role,
                           people: { id: "", name: w.name },
@@ -65,20 +65,20 @@ export function SongsListProvider({
                     }
                   : {}),
               }
-            : tune
+            : song
         )
       );
     },
     []
   );
 
-  const removeTune = useCallback((id: string) => {
-    setTunes((prev) => prev.filter((tune) => tune.id !== id));
+  const removeSong = useCallback((id: string) => {
+    setSongs((prev) => prev.filter((song) => song.id !== id));
   }, []);
 
   return (
     <SongsListContext.Provider
-      value={{ tunes, loading, fetchTunes, patchTune, removeTune }}
+      value={{ songs, loading, fetchSongs, patchSong, removeSong }}
     >
       {children}
     </SongsListContext.Provider>

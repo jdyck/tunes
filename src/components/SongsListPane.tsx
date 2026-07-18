@@ -16,7 +16,7 @@ import AddSongModal from "@/components/AddSongModal";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import { formatWriterCredit } from "@/utils/songWriters";
 import { useSongsList } from "@/components/SongsListContext";
-import { Tune } from "@/types/types";
+import { Song } from "@/types/types";
 import BackLink from "@/components/BackLink";
 
 type SortKey = "title" | "writers" | "date" | "added";
@@ -43,7 +43,7 @@ const titleForSorting = (title: string) => {
 export default function SongsListPane() {
   const router = useRouter();
   const pathname = usePathname();
-  const { tunes, loading, fetchTunes } = useSongsList();
+  const { songs, loading, fetchSongs } = useSongsList();
 
   const [loadingUser, setLoadingUser] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -75,20 +75,20 @@ export default function SongsListPane() {
   }, [loadingUser, user, router]);
 
   useEffect(() => {
-    if (user) fetchTunes(user.id);
+    if (user) fetchSongs(user.id);
   }, [user]);
 
   const goToSong = (id: string) => {
     router.push(`/song/${id}`);
   };
 
-  const visibleTunes = useMemo(() => {
+  const visibleSongs = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
-    const filteredTunes = searchTerm
-      ? tunes.filter((tune) => tune.name.toLowerCase().includes(searchTerm))
-      : tunes;
+    const filteredSongs = searchTerm
+      ? songs.filter((song) => song.name.toLowerCase().includes(searchTerm))
+      : songs;
 
-    return [...filteredTunes].sort((a, b) => {
+    return [...filteredSongs].sort((a, b) => {
       let comparison = 0;
 
       if (sortKey === "title") {
@@ -109,7 +109,7 @@ export default function SongsListPane() {
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [search, sortDirection, sortKey, tunes]);
+  }, [search, sortDirection, sortKey, songs]);
 
   if (loadingUser || !user) {
     return <p className="p-4">Loading...</p>;
@@ -157,7 +157,7 @@ export default function SongsListPane() {
 
 
         <div className="pb-2 text-sm text-ink-600 flex items-center justify-between gap-3">
-          <span className={`text-azure-600/90 font-bold uppercase ${leagueGothic.className} text-base tracking-widest`}>{visibleTunes.length} Songs</span>
+          <span className={`text-azure-600/90 font-bold uppercase ${leagueGothic.className} text-base tracking-widest`}>{visibleSongs.length} Songs</span>
           <div className="relative flex items-center">
             <button
               type="button"
@@ -215,19 +215,19 @@ export default function SongsListPane() {
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-12">
         {loading ? (
           <p>Loading songs...</p>
-        ) : visibleTunes.length > 0 ? (
+        ) : visibleSongs.length > 0 ? (
           <ul>
-            {visibleTunes.map((tune) => {
-              const isActive = pathname.startsWith(`/song/${tune.id}`);
+            {visibleSongs.map((song) => {
+              const isActive = pathname.startsWith(`/song/${song.id}`);
               return (
-                <li key={tune.id} className="[&:has(+_li:hover)>a]:border-b-0">
+                <li key={song.id} className="[&:has(+_li:hover)>a]:border-b-0">
                   <Link
-                    href={`/song/${tune.id}`}
+                    href={`/song/${song.id}`}
                     className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-old-lace-100 hover:border-b-0 hover:rounded-lg active:bg-old-lace-100 ${
                       isActive ? "bg-old-lace-100" : ""
                     }`}
                   >
-                    <SongRow tune={tune} />
+                    <SongRow song={song} />
                     {isActive && (
                       <div className="w-2 h-full absolute bg-mojo-700 shrink-0" />
                     )}
@@ -236,7 +236,7 @@ export default function SongsListPane() {
               );
             })}
           </ul>
-        ) : tunes.length > 0 ? (
+        ) : songs.length > 0 ? (
           <p>No songs match “{search}”.</p>
         ) : (
           <p>You don’t have any songs yet.</p>
@@ -248,7 +248,7 @@ export default function SongsListPane() {
           onClose={() => setShowAddSong(false)}
           onCreated={(id) => {
             setShowAddSong(false);
-            if (user) fetchTunes(user.id);
+            if (user) fetchSongs(user.id);
             goToSong(id);
           }}
         />
@@ -257,14 +257,14 @@ export default function SongsListPane() {
   );
 }
 
-function SongRow({ tune }: { tune: Tune }) {
-  const credit = formatWriterCredit(tune.song_writers ?? []);
+function SongRow({ song }: { song: Song }) {
+  const credit = formatWriterCredit(song.song_writers ?? []);
   return (
     <div className={`pl-6 flex-1 min-w-0 ${robotoCondensed.className}`}>
       <div className="flex justify-between items-start gap-2 tracking-wider">
-        <span className={`${leagueGothic.className} uppercase text-xl truncate min-w-0`}>{tune.name}</span>
-        {tune.year && (
-          <span className="text-sm text-ink-900 shrink-0">{tune.year}</span>
+        <span className={`${leagueGothic.className} uppercase text-xl truncate min-w-0`}>{song.name}</span>
+        {song.year && (
+          <span className="text-sm text-ink-900 shrink-0">{song.year}</span>
         )}
       </div>
       {credit && (

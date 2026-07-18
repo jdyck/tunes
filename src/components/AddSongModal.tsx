@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Tune } from "@/types/types";
+import { Song } from "@/types/types";
 import { SongWorkSearchResult } from "@/utils/musicbrainz";
 import { WorkBackground } from "@/utils/wikipedia";
 import { WriterInput, saveSongWriters } from "@/utils/songWriters";
@@ -116,7 +116,7 @@ export default function AddSongModal({
     }
 
     setSaving(true);
-    const tune: Partial<Tune> = {
+    const newSong: Partial<Song> = {
       name: song.name,
       year: song.year,
       user_id: user.id,
@@ -126,8 +126,8 @@ export default function AddSongModal({
     };
 
     const { data, error } = await supabase
-      .from("tunes")
-      .insert([tune])
+      .from("songs")
+      .insert([newSong])
       .select()
       .single();
 

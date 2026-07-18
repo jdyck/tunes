@@ -4,7 +4,7 @@ import { User as SupabaseUser } from "@supabase/supabase-js";
 
 export interface User extends SupabaseUser {}
 
-export interface Tune {
+export interface Song {
   id?: string;
   name: string;
   created_at?: string | null;
@@ -26,7 +26,7 @@ export interface Person {
 
 export interface SongWriter {
   id?: string;
-  tune_id: string;
+  song_id: string;
   person_id: string;
   role: SongWriterRole;
   sort_order?: number | null;
@@ -35,7 +35,7 @@ export interface SongWriter {
 
 export interface Recording {
   id: string;
-  tune_id: string;
+  song_id: string;
   user_id: string;
   name: string;
   notes?: string | null;

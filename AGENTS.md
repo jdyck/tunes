@@ -48,7 +48,7 @@ Login credentials for local dev are in `.env.local` (not checked in).
 
 ## Rules and guardrails
 
-- **Terminology**: use "Song" in new code/UI copy, not "Tune" — the domain was renamed ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)) but some code/DB (`Tune` type, `public.tunes` table) hasn't caught up yet ([docs/direction/song-user-song-split.md](docs/direction/song-user-song-split.md)). Don't treat that existing code as the preferred pattern to copy. The type rename is approved and scoped in [docs/direction/code-organization.md](docs/direction/code-organization.md); the DB split is a separate migration — do either only as its scoped task, not as a drive-by inside other work.
+- **Terminology**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). The rename is complete through code and DB (`public.songs`, `song_id`); don't reintroduce "tune". The remaining Song / User Song *table split* is a future scoped migration ([docs/direction/song-user-song-split.md](docs/direction/song-user-song-split.md)) — not a drive-by.
 - **Song creation is not admin-gated**: any user can create a new Song on no search match; don't add approval/moderation gates here ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)).
 - **Lead Sheets are private by default and publishing is admin-only**, never self-service or automatic — don't build a user-facing "publish" action ([ADR-0002](docs/adr/0002-lead-sheets-admin-gated-publishing.md)).
 - **One email = one account** across auth methods (password + Google) — don't treat them as separate identities ([ADR-0001](docs/adr/0001-unique-email-account-linking.md)).

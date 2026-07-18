@@ -5,7 +5,7 @@
 // functions are only ever called from Next.js route handlers, never
 // directly from a component.
 
-const USER_AGENT = "tunes-personal-app/0.1 (https://github.com/jdyck/tunes)";
+const USER_AGENT = "songs-personal-app/0.1 (https://github.com/jdyck/songs)";
 
 export interface SongWorkSearchResult {
   workId: string;

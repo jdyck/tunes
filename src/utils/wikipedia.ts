@@ -5,7 +5,7 @@
 // JS set.
 
 const WIKIMEDIA_USER_AGENT =
-  "tunes-personal-app/0.1 (https://github.com/jdyck/tunes)";
+  "songs-personal-app/0.1 (https://github.com/jdyck/songs)";
 
 export interface WorkBackground {
   extract: string;
