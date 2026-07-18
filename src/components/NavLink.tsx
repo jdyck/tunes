@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import {leagueGothic} from "../../.claude/worktrees/lucid-kepler-ee6ce2/src/lib/fonts";
+import { leagueGothic } from "@/lib/fonts";
 
 export default function NavLink({
   href,
