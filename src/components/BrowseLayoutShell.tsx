@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import BrowseSidebar from "@/components/BrowseSidebar";
 import DetailPaneGate from "@/components/DetailPaneGate";
-import MiddlePaneGate from "@/components/MiddlePaneGate";
+import ListPaneSwitch from "@/components/ListPaneSwitch";
 
 export default function BrowseLayoutShell({
   detail,
@@ -26,7 +26,7 @@ export default function BrowseLayoutShell({
             isSongsList ? "fixed" : "hidden"
           } inset-x-0 top-0 bottom-0 z-10 overflow-y-auto overscroll-none pt-[env(safe-area-inset-top)] pb-[calc(4rem+env(safe-area-inset-bottom))] bg-surface-app lg:block lg:static lg:inset-auto lg:z-auto lg:w-sm xl:w-md lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pt-0 lg:pb-0 lg:border-r lg:border-line-100`}
         >
-          <MiddlePaneGate />
+          <ListPaneSwitch />
         </div>
         <div className="lg:relative lg:flex lg:flex-1 lg:min-w-0 lg:h-full lg:overflow-hidden">
           <DetailPaneGate>{detail}</DetailPaneGate>

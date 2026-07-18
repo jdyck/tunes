@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 // push-navigating away from /song/[id] (a Next.js parallel-routes
 // limitation — pop/back navigation resolves it fine, push doesn't), so we
 // gate on pathname directly instead of trusting whatever content Next
-// hands us for the slot. Mirrors the same pattern RecordingPaneWrapper
+// hands us for the slot. Mirrors the same pattern RecordingPaneGate
 // already uses for @recording.
 export default function DetailPaneGate({
   children,

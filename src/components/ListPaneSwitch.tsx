@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import SongsListPane from "@/components/SongsListPane";
 import ComponentsListPane from "@/components/ComponentsListPane";
 
-export default function MiddlePaneGate() {
+export default function ListPaneSwitch() {
   const pathname = usePathname();
 
   if (

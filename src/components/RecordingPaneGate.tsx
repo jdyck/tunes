@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 // default.tsx), but we only want to reserve pane width for it when the
 // current URL is actually pointing at a recording — otherwise it collapses
 // so the song pane gets the full remaining width.
-export default function RecordingPaneWrapper({
+export default function RecordingPaneGate({
   children,
 }: {
   children: React.ReactNode;
