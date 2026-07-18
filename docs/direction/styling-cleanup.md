@@ -13,7 +13,7 @@ Decision owner note: the actual palette/token values are decided outside this re
 - Do not "fix" colors opportunistically while doing other work. Color changes only happen as part of the migration tasks below, after the target mapping exists.
 - Do not invent new token names.
 
-## Task 1: token usage inventory in the component gallery (unblocked)
+## Task 1: token usage inventory in the component gallery — **DONE (July 2026)**
 
 Add a per-component "tokens used" panel to the dev component gallery (`/dev/components/<slug>` pages). Not weird — this is a standard style-guide feature (Storybook design-token addons do the same).
 
@@ -24,7 +24,7 @@ Suggested approach, simplest first:
 
 This gives the visual overview needed to make the mapping decision in Task 2.
 
-## Task 2: define the role → token mapping — **blocked on the palette decision**
+## Task 2: define the role → token mapping — **UNBLOCKED — needs the palette decision**
 
 Once Task 1 exists, decide and record here: for each *role* (primary action, destructive/error, success, muted text, headings/accent, surfaces/borders), which token family is canonical. Open question to settle: does `teal` (current de-facto accent) get promoted into the `@theme` palette under a real name, or does an existing family (azure?) take over its role?
 
