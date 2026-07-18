@@ -4,12 +4,12 @@ Superseded in part by [streaming-platform-links.md](streaming-platform-links.md)
 
 ## Implemented
 
-A persistent custom player replaced the old per-page bare YouTube embeds. `src/components/YouTubePlayer.tsx` (an earlier, unused wrapper around the IFrame API) is now dead code, superseded by this.
+A persistent custom player replaced the old per-page bare YouTube embeds. (`YouTubePlayer.tsx`, an earlier unused wrapper this superseded, has since been deleted.)
 
-- **`src/components/GlobalPlayer.tsx`** — a client component rendered in the root layout (`src/app/layout.tsx`), wrapping `{children}`. It owns all playback state (current track, playing/paused, progress, video visibility) and drives a single YouTube IFrame API player instance. Because it lives in the layout rather than a page, Next.js keeps it mounted across route navigations — playback survives moving between screens instead of restarting per page.
+- **`src/components/player/GlobalPlayer.tsx`** — a client component rendered in the root layout (`src/app/layout.tsx`), wrapping `{children}`. It owns all playback state (current track, playing/paused, progress, video visibility) and drives a single YouTube IFrame API player instance. Because it lives in the layout rather than a page, Next.js keeps it mounted across route navigations — playback survives moving between screens instead of restarting per page.
 - **`usePlayer()`** hook, exported from the same file, is how any page starts playback: `usePlayer().play(playable)`. `play` takes a `Playable` (`{ name, url?, artist?, kind? }`) rather than a full `Recording`, since YouTube search results (not yet saved as a Recording) need to play too, alongside saved Recordings which structurally satisfy `Playable`.
 - **Custom controls, hidden video by default.** The IFrame API still plays a real video (YouTube exposes no audio-only stream), but the app shows its own play/pause, scrubber, and time instead of YouTube's chrome. `Recording.kind` decides the starting state — `released` starts audio-only (video hidden off-screen), `video_capture` starts with video shown — and a chevron button lets the user override either way at any time without interrupting playback.
-- **Wired in at three call sites:** the recording detail page (`src/app/recording/[id]/page.tsx`, a "Play" button replacing the old inline iframe), the tune detail page's recordings list (`src/app/tune/[id]/page.tsx`, a play button per row, `stopPropagation`'d so it doesn't also trigger the row's link-through), and the add-recording YouTube search results (`src/app/tune/[id]/add-recording/page.tsx`, clicking a result's thumbnail plays it as a `Playable` built from the search result — this replaced a separate inline per-result preview iframe that used to exist only in that one screen).
+- **Wired in at three call sites** (paths as of the July 2026 reorg): the recording detail content (`src/components/recording/RecordingDetailContent.tsx`, a "Play" button replacing the old inline iframe), the song detail's recordings list (`src/components/song/SongDetailContent.tsx`, a play button per row, `stopPropagation`'d so it doesn't also trigger the row's link-through), and the add-recording YouTube search results (`src/components/recording/AddRecordingModal.tsx`, clicking a result's thumbnail plays it as a `Playable` built from the search result — this replaced a separate inline per-result preview iframe that used to exist only in that one screen).
 
 Two non-obvious pitfalls hit during implementation, worth knowing before touching this component again:
 
@@ -23,4 +23,3 @@ The owner plans to redesign the bottom bar's visual treatment separately — cur
 ## Open / not yet decided
 
 - Whether queueing/next-track behavior is in scope here or a separate feature.
-- Whether `src/components/YouTubePlayer.tsx` should just be deleted now that it's confirmed dead code, or left as-is until a broader cleanup pass.

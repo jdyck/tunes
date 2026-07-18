@@ -4,7 +4,7 @@ Instructions for AI coding agents working in this repo. Keep this file lean — 
 
 ## Project overview
 
-Tunes: a personal Next.js/Supabase app for tracking a solo musician's repertoire (Songs), personal notes on each (User Songs), and liked recordings — separate from casual playlists. Solo personal project, early stage, dormant between sessions. See [docs/domain-model.md](docs/domain-model.md) for why it exists and the domain vocabulary.
+Standards (repo folder: `tunes`): a personal Next.js/Supabase app for tracking a solo musician's repertoire (Songs), personal notes on each (User Songs), and liked recordings — separate from casual playlists. Solo personal project, early stage, dormant between sessions. See [docs/domain-model.md](docs/domain-model.md) for why it exists and the domain vocabulary.
 
 ## Repo layout
 
@@ -29,14 +29,14 @@ src/utils/           pure functions only (e.g. ytmusic.ts)
 docs/                domain model, ADRs, direction notes (issues + ideas by subject) — see docs/README.md
 ```
 
-Planned/known reorganization of this layout (folder grouping, lib/utils moves, renames) is scoped in [docs/direction/code-organization.md](docs/direction/code-organization.md) — check it before structural changes.
+The folder scheme and lib/utils rule above are deliberate decisions (recorded in [docs/direction/code-organization.md](docs/direction/code-organization.md)) — place new files accordingly, and check that doc before further structural changes.
 
 ## Tech stack
 
 - Next.js 16 (App Router), React 19, TypeScript
 - Tailwind CSS
-- Supabase (`@supabase/supabase-js`) — auth + Postgres, client in `src/lib/supabaseClient.js`
-- Persistent custom player for Recordings, backed by the YouTube IFrame API (`src/components/GlobalPlayer.tsx`, `src/utils/youtube.ts`) — see [docs/direction/music-player.md](docs/direction/music-player.md)
+- Supabase (`@supabase/supabase-js`) — auth + Postgres, client in `src/lib/supabaseClient.ts`; schema migrations in `supabase/migrations/` (applied with `npx supabase db push`)
+- Persistent custom player for Recordings, backed by the YouTube IFrame API (`src/components/player/GlobalPlayer.tsx`, `src/lib/youtube.ts`) — see [docs/direction/music-player.md](docs/direction/music-player.md)
 
 ## Commands
 
@@ -57,5 +57,6 @@ Login credentials for local dev are in `.env.local` (not checked in).
 - **Lead Sheets are private by default and publishing is admin-only**, never self-service or automatic — don't build a user-facing "publish" action ([ADR-0002](docs/adr/0002-lead-sheets-admin-gated-publishing.md)).
 - **One email = one account** across auth methods (password + Google) — don't treat them as separate identities ([ADR-0001](docs/adr/0001-unique-email-account-linking.md)).
 - **Only the owner commits — never an agent.** Agents stage changes (`git add`) and suggest a `git commit -m` message for the owner to run; never run `git commit` (or push, amend, etc.) themselves.
+- **Docs record direction and decisions, not history.** When work scoped in [docs/direction/](docs/direction/) is completed, *delete* that task/section (git history is the record — no "DONE" markers accumulating). Standing decisions worth keeping get an ADR; a direction file whose content is all completed gets deleted.
 - Before "fixing" something you notice in passing, check [docs/direction/](docs/direction/) for a file on that subject — it may already be a known, deliberately-not-yet-fixed issue, or something the owner has other plans for. A hit there needs a conversation, not a silent fix.
 - This is a solo hobby project the owner returns to after long gaps and is also using to learn broader dev practices — prefer clear, conventional patterns over clever ones, and explain non-obvious choices.
