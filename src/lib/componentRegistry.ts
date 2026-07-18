@@ -24,6 +24,10 @@ export const componentRegistry = [
     name: "GlobalPlayer",
   },
   {
+    slug: "link-button",
+    name: "LinkButton",
+  },
+  {
     slug: "modal",
     name: "Modal",
   },

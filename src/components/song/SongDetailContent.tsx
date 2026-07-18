@@ -38,6 +38,7 @@ import {
   fetchWorkBackground,
 } from "@/lib/songMetadataClient";
 import BackLink from "@/components/ui/BackLink";
+import LinkButton from "@/components/ui/LinkButton";
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 const formatWriterInputCredit = (writers: WriterInput[]) => {
@@ -431,13 +432,13 @@ export default function SongDetailContent({ id }: { id: string }) {
               )}
 
               {(musicbrainzWorkId || wikipediaExtract) && (
-                <button
-                  type="button"
+                <LinkButton
+                  variant="muted"
                   onClick={handleOpenBackgroundSearch}
-                  className="block text-xs text-ink-600 underline mt-1"
+                  className="block mt-1"
                 >
                   Change match
-                </button>
+                </LinkButton>
               )}
             </>
           )}

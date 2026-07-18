@@ -8,6 +8,7 @@ import { fetchYouTubeVideoData, extractYouTubeID } from "@/lib/youtube";
 import { PlayIcon } from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import BackLink from "@/components/ui/BackLink";
+import LinkButton from "@/components/ui/LinkButton";
 import { RecordingMatchResult } from "@/lib/musicbrainz";
 import {
   coverArtUrl,
@@ -390,21 +391,20 @@ export default function RecordingDetailContent({
                   {`"${album}" might be a compilation -- don't use it to match`}
                 </label>
               )}
-              <button
-                type="button"
+              <LinkButton
                 onClick={handleManualSearch}
                 disabled={manualSearching}
-                className="text-xs text-teal-700 underline disabled:opacity-70 mb-2 mr-3"
+                className="mb-2 mr-3"
               >
                 {manualSearching ? "Searching..." : "Search"}
-              </button>
-              <button
-                type="button"
+              </LinkButton>
+              <LinkButton
+                variant="muted"
                 onClick={() => setShowManualSearch(false)}
-                className="text-xs text-ink-600 underline mb-2"
+                className="mb-2"
               >
                 Cancel
-              </button>
+              </LinkButton>
               <RecordingMatchResultsList results={manualResults} onSelect={applyMatch} />
             </>
           ) : musicbrainzRecordingId ? (
@@ -415,13 +415,9 @@ export default function RecordingDetailContent({
                 onClick={handleUpdateFromMusicBrainz}
                 className="text-xs text-teal-700 underline disabled:opacity-70 mr-3"
               />
-              <button
-                type="button"
-                onClick={handleChangeMatch}
-                className="text-xs text-ink-600 underline"
-              >
+              <LinkButton variant="muted" onClick={handleChangeMatch}>
                 Change match
-              </button>
+              </LinkButton>
               {syncError && <p className="text-sm text-ink-600 mt-1">{syncError}</p>}
             </>
           ) : suggestedMatch ? (
@@ -432,16 +428,14 @@ export default function RecordingDetailContent({
               onSearchManually={handleOpenManualSearch}
             />
           ) : (
-            <button
-              type="button"
+            <LinkButton
               onClick={handleOpenManualSearch}
               disabled={matchStatus === "searching"}
-              className="text-xs text-teal-700 underline disabled:opacity-70"
             >
               {matchStatus === "searching"
                 ? "Looking for a match..."
                 : "Match with MusicBrainz"}
-            </button>
+            </LinkButton>
           )}
           {matchError && <p className="text-sm text-ink-600 mt-1">{matchError}</p>}
         </div>
