@@ -312,9 +312,12 @@ export default function RecordingDetailContent({
     return <AsyncStateMessage>No recording found.</AsyncStateMessage>;
 
   return (
-    <div className="w-full min-h-full p-4 bg-merino-100">
-      <BackLink href={backHref} label="Back to song" />
+    <div className="w-full h-full flex flex-col bg-surface-app">
+      <div className="shrink-0 border-b border-line-100 p-4 pt-[calc(1rem+env(safe-area-inset-top))] lg:pt-4">
+        <BackLink href={backHref} label="Back to song" />
+      </div>
 
+      <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       {videoId && recording && (
         <button
           onClick={() => play(recording)}
@@ -476,6 +479,7 @@ export default function RecordingDetailContent({
         confirmMessage="Are you sure you want to delete this recording? This action cannot be undone."
         onDelete={handleDelete}
       />
+      </div>
     </div>
   );
 }

@@ -117,100 +117,102 @@ export default function SongsListPane() {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <BackLink href="/" label="Back" className="lg:hidden" />
+      <div className="border-b border-line-100 px-8 pb-0 lg:pt-8">
+        <BackLink href="/" label="Back" className="lg:hidden text-mojo-700" />
+        <div className="flex items-center justify-between pb-4">
+          <h1 className={` text-7xl uppercase tracking-wide ${leagueGothic.className}`}>
+            Songs
+          </h1>
+          <button
+            onClick={() => setShowAddSong(true)}
+            aria-label="Add song"
+            className={`border-[2] border-mojo-600 text-mojo-600 p-2 py-1.75  rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
+          >
+            <PlusIcon className="h-5 w-5 " />
+            <span>Add Song</span>
+          </button>
+        </div>
+        <div className="pb-2">
+          <div className="relative">
+            <MagnifyingGlassIcon className="h-4 w-4 text-ink-700 absolute left-3 top-1/2 -translate-y-1/2" />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-ink-600 hover:bg-merino-200 hover:text-ink-900"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            )}
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search songs"
+              className="w-full pl-9 pr-9 py-2 rounded-sm border-[1.5] border-ink-400 bg-surface-app"
+            />
+          </div>
+        </div>
 
-      <div className="flex items-center justify-between p-8">
-        <h1 className={` text-7xl uppercase ${leagueGothic.className}`}>
-          Songs
-        </h1>
-        <button
-          onClick={() => setShowAddSong(true)}
-          aria-label="Add song"
-          className={`border-[2] border-mojo-600 text-mojo-600 p-2 py-1.75  rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
-        >
-          <PlusIcon className="h-6 w-6 " />
-          <span>Add Song</span>
-        </button>
-      </div>
 
-      <div className="px-4 pb-3">
-        <div className="relative">
-          <MagnifyingGlassIcon className="h-4 w-4 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          {search && (
+        <div className="pb-2 text-sm text-ink-600 flex items-center justify-between gap-3">
+          <span className={`text-azure-600/90 font-bold uppercase ${leagueGothic.className} text-base tracking-widest`}>{visibleTunes.length} Songs</span>
+          <div className="relative flex items-center">
             <button
               type="button"
-              onClick={() => setSearch("")}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-ink-600 hover:bg-merino-200 hover:text-ink-900"
+              onClick={() => setShowSortMenu((open) => !open)}
+              className="px-2 py-1 rounded-sm font-semibold text-ink-800 hover:bg-merino-200"
+              aria-haspopup="menu"
+              aria-expanded={showSortMenu}
             >
-              <XMarkIcon className="h-4 w-4" />
+              {sortLabels[sortKey]}
             </button>
-          )}
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search songs"
-            className="w-full pl-9 pr-9 py-2 rounded-md border border-line-200 bg-merino-100"
-          />
-        </div>
-      </div>
-
-      <div className="px-4 pb-2 text-sm text-ink-600 flex items-center justify-between gap-3">
-        <span>{visibleTunes.length} Songs</span>
-        <div className="relative flex items-center">
-          <button
-            type="button"
-            onClick={() => setShowSortMenu((open) => !open)}
-            className="px-2 py-1 rounded-sm font-semibold text-ink-800 hover:bg-merino-200"
-            aria-haspopup="menu"
-            aria-expanded={showSortMenu}
-          >
-            {sortLabels[sortKey]}
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setSortDirection((direction) =>
-                direction === "asc" ? "desc" : "asc"
-              )
-            }
-            className="p-1 rounded-sm text-ink-800 hover:bg-merino-200"
-            aria-label={`Sort ${sortDirection === "asc" ? "descending" : "ascending"}`}
-          >
-            {sortDirection === "asc" ? (
-              <ChevronUpIcon className="h-4 w-4" />
-            ) : (
-              <ChevronDownIcon className="h-4 w-4" />
-            )}
-          </button>
-          {showSortMenu && (
-            <div
-              role="menu"
-              className="absolute right-0 top-full z-20 mt-1 min-w-24 rounded-md border border-line-200 bg-merino-100 py-1 shadow-md"
+            <button
+              type="button"
+              onClick={() =>
+                setSortDirection((direction) =>
+                  direction === "asc" ? "desc" : "asc"
+                )
+              }
+              className="p-1 rounded-sm text-ink-800 hover:bg-merino-200"
+              aria-label={`Sort ${sortDirection === "asc" ? "descending" : "ascending"}`}
             >
-              {(["title", "writers", "date", "added"] as SortKey[]).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setSortKey(key);
-                    setShowSortMenu(false);
-                  }}
-                  className={`block w-full px-3 py-1.5 text-left hover:bg-merino-200 ${
-                    sortKey === key ? "font-semibold text-ink-900" : ""
-                  }`}
-                >
-                  {sortLabels[key]}
-                </button>
-              ))}
-            </div>
-          )}
+              {sortDirection === "asc" ? (
+                <ChevronUpIcon className="h-4 w-4" />
+              ) : (
+                <ChevronDownIcon className="h-4 w-4" />
+              )}
+            </button>
+            {showSortMenu && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-20 mt-1 min-w-24 rounded-md border border-line-200 bg-surface-app py-1 shadow-md"
+              >
+                {(["title", "writers", "date", "added"] as SortKey[]).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setSortKey(key);
+                      setShowSortMenu(false);
+                    }}
+                    className={`block w-full px-3 py-1.5 text-left hover:bg-old-lace-100 ${
+                      sortKey === key ? "font-semibold text-ink-900" : ""
+                    }`}
+                  >
+                    {sortLabels[key]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
 
-      <div className="flex-1 overflow-y-auto overscroll-none px-4 pb-12">
+      <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-12">
         {loading ? (
           <p>Loading songs...</p>
         ) : visibleTunes.length > 0 ? (
@@ -221,13 +223,13 @@ export default function SongsListPane() {
                 <li key={tune.id} className="[&:has(+_li:hover)>a]:border-b-0">
                   <Link
                     href={`/song/${tune.id}`}
-                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-merino-200 hover:border-b-0 hover:rounded-lg active:bg-merino-300 ${
-                      isActive ? "bg-merino-200" : ""
+                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-old-lace-100 hover:border-b-0 hover:rounded-lg active:bg-old-lace-100 ${
+                      isActive ? "bg-old-lace-100" : ""
                     }`}
                   >
                     <SongRow tune={tune} />
                     {isActive && (
-                      <div className="w-2 h-full absolute bg-mojo-500 shrink-0" />
+                      <div className="w-2 h-full absolute bg-mojo-700 shrink-0" />
                     )}
                   </Link>
                 </li>

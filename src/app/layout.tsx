@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`bg-merino-100 overscroll-none ${leagueGothic.variable} ${robotoCondensed.variable} ${robotoMono.variable}`}
+      className={`bg-surface-app overscroll-none ${leagueGothic.variable} ${robotoCondensed.variable} ${robotoMono.variable}`}
     >
     <head>
       <link rel="manifest" href="/manifest.json" />
@@ -36,8 +36,8 @@ export default function RootLayout({
       <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       <title>{String(metadata.title || "Default Title")}</title>
     </head>
-    <body className={`bg-merino-100 overscroll-none ${robotoCondensed.className}`}>
-    <div className="w-full h-full pt-[env(safe-area-inset-top)] bg-merino-100">
+    <body className={`bg-surface-app overscroll-none ${robotoCondensed.className}`}>
+    <div className="w-full h-full pt-[env(safe-area-inset-top)] bg-surface-app">
       <GlobalPlayerGate>{children}</GlobalPlayerGate>
     </div>
     <div className="paper-grain" aria-hidden="true" />

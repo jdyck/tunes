@@ -24,7 +24,7 @@ export default function BrowseLayoutShell({
         <div
           className={`${
             isSongsList ? "fixed" : "hidden"
-          } inset-x-0 top-0 bottom-0 z-10 overflow-y-auto overscroll-none pt-[env(safe-area-inset-top)] pb-[calc(4rem+env(safe-area-inset-bottom))] bg-merino-100 lg:block lg:static lg:inset-auto lg:z-auto lg:w-96 lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pt-0 lg:pb-0 lg:border-r-2 lg:border-line-100`}
+          } inset-x-0 top-0 bottom-0 z-10 overflow-y-auto overscroll-none pt-[env(safe-area-inset-top)] pb-[calc(4rem+env(safe-area-inset-bottom))] bg-surface-app lg:block lg:static lg:inset-auto lg:z-auto lg:w-sm xl:w-md lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pt-0 lg:pb-0 lg:border-r lg:border-line-100`}
         >
           <MiddlePaneGate />
         </div>

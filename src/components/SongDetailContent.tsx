@@ -304,8 +304,35 @@ export default function SongDetailContent({ id }: { id: string }) {
   const writerCredit = formatWriterInputCredit(writers);
 
   return (
-    <div className="w-full p-4 bg-merino-100">
-      <BackLink href="/songs" label="Back to songs" />
+    <div className="w-full h-full flex flex-col bg-surface-app">
+      <div className="pt-[calc(env(safe-area-inset-top))]"></div>
+      <BackLink href="/songs" label="Back to songs" className="lg:hidden shrink-0 mt-1" />
+      <div className="shrink-0 flex items-start gap-3 border-b border-line-100 p-4  lg:pt-4">
+        <div
+          ref={titleRef}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-label="Song title"
+          onInput={handleTitleInput}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.preventDefault();
+          }}
+          onPaste={(e) => {
+            e.preventDefault();
+            const text = e.clipboardData
+              .getData("text/plain")
+              .replace(/\s*\n\s*/g, " ");
+            document.execCommand("insertText", false, text);
+          }}
+          className={`flex-1 min-w-0 wrap-break-word text-balance text-6xl uppercase leading-14 bg-transparent outline-none ${leagueGothic.className} tracking-wide`}
+        >
+          {title}
+        </div>
+        <SaveStatusButton isSaved={isSaved} className="block relative shrink-0 mt-1" onClick={handleSave} />
+      </div>
+
+      <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <form
         className="w-full"
         onSubmit={(e) => {
@@ -313,31 +340,6 @@ export default function SongDetailContent({ id }: { id: string }) {
           handleSave();
         }}
       >
-        <div className="flex justify-between items-start gap-3 mb-3">
-          <div
-            ref={titleRef}
-            contentEditable
-            suppressContentEditableWarning
-            role="textbox"
-            aria-label="Song title"
-            onInput={handleTitleInput}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.preventDefault();
-            }}
-            onPaste={(e) => {
-              e.preventDefault();
-              const text = e.clipboardData
-                .getData("text/plain")
-                .replace(/\s*\n\s*/g, " ");
-              document.execCommand("insertText", false, text);
-            }}
-            className={`w-full min-w-0 break-words [text-wrap:balance] text-4xl uppercase leading-[1.15] bg-transparent pb-3 outline-none ${leagueGothic.className}`}
-          >
-            {title}
-          </div>
-          <SaveStatusButton isSaved={isSaved} />
-        </div>
-
         {showWritersEditor ? (
           <SongWritersEditor
             value={writers}
@@ -349,11 +351,11 @@ export default function SongDetailContent({ id }: { id: string }) {
           />
         ) : (
           <div className="mb-4">
-            <span className="block text-sm mb-1">Writers</span>
+            {/*<span className="block text-sm mb-1">Writers</span>*/}
             <button
               type="button"
               onClick={() => setShowWritersEditor(true)}
-              className="block w-full text-left text-ink-700 hover:text-ink-900"
+              className="block w-full text-left text-azure-600 hover:text-azure-500 font-bold text-xl"
             >
               {writerCredit || "Add writers"}
             </button>
@@ -527,6 +529,7 @@ export default function SongDetailContent({ id }: { id: string }) {
           }}
         />
       )}
+      </div>
     </div>
   );
 }

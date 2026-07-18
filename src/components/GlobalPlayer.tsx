@@ -188,7 +188,7 @@ export default function GlobalPlayer({
     <PlayerContext.Provider value={{ play }}>
       {children}
 
-      <div className="fixed bottom-0 inset-x-0 lg:inset-x-auto lg:left-0 lg:w-64 pb-[env(safe-area-inset-bottom)] bg-merino-100 border-t lg:border-r border-line-100 z-40">
+      <div className="fixed bottom-0 inset-x-0 lg:inset-x-auto lg:left-0 lg:w-64 pb-[env(safe-area-inset-bottom)] bg-surface-app border-t lg:border-r border-line-100 z-40">
         {recording ? (
           <div className="max-w-3xl mx-auto px-4 py-2 flex items-center gap-3">
             <button

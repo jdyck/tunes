@@ -10,7 +10,7 @@ export default function AuthLayoutShell({
       <div>
         <h1 className={`text-merino-100 text-7xl uppercase ${leagueGothic.className}`}>Standards</h1>
       </div>
-      <div className="bg-merino-100 rounded-lg p-8 w-full max-w-sm m-4">
+      <div className="bg-surface-app rounded-lg p-8 w-full max-w-sm m-4">
         {children}
       </div>
     </div>

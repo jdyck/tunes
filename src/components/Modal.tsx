@@ -26,10 +26,10 @@ export default function Modal({
       onClick={onClose}
     >
       <div
-        className="bg-merino-100 w-full h-full sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-lg sm:rounded-lg overflow-y-auto overscroll-none pb-20"
+        className="bg-surface-app w-full h-full sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-lg sm:rounded-lg overflow-y-auto overscroll-none pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-line-100 sticky top-0 bg-merino-100">
+        <div className="flex items-center justify-between p-4 border-b border-line-100 sticky top-0 z-10 bg-surface-app/70 backdrop-blur-md pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-4 sm:bg-surface-app sm:backdrop-blur-none">
           <h2 className="font-bold">{title}</h2>
           <button onClick={onClose} aria-label="Close">
             <XMarkIcon className="h-6 w-6 text-ink-600" />
