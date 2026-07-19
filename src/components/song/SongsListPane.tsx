@@ -17,7 +17,7 @@ import { PlusIcon } from "@heroicons/react/24/solid";
 import { formatWriterCredit } from "@/lib/songWriters";
 import { useSongsList } from "@/components/song/SongsListContext";
 import { Song } from "@/types/types";
-import BackLink from "@/components/ui/BackLink";
+import PaneHeader from "@/components/layout/PaneHeader";
 
 type SortKey = "title" | "writers" | "date" | "added";
 type SortDirection = "asc" | "desc";
@@ -117,10 +117,9 @@ export default function SongsListPane() {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="border-b border-line-100 px-8 pb-0 lg:pt-8">
-        <BackLink href="/" label="Back" className="lg:hidden text-mojo-700" />
-        <div className="flex items-center justify-between pb-4">
-          <h1 className={` text-7xl uppercase tracking-wide ${leagueGothic.className}`}>
+      <PaneHeader backHref="/" backLabel="Back">
+        <div className="flex items-center justify-between pb-2">
+          <h1 className={`text-7xl uppercase tracking-wide px-4 ${leagueGothic.className}`}>
             Songs
           </h1>
           <button
@@ -156,7 +155,7 @@ export default function SongsListPane() {
         </div>
 
 
-        <div className="pb-2 text-sm text-ink-600 flex items-center justify-between gap-3">
+        <div className="pb-4 text-sm text-ink-600 flex items-center justify-between gap-3 px-4 ">
           <span className={`text-azure-600/90 font-bold uppercase ${leagueGothic.className} text-base tracking-widest`}>{visibleSongs.length} Songs</span>
           <div className="relative flex items-center">
             <button
@@ -210,7 +209,7 @@ export default function SongsListPane() {
           </div>
         </div>
 
-      </div>
+      </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-12">
         {loading ? (

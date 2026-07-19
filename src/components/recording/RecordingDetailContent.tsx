@@ -7,7 +7,7 @@ import { Recording } from "@/types/types";
 import { fetchYouTubeVideoData, extractYouTubeID } from "@/lib/youtube";
 import { PlayIcon } from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/player/GlobalPlayer";
-import BackLink from "@/components/ui/BackLink";
+import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
 import { RecordingMatchResult } from "@/lib/musicbrainz";
 import {
@@ -314,9 +314,9 @@ export default function RecordingDetailContent({
 
   return (
     <div className="w-full h-full flex flex-col bg-surface-app">
-      <div className="shrink-0 border-b border-line-100 p-4 pt-[calc(1rem+env(safe-area-inset-top))] lg:pt-4">
-        <BackLink href={backHref} label="Back to song" />
-      </div>
+      <PaneHeader backHref={backHref} backLabel="Back to song" safeAreaTop>
+        <div className="pb-4" />
+      </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       {videoId && recording && (

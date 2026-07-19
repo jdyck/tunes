@@ -50,6 +50,11 @@ export const componentRegistry = [
     path: "src/components/ui/MusicBrainzLink.tsx",
   },
   {
+    slug: "pane-header",
+    name: "PaneHeader",
+    path: "src/components/layout/PaneHeader.tsx",
+  },
+  {
     slug: "primary-button",
     name: "PrimaryButton",
     path: "src/components/ui/PrimaryButton.tsx",
@@ -73,6 +78,11 @@ export const componentRegistry = [
     slug: "recording-thumbnail",
     name: "RecordingThumbnail",
     path: "src/components/recording/RecordingThumbnail.tsx",
+  },
+  {
+    slug: "recordings-section",
+    name: "RecordingsSection",
+    path: "src/components/song/RecordingsSection.tsx",
   },
   {
     slug: "save-status-button",
