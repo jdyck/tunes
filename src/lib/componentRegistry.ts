@@ -50,6 +50,11 @@ export const componentRegistry = [
     path: "src/components/ui/MusicBrainzLink.tsx",
   },
   {
+    slug: "notes-field",
+    name: "NotesField",
+    path: "src/components/ui/NotesField.tsx",
+  },
+  {
     slug: "pane-header",
     name: "PaneHeader",
     path: "src/components/layout/PaneHeader.tsx",

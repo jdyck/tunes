@@ -20,6 +20,7 @@ import RecordingMatchResultsList from "@/components/recording/RecordingMatchResu
 import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
 import SaveStatusButton from "@/components/ui/SaveStatusButton";
 import FormField from "@/components/ui/FormField";
+import NotesField from "@/components/ui/NotesField";
 import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
 import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton";
 import DeleteButton from "@/components/ui/DeleteButton";
@@ -459,11 +460,11 @@ export default function RecordingDetailContent({
           />
         </div>
 
-        <textarea
+        <NotesField
+          label="Notes"
           value={notes}
           onChange={handleFieldChange(setNotes)}
           rows={10}
-          className="w-full p-1.5 rounded-md mb-4"
           placeholder="Add notes here"
         />
       </form>

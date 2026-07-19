@@ -17,6 +17,7 @@ import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton
 import WikipediaBackgroundCard from "@/components/song/WikipediaBackgroundCard";
 import DeleteButton from "@/components/ui/DeleteButton";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
+import NotesField from "@/components/ui/NotesField";
 import { useFieldChange } from "@/hooks/useFieldChange";
 import {
   WriterInput,
@@ -431,12 +432,13 @@ export default function SongDetailContent({ id }: { id: string }) {
             </div>
           )}
 
-          <textarea
+          <NotesField
+            label="Notes"
             value={notes}
             onChange={handleFieldChange(setNotes)}
             rows={6}
-            className="w-full p-1.5 rounded-md mb-4 mt-3"
             placeholder="Notes"
+            className="w-full p-1.5 rounded-md mb-4 mt-3"
           />
 
           <div className="mb-4">
