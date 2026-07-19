@@ -15,10 +15,6 @@ All four auth-ish pages (`login`, `signup`, `forgot-password`, `account`) hand-r
 
 The problem: existing shared components don't match. `PrimaryButton` is `bg-slate-700 rounded-lg` (different color, no busy state); `FormField` has a different input style (`p-1.5 rounded-md`, no border). Whether these become new `TextInput`/`SubmitButton` components or the existing ones absorb them depends on the role→token mapping in [styling-cleanup.md](styling-cleanup.md) Task 2 — once that exists, extraction + recoloring of these pages land together. Do not pick silently.
 
-## SectionHeading (no decisions pending)
-
-The League Gothic teal `<h2>` + count-badge pill in `SongDetailContent.tsx`: heading text in `font-bold text-teal-700 text-xl uppercase ${leagueGothic.className}`, optional count in a `rounded-full bg-teal-700` pill with `robotoCondensed`. Extract as `SectionHeading({ children, count? })`. Currently one call site, but it's the established visual for detail-pane sections; extract when a second section header is added, or now if convenient.
-
 ## NotesField (small)
 
 Both `SongDetailContent.tsx` and `RecordingDetailContent.tsx` have a near-identical notes `<textarea>` wired to the same dirty/save flow that `SaveStatusButton` indicates. Extract a `NotesField` (label, value, onChange, textarea styling). Keep the save-state logic in the parent — this is a presentational extraction only.
