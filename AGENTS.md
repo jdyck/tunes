@@ -4,7 +4,7 @@ Instructions for AI coding agents working in this repo. Keep this file lean — 
 
 ## Project overview
 
-Standards (repo folder: `tunes`): a personal Next.js/Supabase app for tracking a solo musician's repertoire (Songs), personal notes on each (User Songs), and liked recordings — separate from casual playlists. Solo personal project, early stage, dormant between sessions. See [docs/domain-model.md](docs/domain-model.md) for why it exists and the domain vocabulary.
+Standards (repo folder: `tunes`): a personal Next.js/Supabase app for tracking a solo musician's repertoire (Songs), private `song_user_data`, and saved Recordings with private `user_recording_data` — separate from casual playlists. Solo personal project, early stage, dormant between sessions. See [docs/domain-model.md](docs/domain-model.md) for why it exists and the domain vocabulary.
 
 ## Repo layout
 
@@ -25,7 +25,7 @@ src/components/      shared React components, grouped by feature
 src/hooks/           shared React hooks
 src/lib/             effectful/stateful modules — anything that fetches, talks to supabase, or holds state (supabaseClient, fonts, metadata clients, componentRegistry)
 src/types/           shared TS types
-src/utils/           pure functions only (e.g. ytmusic.ts)
+src/utils/           pure functions only
 docs/                domain model, ADRs, direction notes (issues + ideas by subject) — see docs/README.md
 ```
 
@@ -50,9 +50,21 @@ No test suite exists yet (see [docs/direction/testing.md](docs/direction/testing
 
 Login credentials for local dev are in `.env.local` (not checked in).
 
+## Flagged findings and plans to review
+
+Use the git-ignored `notes/` folder as a local review workspace before extensive work becomes an implementation task:
+
+- `notes/flagged.md` is the index of observed gaps between the documentation and the current code. A finding records evidence and why the mismatch matters; it is not approval to fix the issue and should not grow into a detailed implementation plan.
+- For extensive work (for example, a schema migration, architectural change, risky cross-feature change, or coordinated multi-file refactor), create one focused draft in `notes/plans-to-review/<descriptive-slug>.md`. Link that path from the corresponding finding in `notes/flagged.md` rather than embedding the whole plan there.
+- A draft plan should state its status, the problem and documentation involved, current-code evidence, intended outcome, scope and non-goals, implementation phases or steps, risks and open questions, verification, and required documentation cleanup. Keep decisions that still need the owner's input visibly unresolved.
+- Treat `notes/plans-to-review/` as a human-review checkpoint. The owner may edit a plan directly or revise it through an AI conversation. Unless the owner explicitly requests planning and implementation together, stop after drafting or revising the plan; the existence of a plan alone does not authorize implementation.
+- When the owner approves a plan and asks for implementation, confirm whether the request covers the whole plan or named parts, then use the reviewed plan as the working scope. Re-check its assumptions against the current code before changing anything, and keep unfinished phases accurate if only part of the plan is attempted.
+- Plans in `notes/` are provisional and are not the repository's source of truth. As implementation settles direction, reflect lasting decisions in the appropriate committed docs or ADRs. Delete a completed, rejected, or superseded review plan when it no longer provides useful in-progress context; keep or revise a partially implemented plan so its remaining work is clear.
+
 ## Rules and guardrails
 
-- **Terminology**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). The rename is complete through code and DB (`public.songs`, `song_id`); don't reintroduce "tune". The remaining Song / User Song *table split* is a future scoped migration ([docs/direction/song-user-song-split.md](docs/direction/song-user-song-split.md)) — not a drive-by.
+- **Terminology**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). The rename is complete through code and DB (`public.songs`, `song_id`); don't reintroduce "tune". The remaining Song / `song_user_data` split is a future scoped migration ([docs/direction/song-user-song-split.md](docs/direction/song-user-song-split.md)) — not a drive-by.
+- **Canonical entity migrations are scoped work, not drive-bys**: Artist includes people and groups; Recording is provider-neutral; private Recording state belongs in `user_recording_data`; YouTube results belong in `youtube_items`; and Original/Primary Release point to shared Release Groups. The current schema has not caught up — follow [ADR-0008](docs/adr/0008-provider-neutral-music-entities-and-user-data.md) and [canonical-entity-migrations.md](docs/direction/canonical-entity-migrations.md) rather than extending transitional tables as if they were final.
 - **Song creation is not admin-gated**: any user can create a new Song on no search match; don't add approval/moderation gates here ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)).
 - **Lead Sheets are private by default and publishing is admin-only**, never self-service or automatic — don't build a user-facing "publish" action ([ADR-0002](docs/adr/0002-lead-sheets-admin-gated-publishing.md)).
 - **One email = one account** across auth methods (password + Google) — don't treat them as separate identities ([ADR-0001](docs/adr/0001-unique-email-account-linking.md)).

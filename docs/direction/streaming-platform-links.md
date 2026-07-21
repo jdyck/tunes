@@ -4,27 +4,40 @@ Concrete plan for multi-platform Recording playback (see [ADR-0004](../adr/0004-
 
 Build order is deliberately phased: get a good YouTube search experience working first, then add Spotify as a second search source, then layer Odesli-based cross-platform expansion on top. Each phase should be usable/iterable on its own rather than waiting for the whole thing.
 
-## Phase 1 (done): YouTube search, one search step
+## Phase 1 (search built; provider persistence still planned): YouTube sources
 
-There is no separate YouTube Music search API — Google never published one distinct from the regular YouTube Data API. So this isn't "choose YouTube or YouTube Music, then search twice"; it's **one search** against `search.list`, with results labeled by what they look like:
+Google does not publish a supported YouTube Music catalog API distinct from the YouTube Data API. The app nevertheless offers two search sources in the same Add Recording flow:
 
-- Results from an auto-generated **"Artist – Topic" channel** (YouTube/Content ID's marker for officially-delivered audio) get a **Music** badge — detected by `channelTitle` ending in `" - Topic"`, no extra API call needed.
-- Everything else gets a **Video** badge.
+- **YouTube Music** uses the unofficial, server-only `ytmusic-api` package and searches both its song and video result kinds. This is the primary catalog-oriented path and can return YouTube Music artist and album identities, names, duration, and the shared YouTube video ID.
+- **YouTube** uses the official Data API as a separate search/fallback path. Results from an auto-generated `"Artist – Topic"` channel are normalized to the app's `song` search category; other results are `video`.
 
-**The badge on the result the user picks sets `kind`** — Music → `released`, Video → `video_capture` — not a button clicked before searching. Picking a Music-badged result stores both a YouTube link and a YouTube Music link (typically the same video ID, essentially free); picking a Video-badged result stores only the YouTube link.
+Both sources normalize results around the same YouTube video ID and the same local search categories (`song` / `video`), while preserving source provenance that can include either source or both. If evidence is merged for one video ID, `song` wins when either a YouTube Music song or official Topic result supplies catalog-song evidence; otherwise the category is `video`. A `song` is strong evidence for Recording Kind `released` and can support both YouTube and YouTube Music Platform Links because those URLs normally share the video ID. A result categorized as **video** is ambiguous: it may be an officially released music video (`released`) or unofficial footage (`video_capture`). Provider-item category must therefore remain separate from Recording Kind. The current code defaults every video result to `video_capture`; treat that as a transitional heuristic and add an override/classification step when the provider-snapshot work is implemented.
 
-This replaced the earlier "entry-point button chosen = kind chosen" idea for the YouTube path: a single YouTube search can turn up both kinds of result, so the button you start from can't be what decides `kind`.
+Per [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md), the video ID and result metadata describe a provider item, not the Recording's identity. Use one future `youtube_items` table rather than separate `ym_tracks` and `ym_videos` tables, and associate it through `recording_youtube_items`: one Recording can have multiple items, while a long video can support separate Song-scoped Recordings. A Recording can also carry a MusicBrainz identity and other Platform Links.
+
+### Persist the selected YouTube item
+
+The current adapter discards useful YouTube Music artist and album IDs while retaining only their names. Preserve a normalized snapshot when the user selects a result:
+
+- video ID, accumulated discovery provenance (including manual entry), and normalized `song` / `video` search category;
+- title;
+- YouTube Music artist ID and name when present;
+- YouTube Music album ID and name when present;
+- duration; and
+- a metadata fetch timestamp.
+
+This is durable source evidence, not an indiscriminate cache. YouTube Music-specific fields are nullable for an item selected only through official YouTube search. If the same video ID is later selected or enriched through the other source, update the one snapshot without discarding richer non-null source metadata. The installed `ytmusic-api` client can look up a song or video by video ID later, and the official `videos.list` call can recover ordinary YouTube snippet/content metadata, but neither reliably reconstructs the album identity returned by YouTube Music search. Re-running a text search is not identity lookup. Do not store the full raw response, streaming formats, view counts, or other volatile/unneeded values by default. Thumbnail URLs can continue to be fetched from the video resource unless a concrete offline/display need justifies snapshotting them.
 
 Implementation notes, for later phases to build on:
 
-- `search.list` bills a flat 100 quota units per call no matter how many results are requested, and caps `maxResults` at 50 regardless of what's asked for. The add-recording search fetches one page (50 results, 100 units) and defaults to showing only Music-badged ones, with a checkbox to reveal the rest. A "Load next 50 results" button fetches the next page on demand (another 100 units) via YouTube's `pageToken`, merging new results in and de-duping by video ID — YouTube's pagination can return the same video across pages.
+- The official YouTube `search.list` path fetches one page of up to 50 and pages on demand with `pageToken`, merging and de-duplicating by video ID. The unofficial YouTube Music search currently has no pagination in the app.
 - Each result has a thumbnail-click preview (inline YouTube embed) so you can listen before committing, and a separate "+" button to actually select it into the form — selecting is never accidental from a plain click on the row.
-- Picking a Music-badged result also attempts to auto-fill `artist` (from the channel name, the "- Topic" suffix stripped), `duration` (from `videos.list` `contentDetails`), and `album`/`year`. The last two come from a useful discovery: label-distributed Topic-channel videos carry an auto-generated description in a semi-standard format (`Provided to YouTube by <distributor>\n\n<title> · <artist>\n\n<album>\n\n℗ ...\n\nReleased on: YYYY-MM-DD`). This isn't an official metadata field — it can be missing or vary on videos that aren't label-distributed — so it's parsed best-effort (`parseYouTubeMusicMetadata` in `src/lib/youtube.ts`) and left blank rather than guessed when the format doesn't match.
-- The manual URL field is kept as a fallback alongside search, for videos search can't find. Editing it by hand clears `kind`, since a hand-typed URL can't be trusted to match a stale badge.
+- YouTube Music results supply artist, duration, and album directly when present. The official YouTube path looks up `videos.list` metadata and can best-effort parse album/release hints from the semi-standard `Provided to YouTube by …` Topic description. That description is not an official structured metadata contract, so missing values remain blank rather than guessed.
+- The manual URL field is kept as a fallback alongside search, for videos search can't find. Editing it by hand clears the form's provisional Recording Kind classification, since a hand-typed URL cannot be trusted to match a stale `released` / `video_capture` badge. Once normalized, the URL still creates or reuses a YouTube Item by video ID. Record manual-entry provenance, start its search category conservatively as `video`, and leave YouTube Music-specific fields null until later enrichment supplies evidence.
 
 ## Phase 2 (later): Spotify as a second search source
 
-Add Spotify's catalog Search API (client-credentials, no user login needed) as an alternate source alongside YouTube search at the same add-recording step. Any Spotify result is inherently `released` (Spotify's whole catalog is official releases) and attaches a Spotify Platform Link directly — no Music/Video labeling needed, unlike YouTube.
+Add Spotify's track Search API (client-credentials, no user login needed) as an alternate source alongside YouTube search at the same add-recording step. A selected Spotify track is strong `released` evidence and attaches a Spotify Platform Link directly — no Music/Video labeling needed, unlike YouTube.
 
 ## Phase 3 (later still): Odesli-based expansion
 
@@ -38,4 +51,4 @@ No backfill script. All current Recordings predate Kind and have no Platform Lin
 
 - Exact UI treatment of the primary vs. secondary platform buttons on the Recording detail page.
 - Whether/how a User sets their Platform Preference (ranked list) in the account UI.
-- Whether the "Artist – Topic" channel heuristic needs a manual override in the UI (in case it mislabels a result), or whether mislabeling is rare enough to defer.
+- Exact UX for classifying a video result as official `released` versus `video_capture`. It must be overrideable because neither YouTube Music's video category nor the official YouTube Topic-channel heuristic fully determines release status.

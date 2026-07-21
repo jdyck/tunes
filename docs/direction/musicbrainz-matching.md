@@ -1,37 +1,235 @@
-# MusicBrainz matching quality
+# MusicBrainz metadata and matching
 
-Recording matching works, but it matches the wrong entities and captures a thin slice of what MusicBrainz knows. Observed with "But Beautiful" (Nat King Cole): the song is paired to the right work, but the app matched the YouTube recording to a MusicBrainz recording whose first-release-date is 1997 (a compilation orphan), on a reissue release with no useful relationships — while the canonical release carries the true recording date (1958-05), lyricist, composer, and publishers. Same pattern with *Ella Fitzgerald Sings the Jerome Kern Songbook*: the well-documented release has per-track engineer, producer, conductor, arranger, recording date (1963), and work provenance (composed 1927, from *Show Boat*), none of which the app sees.
+MusicBrainz remains the metadata backbone. The app currently reaches it through one large module, exposes a provider-shaped result directly to components, and persists whichever Release happened to win a thin search heuristic. That produces plausible-looking but incorrect metadata and makes it hard to tell which MusicBrainz entity supplies each app field.
 
-## Why it happens (current code, `src/lib/musicbrainz.ts`)
+This document defines the entity mapping, calls, normalized response, storage boundary, and implementation order. Matching stays user-confirmed: the app proposes and explains; the user chooses.
 
-- `searchRecordingMatches` ranks candidates by duration/album-hint/year/score only. It never uses the song's already-known `musicbrainz_work_id`, so among the many never-merged duplicate Recordings of a standard it can't tell the canonical, well-linked one from a budget-compilation orphan. The "earliest year wins" tiebreak partially compensates but picked 1997 here because the orphan *is* a separate recording entity.
-- `year` is taken from the recording's `first-release-date` — a release year, not the performance date. The true recording date lives on the recording→work relationship (`begin`), which is never fetched during search.
-- `pickAlbum` chooses a release by album-hint match or earliest date, ignoring release status/type (official album vs. compilation/reissue), relationship richness, and cover-art availability.
-- Nothing release-level is captured beyond title + id, and nothing is amortized: matching 12 tracks from one songbook album means 12 independent searches with no shared release context.
+## Entity mapping
 
-## Decided semantics
+| Standards entity/concept | MusicBrainz entity | Stored provider mapping |
+| --- | --- | --- |
+| Song (composition) | Work | `songs.musicbrainz_work_id` |
+| Recording (specific recorded performance/version) | Recording | `recordings.musicbrainz_recording_id` |
+| Release Group (master-level publication concept) | Release Group | planned provider ID on shared `release_groups` |
+| Representative edition for source inspection | Release | existing `recordings.musicbrainz_release_id` |
+| Writer, credited act, or selected performer | Artist (Person, Group, Orchestra, etc.) | future MusicBrainz identity on shared `artists` |
 
-Date and album semantics are settled in [ADR-0007](../adr/0007-original-dates-and-albums.md): song year = year written; recording date = performance date (full-precision `recording_date`, year-level display for now); album = the most original release, with reissue/media detail demoted to a future detail modal.
+This distinction is the center of the design. A Release MBID must never stand in for Release Group identity; it is an edition-level pointer for a future detail view. Cover art should use the Cover Art Archive's Release Group endpoint, which already chooses representative art across editions. The current `recordings.album` snapshot is transitional. [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md) settles the first-class Release Group and Artist boundaries plus separate Original Release and Primary Release relationships.
 
-Matching stays user-confirmed for now — the app suggests, the user confirms. A couple of MusicBrainz requests per match is acceptable (their 1 req/s limit is fine at this usage).
+## What the known bad match proves
 
-## Direction
+The regression fixture is "But Beautiful" by Nat King Cole:
 
-Matching backbone stays MusicBrainz — recordings and works (true dates, composer/lyricist, show/film provenance) exist only there. Discogs/AllMusic are release-centric; if used at all, they'd supplement a chosen release (art, credits), which is a separate concern from matching.
+- Work `10f9d66d-700a-3267-9551-2938a219ebf9` currently has 306 Recording relationships.
+- An exact title/artist Recording search returns several Nat King Cole entities. More than one is linked to that Work, so Work membership alone does not eliminate duplicates.
+- Recording `c5564b36-9155-4bd6-b2db-6698d702936a` has the correct `1958-05` performance relationship but appears only on later Releases in the search/lookup data.
+- Recording `f2959512-37dd-4058-8937-97c77620bca8` has the same performance date and points to a 1958 official Release of Release Group `4c572b9f-bf8f-3238-a0c2-8185862ca5fa` (*The Very Thought of You*).
 
-**First milestone = items 1 + 2 below** (work-aware matching + true recording date), shippable before any schema expansion.
+Therefore the ranking evidence is a combination: title/artist, duration, exact Work relationship, relationship date, and the earliest credible Release containing the candidate. "Work-aware" is a strong signal, not a complete algorithm. When the inexpensive evidence leaves multiple plausible candidates, the app preserves that ambiguity until the user asks it to compare fuller Release histories.
 
-## Work items
+## Calls
 
-1. **Work-aware recording matching** — when the song has a `musicbrainz_work_id`, use it: browse recordings of that work, or rank search candidates by linkage to it. Should eliminate the orphan-duplicate problem outright. *Unblocked.* Open sub-question: when the top text-search candidate isn't linked to the work (MusicBrainz work links are incomplete), rank it down rather than hide it — revisit if that proves noisy.
-2. **True recording date** — fetch work-rels for candidate/linked recordings and store the performance date (`recording_date`, full precision) instead of first-release year. *Unblocked.* Head start: `fetchRecordingMatch` already requests `inc=work-rels` and the response is discarded unparsed — the resolve/resync path only needs mapping code, no extra requests.
-3. **Original-release selection** — prefer the most original release (official status, earliest, non-compilation) per the decided album semantics; keep the matched release id for a future release-detail modal. *Unblocked by the semantics above; spec the ranking heuristics when picked up.*
-4. **Structured performers** — selected performers per recording (e.g. Barney Kessel on guitar on the Julie London recording); the unused `artists`/`recording_artists` tables were reserved for exactly this ([metadata-fields.md](metadata-fields.md)). Structured, not free text. *Future feature.*
-5. **Work provenance** — "part of" (e.g. *Show Boat*) as a plain text field on the Song; no browsing/querying by show. *Unblocked, small.* Other credits (producer, engineer, publisher, arranger) are not wanted yet.
-6. **Release-level amortization** — when adding a track whose album's release was already matched for a sibling track, auto-suggest that release's recording first. *Blocked* on items 1–3.
+All calls stay server-side, and components receive normalized Standards data rather than raw MusicBrainz JSON. How much shared transport infrastructure to introduce with the multi-call flow is still a blocked implementation-scope decision; see [Transport boundary](#transport-boundary).
 
-## Future features (flagged, not scoped)
+### 1. Find and resolve a Song's Work
 
-- Side-scroll through alternative match candidates instead of a single suggestion.
-- Cover art borrowed from another release of the same album when the matched release has none — user-triggered, never automatic.
-- Release-detail modal exposing pressing/media/remaster data.
+Search while adding/changing a Song:
+
+```text
+GET /ws/2/work?query=work:"{title}"&fmt=json&limit=15
+```
+
+Resolve a selected Work for ordinary Song sync:
+
+```text
+GET /ws/2/work/{workId}?inc=artist-rels+work-rels+url-rels&fmt=json
+```
+
+Consume:
+
+- Work `id`, `title`, and `disambiguation`;
+- `composer`, `lyricist`, and generic `writer` Artist relationships, including Artist MBID/name/type and relationship dates;
+- parent Work relationships (`parts`, and where useful `included works`) as candidates for the editable "Part of" field;
+- a Wikidata URL relationship for the existing Wikipedia flow.
+
+Do not include `recording-rels` in ordinary Song sync. A popular standard can have hundreds of them, and the current code downloads that large list even when it only needs writers and a Wikidata ID.
+
+Song year remains a best-effort approximation of year written. Use the earliest date on a composer/lyricist/writer relationship; otherwise leave it null. Relationship dates are often absent, so sparse coverage and a null year are expected outcomes, not sync failures. Never substitute a performance, Release, or publisher date merely to improve coverage: all describe something later or different from writing.
+
+### 2. Build Recording candidates
+
+First, perform the narrow text search already supported by the UI:
+
+```text
+GET /ws/2/recording?query=recording:"{song title}" AND artist:"{credited artist}"&fmt=json&limit=25
+```
+
+Consume the Recording MBID, title, artist credit, duration, MusicBrainz score, first-release date, and the compact Release/Release Group summaries returned by search. The first-release date and Release summaries are provisional release context only: never store the former as performance date, and never let either resolve an otherwise ambiguous candidate. They cannot establish that the best or earliest Release path has been seen.
+
+When the Song has a Work MBID, also fetch its Recording relationship index:
+
+```text
+GET /ws/2/work/{workId}?inc=recording-rels&fmt=json
+```
+
+Normalize that response to a map keyed by Recording MBID with performance start/end, relationship attributes (live, instrumental, cover, partial, etc.), title, duration, and disambiguation. Join the map to the small text-search result set locally. This gives exact Work linkage and true performance dates in one additional request without browsing hundreds of Recordings page by page.
+
+If the Work index call fails, return text-search candidates with a visibly weaker evidence state. If a text-search candidate is not linked to the Work, rank it down rather than hiding it because MusicBrainz relationship coverage is incomplete.
+
+The ranking invariants that do not depend on fuller Release browsing are:
+
+1. exact link to the Song's Work;
+2. credited-artist and title agreement;
+3. closeness to known duration, retaining the existing three-second tolerance;
+4. presence of a performance date;
+5. a trusted album hint (soft boost only; users can continue to ignore it);
+6. MusicBrainz search score.
+
+If a text-search candidate is linked to the Work, it ranks above otherwise-similar unlinked candidates, but multiple candidates can satisfy every invariant above. The API result should include human-readable evidence such as "linked to this Song's Work", "duration differs by 1s", and "recorded 1958-05". These explanations are transient UI data, not database columns.
+
+**Decided — resolve ambiguous Work-linked candidates on demand.** Do not use incomplete search Release summaries to manufacture a confident winner when multiple candidates remain equivalent on the strong evidence. Treat the leading set as ambiguous when two or more candidates:
+
+- link to the Song's exact Work;
+- agree on title and credited artist;
+- are within the existing duration tolerance; and
+- have no decisive difference in performance date or relationship attributes.
+
+Show an explicit "multiple plausible matches" state with the available evidence rather than the current single confident suggestion. A user-triggered **Compare release history** action then browses complete Releases for the bounded tied set (initially at most three candidates), reranks them using full Release Group/edition evidence, and explains the result. The comparison is never fetched speculatively. The user still confirms the Recording; if complete Release evidence remains inconclusive or unavailable, preserve the ambiguity instead of forcing a winner.
+
+Full Release evidence has two distinct uses after that on-demand browse: the earliest credible official path informs Original Release, even when it is a Compilation, while eligible non-compilation/non-remix Album or EP evidence informs Primary Release. Compact search-summary evidence can be displayed as provisional context, but must not resolve the tie.
+
+### 3. Resolve an inspected or confirmed Recording
+
+When the user requests Release comparison, or when a clear candidate is confirmed, resolve the Recording itself:
+
+```text
+GET /ws/2/recording/{recordingId}?inc=artist-credits+work-rels&fmt=json
+```
+
+Use the performance relationship that targets the Song's exact Work MBID. Do not borrow a date from a different Work on medleys, and never substitute `first-release-date` for a performance date.
+
+Then browse all Releases containing the Recording. An on-demand comparison performs this sequence for each candidate in the bounded tied set; a clear match performs it only for the confirmed candidate:
+
+```text
+GET /ws/2/release?recording={recordingId}&inc=release-groups+artist-credits&fmt=json&limit=100
+```
+
+Use paging when MusicBrainz reports more results. A Recording lookup with `inc=releases` is not sufficient for this job because linked-entity lookups are capped and ordered by MBID, not by date.
+
+Resolve two Release Group roles and representative edition detail separately:
+
+- **Original Release:** choose the Release Group containing the earliest credible official Release of this exact Recording, regardless of whether its type is Single, EP, Album, Compilation, or Other. A previously unreleased performance first issued on a compilation legitimately has that compilation as its Original Release. If dates are missing or tied across equally plausible groups, preserve ambiguity/null rather than manufacturing chronology.
+- **Primary Release:** consider only Release Groups that actually contain the Recording. Exclude Compilation and Remix candidates by default; Live or Soundtrack remains eligible when it describes the actual source. Prefer Album, then EP. A trusted YouTube Music album hint may choose among those eligible groups only when its identity or normalized metadata can be reconciled to a candidate; title resemblance alone cannot make a group eligible. If equally useful candidates remain, preserve null/ambiguity. If no better album context exists, use Original Release, which may be a Single, Compilation, or another type.
+- Original and Primary can point to the same Release Group; compute them independently rather than assuming they differ.
+- For edition-level source inspection, choose the earliest official Release within Primary Release as `musicbrainz_release_id`; if Primary is null, use Original Release, and fall back to the best available edition only if no official one exists. Original Release chronology remains derived from the full browse evidence and does not require a second edition pointer until a concrete UI needs it.
+
+### Original Release and Primary Release
+
+Persist both relationships when the evidence supports them:
+
+- `original_release_group_id` answers “where was this exact Recording first credibly published?”
+- `primary_release_group_id` answers “which album context is most useful for presenting and browsing this Recording?”
+
+If a single predates an album, Original points to the single and Primary points to the album. For an ordinary album track, both normally point to the album. Default release title and art use Primary, then fall back to Original. Most UI displays only that title; provenance/detail UI can expose both relationships when they differ.
+
+The normalized result supplies editable snapshots (credited artist, current release-title hint, duration, performance date) plus durable identities for Recording, Original Release Group, Primary Release Group, and representative Release. On-demand comparison returns those normalized results as transient evidence without changing the form. Confirming a candidate, or explicitly updating an already-linked Recording from MusicBrainz, loads settled values into the form; the existing Save action remains the point that persists them.
+
+### 4. Cover art
+
+Use Primary Release Group art, falling back to Original Release Group art. Call the Release Group endpoint directly; no MusicBrainz lookup or stored image URL is needed:
+
+```text
+https://coverartarchive.org/release-group/{releaseGroupId}/front-250
+```
+
+A 404 is an ordinary no-art state. Edition-specific art can be added later inside the planned release-detail view.
+
+## Normalized app contract
+
+The provider adapter should return app terms and scalar units suitable for comparison, for example:
+
+```ts
+interface RecordingCandidateSet {
+  state: "clear" | "ambiguous" | "degraded";
+  candidates: RecordingCandidate[];
+}
+
+interface RecordingCandidate {
+  recordingId: string;
+  title: string;
+  artistCredit: string;
+  durationMs: number | null;
+  workMatch: boolean | null; // null means the Work index was unavailable
+  performanceDateStart: string | null;
+  performanceDateEnd: string | null;
+  relationshipAttributes: string[];
+  releaseEvidenceState: "search-summary" | "full-browse" | "unavailable";
+  // Search-derived Release evidence is provisional until a full browse and
+  // cannot resolve an otherwise ambiguous candidate set.
+  releaseGroups: Array<{
+    id: string;
+    title: string;
+    primaryType: string | null;
+    secondaryTypes: string[];
+    earliestCandidateReleaseDate: string | null;
+    representativeReleaseId: string | null;
+  }>;
+  originalReleaseGroupId: string | null;
+  primaryReleaseGroupId: string | null;
+  evidence: string[];
+}
+```
+
+`originalReleaseGroupId` and `primaryReleaseGroupId` remain null while `releaseEvidenceState` is only `search-summary`; they become settled values only after the full browse supports them. A provisional title/album hint belongs in evidence or an explicitly named hint field, not in either durable relationship field.
+
+Keep milliseconds inside the metadata adapter/ranker and format for display at the UI edge. The existing `recordings.duration` text field can remain for this milestone; changing duration storage is a separate migration, not required to fix MusicBrainz matching.
+
+## Database boundary
+
+Persist normalized app facts and durable source identities only:
+
+- keep `songs.musicbrainz_work_id`;
+- keep `recordings.musicbrainz_recording_id`;
+- add a shared Release Group identity with provider mappings (initially MusicBrainz Release Group; a future Discogs Master can identify the same Standards entity);
+- add nullable `recordings.original_release_group_id` and `recordings.primary_release_group_id` relationships to shared Release Groups; permit both to reference the same row and leave either null when evidence is ambiguous;
+- retain nullable `recordings.musicbrainz_release_id uuid` only as the representative edition pointer;
+- replace the planned single date with nullable `recordings.recording_date_start text` and `recording_date_end text`. MusicBrainz dates can be `YYYY`, `YYYY-MM`, or `YYYY-MM-DD`; text preserves partial precision, and two fields preserve actual ranges. Add shape checks and require end to be null or not earlier than start where comparable;
+- keep `recordings.year` during migration for unmatched/manual rows, backfill valid years into `recording_date_start`, then have matched rows display the year prefix of `recording_date_start`. Removal of `year` can wait until every edit path uses the new fields;
+- add the already-planned editable Song "Part of" text field only when that UI work is taken up. Return all suitable parent Work titles as choices, but store the confirmed display text as a shared Song fact rather than persisting a provider relationship graph. It is not a private `song_user_data` preference; editing it is therefore subject to the shared canonical-write policy.
+
+Do **not** persist raw MusicBrainz JSON, search scores, evidence strings, Release status/type/date copies, the Work's Recording index, Cover Art Archive URLs, or every Release containing a Recording. Those are request/cache or ranking inputs. ISRCs likewise stay out until a concrete Platform Link matching use requires them.
+
+### Artist identity
+
+The former non-Person identity blocker is settled by [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md): local Artist is broad enough for MusicBrainz Person, Group, Orchestra, Choir, Character, and Other identities. Song writing roles belong on Song-to-Artist credits, and structured Recording performer credits target the same Artist identity. Preserve credited-as text and never infer a group's members. The schema migration from `people` / `song_writers` and the current user-owned `artists` table still needs explicit implementation scope, including moving private notes/tags to `artist_user_data`.
+
+## Transport boundary
+
+[MusicBrainz requires](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting) a meaningful, contactable User-Agent and currently limits a source IP to an average of one request per second. The new workflow must obey those provider constraints before it adds multiple calls. Calls remain user-triggered by search, confirmation, or explicit Update; do not poll MusicBrainz for changes.
+
+**Blocked — choose the implementation boundary.** These are cumulative choices, not one pre-decided foundation package:
+
+1. **Minimum compliance:** preserve the existing fetch sites but route upstream starts through a shared per-process one-request-per-second queue, with the existing JSON headers and a verified contactable User-Agent. Smallest change, but timeout and error behavior remain inconsistent and repeated requests are not reused.
+2. **Small transport helper:** also centralize abort timeout and normalized errors, and optionally one bounded 429/503 retry that respects `Retry-After`. More consistent behavior for the multi-call flow without committing to a cache design.
+3. **Cached transport layer:** additionally add keyed server-side caching and explicit stale-data bypass rules. This reduces repeated MusicBrainz traffic but introduces cache lifetime, invalidation, refresh, and deployment-lifetime decisions that are not required to define the matching algorithm.
+
+A per-process limiter is sufficient for the current solo deployment. Distributed rate limiting remains future work unless the deployment model changes.
+
+## Code placement
+
+Extract pure normalization, date/release selection, and candidate ranking under `src/utils/` as those seams are implemented and tested. Keep effectful fetching and provider parsing in `src/lib/`, route handlers returning normalized app contracts, and components concerned with search state, evidence display, confirmation, and save state.
+
+A big-bang split of the current `src/lib/musicbrainz.ts` into a new directory is not part of the matching milestone. Further module reorganization can follow the existing lib/effectful and utils/pure rule when concrete file boundaries emerge.
+
+## Work items and status
+
+1. **Narrow regression harness — Unblocked.** Configure a minimal TypeScript test runner, capture reduced fixtures, and test pure date parsing, settled ranking invariants, separate Original/Primary Release Group selection, ambiguity preservation, and representative-edition selection. This is an approved standalone change, not a commitment to broader component/browser testing or a prerequisite for reorganizing the whole provider module.
+2. **Ordinary Song sync cleanup — Unblocked.** Drop `recording-rels` from the existing Work detail request, prefer dated writer relationships for year written, and accept null as common when MusicBrainz has no suitable date.
+3. **Work-aware candidate join and true dates — Blocked on transport boundary for production integration.** Implement the text-search/Work-index join, exact-Work start/end parsing, evidence, and the `recording_date_start` / `recording_date_end` migration. Keep unlinked candidates visible. Pure parsing/ranking work and fixtures can proceed before the transport choice.
+4. **On-demand ambiguous candidate resolution — Unblocked as product behavior; production calls share the transport dependency.** Return an explicit ambiguous state, add the user-triggered comparison of at most three tied candidates, explain the fuller Release evidence, and preserve unresolved ties. Do not browse candidate Releases automatically.
+5. **Release Group resolution — Unblocked in semantics; production calls share the transport dependency.** Browse complete release history, resolve Original and Primary Release Groups independently, add shared Release Group storage and both Recording relationships, switch art to Primary with Original fallback, and retain Release ID only as a representative-edition pointer.
+6. **Work provenance — Unblocked, small.** Add the editable "Part of" field and normalized parent Work choices when that UI work is selected.
+7. **Canonical Artist migration and structured selected performers — Unblocked in semantics; implementation not scoped.** Reconcile `people`, the current user-owned `artists`, `song_writers`, and `recording_artists` around one broad shared Artist identity per [artist-browsing.md](artist-browsing.md). Preserve private Artist notes/tags in `artist_user_data`. Producer, engineer, publisher, and arranger credits remain out of scope until explicitly wanted.
+8. **Release-level amortization — Blocked on items 3–5.** Use a sibling Recording's confirmed Release/Release Group as a strong suggestion when adding another track from the same Release Group.
+
+**Future:** a broader MusicBrainz module reorganization, distributed rate limiting, sideways browsing through alternatives beyond the comparison required by item 4, a release-detail view for edition/media/remaster data, and user-triggered fallback artwork.

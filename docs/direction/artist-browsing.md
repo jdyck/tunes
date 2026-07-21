@@ -10,17 +10,21 @@ The detail should bring together an Artist's relationship to the repertoire:
 
 If a suitable metadata source can be matched reliably, enrich the detail with a short shared canonical biographical/background section. Prefer the existing MusicBrainz/Wikipedia integration patterns over introducing a new provider, but keep sourced biography separate from per-user editable personal notes and make an absent or unmatched biography an ordinary state.
 
-## Data model: person identity lives in `people`
+## Data model: credited identity lives in `artists`
 
-`Recording.artist` is currently a single free-text publication credit, while the unused `artists` and `recording_artists` tables were reserved for structured performers; Song writer credits currently use `people`. Do not build a second, competing artist identity on top of these fields.
+Per [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md), Artist is the shared, provider-neutral identity for anything that can receive a musical credit. It is deliberately broader than Person and may carry a kind such as person, group, orchestra, choir, character, or other. Kind remains null when unknown; do not turn missing source data into `other`. MusicBrainz Artist IDs attach to this identity rather than defining it.
 
-The product needs to distinguish:
+The current schema is transitional in two incompatible directions: Song writer credits use `people`, while `artists` is a user-owned notes table and `recording_artists` points to it. Do not build browsing on either shape as-is. The implementation migration must:
 
-- the credited act attached to a release/album or Recording, which may be a group; and
-- the individual people who actually performed on a Recording, including performers who are not named in that publication credit.
+- make `artists` the single shared canonical identity;
+- migrate `people` rows and Song writing credits to it without assuming every MusicBrainz writer credit is a person;
+- move the current private Artist notes, plus the pane's planned personal tags, into `artist_user_data` (at most one private row per User/Artist) rather than keeping them on the canonical row; and
+- make structured Recording performer credits point to the same Artist identity.
 
-A group credit must not stand in for its members or prevent individual performer credits. Keep the publication/album credit in the existing free-text `Recording.artist` field and show it on Recording detail; it does not need its own browsable identity or group detail page at this stage. The Artists browse feature is for individual people connected to the repertoire as writers or structured performers. Do not infer individual performers from the free-text credited act.
+The product still distinguishes a Recording's published credited-as text from its structured Artist relationships. Keep `Recording.artist` as an editable display snapshot: “Billie Holiday” or a group credit can be what the release says even when other individually credited performers are also attached. Do not infer group members or individual performers from that free text. A group credit also does not stand in for its members; both can be represented when the evidence supports both relationships.
 
-**Decided:** the single person identity is the existing `people` table — the Artists pane lists and details `people` rows. Structured performer credits must therefore connect Recordings to `people`, not to a separate `artists` identity; when implementing, reconcile or retire the unused `artists`/`recording_artists` tables so they reference `people` rather than becoming a second identity. Writer credits already use `people`, so Compositions works from day one.
+The Artists pane lists all Artist kinds rather than silently filtering out groups. Kind can be shown only when useful for disambiguation or filtering; it does not need to clutter every row. Compositions come from Song-to-Artist credits whose role is composer, lyricist, or writer. Recordings come from structured Recording-to-Artist credits.
 
-Note the data dependency: no structured performer credits exist yet — populating them is part of the [musicbrainz-matching.md](musicbrainz-matching.md) work — so the Recordings section will be empty until that lands. Build it as an ordinary empty state, not a blocker.
+Note the data dependency: structured performer credits and the canonical Artist migration do not exist yet — populating them is part of the [musicbrainz-matching.md](musicbrainz-matching.md) work. Do not implement the pane against the obsolete person-only boundary merely to make Compositions work sooner. Once the identity migration lands, absent structured performer data remains an ordinary empty state rather than an error.
+
+Because the pane combines shared canonical facts with private `artist_user_data`, saving notes/tags must never issue a broad update to the canonical Artist row. The write policy for editing shared Artist metadata is a separate migration concern; see [canonical-entity-migrations.md](canonical-entity-migrations.md).
