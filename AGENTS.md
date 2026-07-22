@@ -6,6 +6,8 @@ Instructions for AI coding agents working in this repo. Keep this file lean — 
 
 Standards (repo folder: `tunes`): a personal Next.js/Supabase app for tracking a solo musician's repertoire (Songs), private `song_user_data`, and saved Recordings with private `user_recording_data` — separate from casual playlists. Solo personal project, early stage, dormant between sessions. See [docs/domain-model.md](docs/domain-model.md) for why it exists and the domain vocabulary.
 
+The current deployment/privacy phase is maintained in [docs/project-stage.md](docs/project-stage.md). Read it before schema, RLS, auth, or data-migration work. Its current-stage status controls whether temporary migration exposure is an accepted development tradeoff; it does not override the target private-data boundaries in the domain model and ADRs.
+
 ## Repo layout
 
 ```

@@ -4,17 +4,17 @@ The main navigation already includes an Artists destination, but it has no imple
 
 The detail should bring together an Artist's relationship to the repertoire:
 
-- per-user editable tags and personal notes;
+- User-specific editable tags and personal notes;
 - a **Compositions** section for Songs they are credited with writing; and
 - a **Recordings** section for recordings on which they are credited as an artist.
 
-If a suitable metadata source can be matched reliably, enrich the detail with a short shared canonical biographical/background section. Prefer the existing MusicBrainz/Wikipedia integration patterns over introducing a new provider, but keep sourced biography separate from per-user editable personal notes and make an absent or unmatched biography an ordinary state.
+If a suitable metadata source can be matched reliably, enrich the detail with a short shared canonical biographical/background section. Prefer the existing MusicBrainz/Wikipedia integration patterns over introducing a new provider, but keep sourced biography separate from User-specific editable personal notes and make an absent or unmatched biography an ordinary state.
 
 ## Data model: credited identity lives in `artists`
 
 Per [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md), Artist is the shared, provider-neutral identity for anything that can receive a musical credit. It is deliberately broader than Person and may carry a kind such as person, group, orchestra, choir, character, or other. Kind remains null when unknown; do not turn missing source data into `other`. MusicBrainz Artist IDs attach to this identity rather than defining it.
 
-The current schema is transitional in two incompatible directions: Song writer credits use `people`, while `artists` is a user-owned notes table and `recording_artists` points to it. Do not build browsing on either shape as-is. The implementation migration must:
+The current schema is transitional in two incompatible directions: Song writer credits use `people`, while `artists` is a User-owned notes table and `recording_artists` points to it. Do not build browsing on either shape as-is. The implementation migration must:
 
 - make `artists` the single shared canonical identity;
 - migrate `people` rows and Song writing credits to it without assuming every MusicBrainz writer credit is a person;

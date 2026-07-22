@@ -5,8 +5,8 @@
 ## Current mismatches
 
 - `people` is the identity behind `song_writers`, so a MusicBrainz Group/Orchestra/etc. writer cannot be represented faithfully.
-- `artists` is currently user-owned and holds private notes, while dormant `recording_artists` points to it. It cannot become the shared canonical Artist table without first moving private state.
-- `recordings` is user-owned and combines canonical performance facts with save state, notes, rating, order, and tags.
+- `artists` is currently User-owned and holds private notes, while dormant `recording_artists` points to it. It cannot become the shared canonical Artist table without first moving private data.
+- `recordings` is User-owned and combines canonical performance facts with save state, notes, rating, order, and tags.
 - a Recording's YouTube URL and selected YouTube/YouTube Music metadata are flattened into Recording fields; result source and YouTube Music artist/album IDs are discarded.
 - the current add flow maps every YouTube/YouTube Music video result to `video_capture`, conflating provider-item category with Recording Kind even though an official music video is `released`.
 - `recordings.album` and the stored MusicBrainz Release ID flatten a master-level Release Group, a chosen Recording relationship, an editable title snapshot, and a representative edition into one area.
@@ -24,5 +24,5 @@
 - Canonical Artist work is semantically unblocked but needs a migration plan for existing private `artists.notes` and RLS.
 - Canonical Recording work needs a field-by-field ownership map and a policy for whether existing duplicate rows are merely preserved or later merged. Exact provider identity may dedupe within a Song; it is not permission to merge Recordings across Songs or to merge fuzzy matches.
 - Release Group semantics are unblocked. Matching still depends on the MusicBrainz transport work, and ambiguous evidence must remain null/user-confirmed rather than forcing either relationship.
-- Shared canonical rows cannot reuse the current “owner may update their own row” policies. Before exposing edits after migration, define who may update shared Song, Artist, Recording, Release Group, provider, and Platform Link facts and how conflicting edits are reconciled. User creation remains allowed where already decided; creation and later mutation are separate permissions.
+- Shared canonical rows cannot reuse the current “owner may update their own row” policies indefinitely. The current trusted-development phase may use an explicitly temporary saved-User/last-write-wins edit policy so the entity migrations are not blocked on a full curation system. Long term, any authenticated User may create a shared entity, while an admin-confirmed fact or identity should be distinguishable as authoritative and protected from ordinary edits. The exact verification/lock representation, admin correction workflow, conflicting-edit behavior, duplicate identification, and merge process are one future curation/administration design; do not add an isolated `is_canonical`/lock flag during these migrations. “Canonical entity” here means the shared identity boundary, not that every newly created row has already been admin-verified.
 - Update TypeScript types, Supabase selects/inserts, and the relevant docs in the same change as each migration; do not leave the code half on the old identity model.

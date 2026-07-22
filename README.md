@@ -33,5 +33,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 ## Learn more about this project
 
+- [docs/project-stage.md](docs/project-stage.md) — current development/tester phase and the trigger for switching to privacy-active operation.
 - [docs/README.md](docs/README.md) — index of domain model, architecture decisions, and notes on where the project is headed.
 - [AGENTS.md](AGENTS.md) — instructions for AI coding agents working in this repo.
