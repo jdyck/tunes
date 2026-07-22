@@ -9,7 +9,8 @@ const result: YouTubeSearchResult = {
   title: "Autumn Leaves - Bill Evans Trio (Live)",
   channelTitle: "JazzArchive - Topic",
   thumbnail: "",
-  isMusic: true,
+  searchCategory: "song",
+  discoverySource: "youtube_search",
 };
 
 export default function YoutubeSearchResultRowDemoPage() {
@@ -19,7 +20,9 @@ export default function YoutubeSearchResultRowDemoPage() {
     <ul className="max-w-md">
       <YoutubeSearchResultRow
         result={result}
+        kind="released"
         adding={adding}
+        onKindChange={() => {}}
         onPlay={() => console.log("[demo] play")}
         onAdd={() => {
           setAdding(true);

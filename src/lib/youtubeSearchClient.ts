@@ -1,4 +1,4 @@
-// src/utils/youtubeSearchClient.ts
+// src/lib/youtubeSearchClient.ts
 //
 // Thin client-side wrapper around the /api/youtube-search route, same
 // pattern as recordingMetadataClient.ts.

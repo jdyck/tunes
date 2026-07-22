@@ -7,24 +7,21 @@ import {
   PlayIcon,
   PlusCircleIcon,
 } from "@heroicons/react/20/solid";
-import { extractYouTubeID } from "@/lib/youtube";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import AddRecordingModal from "@/components/recording/AddRecordingModal";
 import RecordingListRow from "@/components/recording/RecordingListRow";
-import { Recording } from "@/types/types";
+import { SavedRecording } from "@/types/types";
 
 export default function RecordingsSection({
   songId,
   songTitle,
   recordings,
-  youtubeData,
   onRecordingAdded,
 }: {
   songId: string;
   songTitle: string;
-  recordings: Recording[];
-  youtubeData: { [key: string]: any };
+  recordings: SavedRecording[];
   onRecordingAdded: () => void;
 }) {
   const { play } = usePlayer();
@@ -56,7 +53,7 @@ export default function RecordingsSection({
       {recordings.length > 0 ? (
         <ul>
           {recordings.map((recording) => {
-            const videoInfo = youtubeData[recording.id];
+            const youtubeItem = recording.youtube_items[0];
             return (
               <li
                 key={recording.id}
@@ -66,14 +63,19 @@ export default function RecordingsSection({
                   href={`/song/${songId}/recording/${recording.id}`}
                   className="flex flex-1 min-w-0"
                 >
-                  <RecordingListRow recording={recording} videoInfo={videoInfo} />
+                  <RecordingListRow recording={recording} />
                 </Link>
-                {extractYouTubeID(recording.url || "") && (
+                {youtubeItem && (
                   <button
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      play(recording);
+                      play({
+                        name: recording.name,
+                        artist: recording.artist,
+                        kind: recording.kind,
+                        youtubeVideoId: youtubeItem.video_id,
+                      });
                     }}
                     aria-label="Play recording"
                     className="p-3 text-green-800 hover:text-green-900 shrink-0 self-center"

@@ -1,4 +1,4 @@
-// src/utils/songMetadataClient.ts
+// src/lib/songMetadataClient.ts
 //
 // Thin client-side wrappers around the /api/song-metadata routes, shared
 // between AddSongModal and SongDetailContent.

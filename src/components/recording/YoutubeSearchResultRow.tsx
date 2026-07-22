@@ -7,17 +7,22 @@ import {
   PlusCircleIcon,
 } from "@heroicons/react/20/solid";
 import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
+import { RecordingKind } from "@/types/types";
 
 export default function YoutubeSearchResultRow({
   result,
+  kind,
   adding,
   onPlay,
   onAdd,
+  onKindChange,
 }: {
   result: YouTubeSearchResult;
+  kind: RecordingKind;
   adding: boolean;
   onPlay: () => void;
   onAdd: () => void;
+  onKindChange: (kind: RecordingKind) => void;
 }) {
   return (
     <li className="mb-2">
@@ -34,7 +39,7 @@ export default function YoutubeSearchResultRow({
             </span>
             {/* TODO: once a YouTube Music lookup-by-title exists, make this
                 icon a button that jumps to the matching YT Music result. */}
-            {result.isMusic && (
+            {result.searchCategory === "song" && (
               <MusicalNoteIcon className="h-3 w-3 shrink-0" />
             )}
           </p>
@@ -53,6 +58,21 @@ export default function YoutubeSearchResultRow({
           />
         </button>
       </div>
+      {result.searchCategory === "video" && (
+        <label className="block ml-[68px] mt-1 text-xs text-ink-600">
+          Kind
+          <select
+            value={kind}
+            onChange={(event) =>
+              onKindChange(event.target.value as RecordingKind)
+            }
+            className="ml-2 rounded border border-line-200 bg-transparent"
+          >
+            <option value="video_capture">Video capture</option>
+            <option value="released">Released recording</option>
+          </select>
+        </label>
+      )}
     </li>
   );
 }

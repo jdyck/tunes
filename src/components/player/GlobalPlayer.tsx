@@ -8,8 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Recording } from "@/types/types";
-import { extractYouTubeID } from "@/lib/youtube";
+import { RecordingKind } from "@/types/types";
 import {
   PlayIcon,
   PauseIcon,
@@ -20,9 +19,9 @@ import {
 
 export interface Playable {
   name: string;
-  url?: string | null;
+  youtubeVideoId: string;
   artist?: string | null;
-  kind?: Recording["kind"];
+  kind?: RecordingKind | null;
 }
 
 interface PlayerContextValue {
@@ -85,7 +84,7 @@ export default function GlobalPlayer({
     null
   );
 
-  const videoId = recording?.url ? extractYouTubeID(recording.url) : null;
+  const videoId = recording?.youtubeVideoId ?? null;
 
   const clearProgressPoll = useCallback(() => {
     if (progressIntervalRef.current) {

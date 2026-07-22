@@ -1,4 +1,4 @@
-// src/utils/songWriters.ts
+// src/lib/songWriters.ts
 
 import { supabase } from "@/lib/supabaseClient";
 import { SongWriterRole } from "@/types/types";

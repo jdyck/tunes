@@ -1,4 +1,4 @@
-// src/utils/recordingMetadataClient.ts
+// src/lib/recordingMetadataClient.ts
 //
 // Thin client-side wrappers around the /api/recording-metadata routes,
 // shared between RecordingDetailContent and its match-suggestion UI.

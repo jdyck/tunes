@@ -29,9 +29,15 @@ You'll need a `.env.local` with:
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+YOUTUBE_API_KEY=
 ```
+
+`YOUTUBE_API_KEY` is server-only. Do not expose it with a `NEXT_PUBLIC_`
+prefix; both YouTube search and selected-video enrichment run through server
+routes.
 
 ## Learn more about this project
 
+- [docs/project-stage.md](docs/project-stage.md) — current development/tester phase and the trigger for switching to privacy-active operation.
 - [docs/README.md](docs/README.md) — index of domain model, architecture decisions, and notes on where the project is headed.
 - [AGENTS.md](AGENTS.md) — instructions for AI coding agents working in this repo.

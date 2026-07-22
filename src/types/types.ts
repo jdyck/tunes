@@ -33,23 +33,58 @@ export interface SongWriter {
   people?: Person; // present when fetched via embedded select
 }
 
+export type RecordingKind = "released" | "video_capture";
+
 export interface Recording {
   id: string;
   song_id: string;
-  user_id: string;
   name: string;
-  notes?: string | null;
-  url?: string | null;
-  rating?: number | null;
-  sortOrder?: number | null;
-  kind?: "released" | "video_capture" | null;
+  kind?: RecordingKind | null;
   artist?: string | null;
   year?: string | null;
   album?: string | null;
   duration?: string | null;
   key?: string | null;
-  tempo?: number | null;
-  tags?: string[] | null;
+  tempo?: string | null;
   musicbrainz_recording_id?: string | null;
   musicbrainz_release_id?: string | null;
+}
+
+export interface UserRecordingData {
+  user_id: string;
+  recording_id: string;
+  notes?: string | null;
+  rating?: number | null;
+  sort_order?: number | null;
+  tags?: string[] | null;
+}
+
+export type YouTubeSearchCategory = "song" | "video";
+export type YouTubeDiscoverySource =
+  | "ytmusic_search"
+  | "youtube_search"
+  | "manual_url"
+  | "legacy_recording_url";
+
+export interface YouTubeItem {
+  video_id: string;
+  title: string;
+  channel_name?: string | null;
+  search_category: YouTubeSearchCategory;
+  discovery_sources: YouTubeDiscoverySource[];
+  ytmusic_artist_id?: string | null;
+  ytmusic_artist_name?: string | null;
+  ytmusic_album_id?: string | null;
+  ytmusic_album_name?: string | null;
+  duration_seconds?: number | null;
+  metadata_fetched_at?: string | null;
+}
+
+export interface RecordingYouTubeItem extends YouTubeItem {
+  association_created_at: string;
+}
+
+export interface SavedRecording extends Recording {
+  user_data: UserRecordingData;
+  youtube_items: RecordingYouTubeItem[];
 }

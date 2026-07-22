@@ -1,24 +1,32 @@
 "use client";
 
 import RecordingsSection from "@/components/song/RecordingsSection";
-import { Recording } from "@/types/types";
+import { SavedRecording } from "@/types/types";
 
-const recordings: Recording[] = [
+const recordings: SavedRecording[] = [
   {
     id: "demo-1",
     song_id: "demo-song",
-    user_id: "demo-user",
     name: "Autumn Leaves",
     artist: "Bill Evans Trio",
-    url: "https://www.youtube.com/watch?v=demo0000000",
+    user_data: { user_id: "demo-user", recording_id: "demo-1" },
+    youtube_items: [
+      {
+        video_id: "demo0000000",
+        title: "Autumn Leaves",
+        search_category: "song",
+        discovery_sources: ["ytmusic_search"],
+        association_created_at: "2026-07-22T00:00:00Z",
+      },
+    ],
   },
   {
     id: "demo-2",
     song_id: "demo-song",
-    user_id: "demo-user",
     name: "Autumn Leaves",
     artist: "Cannonball Adderley",
-    url: null,
+    user_data: { user_id: "demo-user", recording_id: "demo-2" },
+    youtube_items: [],
   },
 ];
 
@@ -29,7 +37,6 @@ export default function RecordingsSectionDemoPage() {
         songId="demo-song"
         songTitle="Autumn Leaves"
         recordings={recordings}
-        youtubeData={{}}
         onRecordingAdded={() => {}}
       />
     </div>
