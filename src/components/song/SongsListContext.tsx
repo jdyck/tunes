@@ -2,17 +2,25 @@
 
 import { createContext, useCallback, useContext, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Song } from "@/types/types";
+import { SongWithUserData } from "@/types/types";
 import { WriterInput } from "@/lib/songWriters";
+import {
+  mapSongUserDataRow,
+  songWithUserDataSelect,
+} from "@/lib/songs";
+import { effectiveSongTitle } from "@/utils/songTitle";
+
+type SongPatch = Partial<Omit<SongWithUserData, "song_writers" | "user_data">> & {
+  user_data?: Partial<SongWithUserData["user_data"]>;
+  writers?: WriterInput[];
+};
 
 interface SongsListContextValue {
-  songs: Song[];
+  songs: SongWithUserData[];
   loading: boolean;
+  error: string | null;
   fetchSongs: (userId: string) => Promise<void>;
-  patchSong: (
-    id: string,
-    patch: Partial<Omit<Song, "song_writers">> & { writers?: WriterInput[] }
-  ) => void;
+  patchSong: (id: string, patch: SongPatch) => void;
   removeSong: (id: string) => void;
 }
 
@@ -23,19 +31,32 @@ export function SongsListProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<SongWithUserData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchSongs = useCallback(async (userId: string) => {
+    setLoading(true);
+    setError(null);
     const { data, error } = await supabase
-      .from("songs")
-      .select("*, song_writers(role, sort_order, people(name))")
+      .from("song_user_data")
+      .select(songWithUserDataSelect)
       .eq("user_id", userId);
 
     if (error) {
       console.error("Error fetching songs:", error.message);
+      setError(`Could not load Songs: ${error.message}`);
     } else {
-      setSongs((data as Song[]).sort((a, b) => a.name.localeCompare(b.name)));
+      setSongs(
+        (data ?? [])
+          .map((row) => mapSongUserDataRow(row as never))
+          .filter((row): row is SongWithUserData => row !== null)
+          .sort((a, b) =>
+            effectiveSongTitle(a, a.user_data).localeCompare(
+              effectiveSongTitle(b, b.user_data)
+            )
+          )
+      );
     }
     setLoading(false);
   }, []);
@@ -43,15 +64,18 @@ export function SongsListProvider({
   const patchSong = useCallback(
     (
       id: string,
-      patch: Partial<Omit<Song, "song_writers">> & { writers?: WriterInput[] }
+      patch: SongPatch
     ) => {
-      const { writers, ...fields } = patch;
+      const { writers, user_data: userDataPatch, ...fields } = patch;
       setSongs((prev) =>
         prev.map((song) =>
           song.id === id
             ? {
                 ...song,
                 ...fields,
+                ...(userDataPatch
+                  ? { user_data: { ...song.user_data, ...userDataPatch } }
+                  : {}),
                 ...(writers
                   ? {
                       song_writers: writers
@@ -78,7 +102,7 @@ export function SongsListProvider({
 
   return (
     <SongsListContext.Provider
-      value={{ songs, loading, fetchSongs, patchSong, removeSong }}
+      value={{ songs, loading, error, fetchSongs, patchSong, removeSong }}
     >
       {children}
     </SongsListContext.Provider>

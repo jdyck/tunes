@@ -16,8 +16,9 @@ import AddSongModal from "@/components/song/AddSongModal";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import { formatWriterCredit } from "@/lib/songWriters";
 import { useSongsList } from "@/components/song/SongsListContext";
-import { Song } from "@/types/types";
+import { SongWithUserData } from "@/types/types";
 import PaneHeader from "@/components/layout/PaneHeader";
+import { effectiveSongTitle } from "@/utils/songTitle";
 
 type SortKey = "title" | "writers" | "date" | "added";
 type SortDirection = "asc" | "desc";
@@ -43,7 +44,7 @@ const titleForSorting = (title: string) => {
 export default function SongsListPane() {
   const router = useRouter();
   const pathname = usePathname();
-  const { songs, loading, fetchSongs } = useSongsList();
+  const { songs, loading, error, fetchSongs } = useSongsList();
 
   const [loadingUser, setLoadingUser] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -85,16 +86,24 @@ export default function SongsListPane() {
   const visibleSongs = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
     const filteredSongs = searchTerm
-      ? songs.filter((song) => song.name.toLowerCase().includes(searchTerm))
+      ? songs.filter((song) => {
+          const effectiveTitle = effectiveSongTitle(song, song.user_data);
+          return (
+            effectiveTitle.toLowerCase().includes(searchTerm) ||
+            song.name.toLowerCase().includes(searchTerm)
+          );
+        })
       : songs;
 
     return [...filteredSongs].sort((a, b) => {
       let comparison = 0;
 
       if (sortKey === "title") {
+        const aTitle = effectiveSongTitle(a, a.user_data);
+        const bTitle = effectiveSongTitle(b, b.user_data);
         comparison =
-          titleForSorting(a.name).localeCompare(titleForSorting(b.name)) ||
-          a.name.localeCompare(b.name);
+          titleForSorting(aTitle).localeCompare(titleForSorting(bTitle)) ||
+          aTitle.localeCompare(bTitle);
       } else if (sortKey === "writers") {
         comparison = (formatWriterCredit(a.song_writers ?? []) ?? "").localeCompare(
           formatWriterCredit(b.song_writers ?? []) ?? ""
@@ -102,8 +111,8 @@ export default function SongsListPane() {
       } else if (sortKey === "date") {
         comparison = String(a.year ?? "").localeCompare(String(b.year ?? ""));
       } else {
-        comparison = String(a.created_at ?? "").localeCompare(
-          String(b.created_at ?? "")
+        comparison = String(a.user_data.created_at).localeCompare(
+          String(b.user_data.created_at)
         );
       }
 
@@ -214,6 +223,8 @@ export default function SongsListPane() {
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-12">
         {loading ? (
           <p>Loading songs...</p>
+        ) : error ? (
+          <p className="text-mojo-600">{error}</p>
         ) : visibleSongs.length > 0 ? (
           <ul>
             {visibleSongs.map((song) => {
@@ -256,12 +267,13 @@ export default function SongsListPane() {
   );
 }
 
-function SongRow({ song }: { song: Song }) {
+function SongRow({ song }: { song: SongWithUserData }) {
   const credit = formatWriterCredit(song.song_writers ?? []);
+  const title = effectiveSongTitle(song, song.user_data);
   return (
     <div className={`pl-6 flex-1 min-w-0 ${robotoCondensed.className}`}>
       <div className="flex justify-between items-start gap-2 tracking-wider">
-        <span className={`${leagueGothic.className} uppercase text-xl truncate min-w-0`}>{song.name}</span>
+        <span className={`${leagueGothic.className} uppercase text-xl truncate min-w-0`}>{title}</span>
         {song.year && (
           <span className="text-sm text-ink-900 shrink-0">{song.year}</span>
         )}

@@ -19,6 +19,7 @@ import {
 
 export interface Playable {
   name: string;
+  songTitle?: string | null;
   youtubeVideoId: string;
   artist?: string | null;
   kind?: RecordingKind | null;
@@ -206,6 +207,11 @@ export default function GlobalPlayer({
               <p className="font-semibold text-sm truncate">
                 {recording.name}
               </p>
+              {recording.songTitle && recording.songTitle !== recording.name && (
+                <p className="text-xs text-ink-700 truncate">
+                  {recording.songTitle}
+                </p>
+              )}
               {recording.artist && (
                 <p className="text-xs text-ink-600 truncate">
                   {recording.artist}

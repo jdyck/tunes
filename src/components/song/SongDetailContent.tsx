@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { Song } from "@/types/types";
+import { SongWithUserData } from "@/types/types";
 import { leagueGothic } from "@/lib/fonts";
 import { useSongsList } from "@/components/song/SongsListContext";
 import RecordingsSection from "@/components/song/RecordingsSection";
@@ -14,7 +14,6 @@ import FormField from "@/components/ui/FormField";
 import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
 import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton";
 import WikipediaBackgroundCard from "@/components/song/WikipediaBackgroundCard";
-import DeleteButton from "@/components/ui/DeleteButton";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import NotesField from "@/components/ui/NotesField";
 import { useFieldChange } from "@/hooks/useFieldChange";
@@ -32,6 +31,11 @@ import {
 import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
 import { useSavedRecordings } from "@/hooks/useSavedRecordings";
+import {
+  mapSongUserDataRow,
+  songWithUserDataSelect,
+} from "@/lib/songs";
+import { effectiveSongTitle } from "@/utils/songTitle";
 
 const formatWriterInputCredit = (writers: WriterInput[]) => {
   const names = writers
@@ -86,11 +90,12 @@ export default function SongDetailContent({ id }: { id: string }) {
     refresh: refreshRecordings,
   } = useSavedRecordings(id);
 
-  const [song, setSong] = useState<Song | null>(null);
+  const [song, setSong] = useState<SongWithUserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [title, setTitle] = useState("");
+  const [sharedTitle, setSharedTitle] = useState("");
   const [writers, setWriters] = useState<WriterInput[]>([]);
   const [year, setYear] = useState("");
   const [wikipediaExtract, setWikipediaExtract] = useState<string | null>(null);
@@ -109,26 +114,38 @@ export default function SongDetailContent({ id }: { id: string }) {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(true);
   const [showWritersEditor, setShowWritersEditor] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const titleRef = useRef<HTMLDivElement | null>(null);
 
   const fetchSongAndRecordings = async () => {
     try {
-      const { data: songData, error: songError } = await supabase
-        .from("songs")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const [{ data: songData, error: songError }, { data: adminData }] =
+        await Promise.all([
+          supabase
+            .from("song_user_data")
+            .select(songWithUserDataSelect)
+            .eq("song_id", id)
+            .single(),
+          supabase.rpc("is_site_admin"),
+        ]);
 
-      if (songError)
-        throw new Error(`Error fetching song: ${songError.message}`);
+      if (songError) {
+        throw new Error(`Error fetching Song: ${songError.message}`);
+      }
 
-      setSong(songData as Song);
-      setNotes(songData?.notes || "");
-      setTitle(songData?.name || "");
-      setYear(songData?.year || "");
-      setWikipediaExtract(songData?.wikipedia_extract || null);
-      setWikipediaUrl(songData?.wikipedia_url || null);
-      setMusicbrainzWorkId(songData?.musicbrainz_work_id || null);
+      const mappedSong = mapSongUserDataRow(songData as never);
+      if (!mappedSong) throw new Error("Song not found in your list");
+
+      setSong(mappedSong);
+      setIsAdmin(Boolean(adminData));
+      setNotes(mappedSong.user_data.notes || "");
+      setTitle(effectiveSongTitle(mappedSong, mappedSong.user_data));
+      setSharedTitle(mappedSong.name || "");
+      setYear(mappedSong.year || "");
+      setWikipediaExtract(mappedSong.wikipedia_extract || null);
+      setWikipediaUrl(mappedSong.wikipedia_url || null);
+      setMusicbrainzWorkId(mappedSong.musicbrainz_work_id || null);
       setWriters(await fetchSongWriters(id));
 
       setLoading(false);
@@ -169,31 +186,72 @@ export default function SongDetailContent({ id }: { id: string }) {
   const handleSave = async () => {
     if (!id || !song) return;
 
-    const updatedFields: Partial<Song> = {
-      notes,
-      name: title,
+    const canEditShared = isAdmin || !song.is_discoverable;
+    const usesPrivateTitle =
+      song.is_discoverable || Boolean(song.user_data.display_title?.trim());
+    const normalizedDisplayTitle = usesPrivateTitle
+      ? title.trim() || null
+      : null;
+    const nextSharedTitle = usesPrivateTitle ? sharedTitle.trim() : title.trim();
+
+    if (canEditShared && !nextSharedTitle) {
+      setError("A shared Song title is required.");
+      return;
+    }
+
+    const sharedFields = {
+      name: nextSharedTitle,
       year: year || null,
       wikipedia_extract: wikipediaExtract,
       wikipedia_url: wikipediaUrl,
       musicbrainz_work_id: musicbrainzWorkId,
     };
 
-    const { error } = await supabase
-      .from("songs")
-      .update(updatedFields)
-      .eq("id", id);
+    const { error: privateError } = await supabase
+      .from("song_user_data")
+      .update({
+        notes: notes.trim() || null,
+        display_title: normalizedDisplayTitle,
+      })
+      .eq("song_id", id);
 
-    if (error) {
-      console.error("Error saving data:", error.message);
-      setError(`Error saving data: ${error.message}`);
+    if (privateError) {
+      console.error("Error saving private Song data:", privateError.message);
+      setError(`Error saving Song data: ${privateError.message}`);
       return;
     }
 
     try {
-      await saveSongWriters(id, writers);
+      if (canEditShared) {
+        const { error: sharedError } = await supabase
+          .from("songs")
+          .update(sharedFields)
+          .eq("id", id);
+        if (sharedError) throw sharedError;
+        await saveSongWriters(id, writers);
+      }
+
+      const nextUserData = {
+        ...song.user_data,
+        notes: notes.trim() || null,
+        display_title: normalizedDisplayTitle,
+      };
+      const nextSong = {
+        ...song,
+        ...(canEditShared ? sharedFields : {}),
+        user_data: nextUserData,
+      };
+      const effectiveTitle = effectiveSongTitle(nextSong, nextUserData);
+      setSong(nextSong);
+      setSharedTitle(nextSong.name);
+      setTitle(effectiveTitle);
       setError(null);
       setIsSaved(true);
-      patchSong(id, { ...updatedFields, writers });
+      patchSong(id, {
+        ...(canEditShared ? sharedFields : {}),
+        user_data: nextUserData,
+        ...(canEditShared ? { writers } : {}),
+      });
     } catch (writersError) {
       const message =
         writersError instanceof Error
@@ -220,7 +278,14 @@ export default function SongDetailContent({ id }: { id: string }) {
       return;
     }
 
-    setTitle(work.title);
+    setSharedTitle(work.title);
+    if (
+      song &&
+      !song.is_discoverable &&
+      !song.user_data.display_title?.trim()
+    ) {
+      setTitle(work.title);
+    }
     setWriters([
       ...work.composers.map((name) => ({ name, role: "composer" as const })),
       ...work.lyricists.map((name) => ({ name, role: "lyricist" as const })),
@@ -235,7 +300,7 @@ export default function SongDetailContent({ id }: { id: string }) {
     setShowBackgroundSearch(true);
     setBackgroundSearching(true);
     try {
-      setBackgroundSearchResults(await searchSongMetadata(title));
+      setBackgroundSearchResults(await searchSongMetadata(sharedTitle));
     } catch {
       setBackgroundError("Couldn't look up song metadata. Try again later.");
     }
@@ -290,18 +355,94 @@ export default function SongDetailContent({ id }: { id: string }) {
     setIsSaved(false);
   };
 
-  const handleDelete = async () => {
+  const handleRemove = async () => {
     if (!id) return;
 
-    const { error } = await supabase.from("songs").delete().eq("id", id);
+    setRemoving(true);
+    const { data: impactRows, error: impactError } = await supabase.rpc(
+      "song_removal_impact",
+      { p_song_id: id }
+    );
+
+    if (impactError) {
+      setRemoving(false);
+      setError(`Could not check removal impact: ${impactError.message}`);
+      return;
+    }
+
+    const impact = impactRows?.[0];
+    if (!impact) {
+      setRemoving(false);
+      setError("Could not determine how this Song should be removed.");
+      return;
+    }
+
+    if (impact.action === "blocked") {
+      setRemoving(false);
+      setError(impact.blocked_reason);
+      return;
+    }
+
+    const recordingCount = Number(impact.saved_recording_count || 0);
+    const privateRecordingCopy =
+      recordingCount === 0
+        ? ""
+        : `, plus your saved status and all private notes, ratings, tags, and ordering for ${recordingCount} ${
+            recordingCount === 1 ? "Recording" : "Recordings"
+          }`;
+    const sharedCopy =
+      impact.action === "delete_song"
+        ? " The never-shared Song record will also be deleted."
+        : " Shared Song and Recording information will remain.";
+    const confirmed = window.confirm(
+      `Remove this Song from your list? This permanently deletes your private notes and display title${privateRecordingCopy}.${sharedCopy} This cannot be undone.`
+    );
+    if (!confirmed) {
+      setRemoving(false);
+      return;
+    }
+
+    const { error } = await supabase.rpc("remove_song_from_library", {
+      p_song_id: id,
+    });
 
     if (error) {
-      console.error("Error deleting song:", error.message);
-      setError(`Error deleting song: ${error.message}`);
+      console.error("Error removing Song:", error.message);
+      setError(`Error removing Song: ${error.message}`);
+      setRemoving(false);
     } else {
       removeSong(id);
       router.push("/songs");
     }
+  };
+
+  const handleDiscoverabilityChange = async (nextValue: boolean) => {
+    if (!song || !isAdmin) return;
+
+    const { error: toggleError } = await supabase.rpc(
+      "set_song_discoverability",
+      { p_song_id: id, p_is_discoverable: nextValue }
+    );
+
+    if (toggleError) {
+      setError(`Could not change visibility: ${toggleError.message}`);
+      return;
+    }
+
+    const nextSong = {
+      ...song,
+      is_discoverable: nextValue,
+      first_discoverable_at:
+        nextValue && !song.first_discoverable_at
+          ? new Date().toISOString()
+          : song.first_discoverable_at,
+    };
+    setSong(nextSong);
+    patchSong(id, {
+      is_discoverable: nextValue,
+      first_discoverable_at: nextSong.first_discoverable_at,
+    });
+    setError(null);
   };
 
   const handleFieldChange = useFieldChange(setIsSaved);
@@ -313,7 +454,7 @@ export default function SongDetailContent({ id }: { id: string }) {
 
   if (loading || recordingsLoading)
     return <AsyncStateMessage>Loading song...</AsyncStateMessage>;
-  if (error || recordingsError)
+  if ((error || recordingsError) && !song)
     return (
       <AsyncStateMessage variant="error">
         {error || recordingsError}
@@ -322,6 +463,9 @@ export default function SongDetailContent({ id }: { id: string }) {
   if (!song) return <AsyncStateMessage>No song found.</AsyncStateMessage>;
 
   const writerCredit = formatWriterInputCredit(writers);
+  const canEditShared = isAdmin || !song.is_discoverable;
+  const titleEditsPrivate =
+    song.is_discoverable || Boolean(song.user_data.display_title?.trim());
 
   return (
     <div className="w-full h-full flex flex-col bg-surface-app">
@@ -333,7 +477,7 @@ export default function SongDetailContent({ id }: { id: string }) {
               contentEditable
               suppressContentEditableWarning
               role="textbox"
-              aria-label="Song title"
+              aria-label={titleEditsPrivate ? "Your Song title" : "Song title"}
               onInput={handleTitleInput}
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.preventDefault();
@@ -350,7 +494,7 @@ export default function SongDetailContent({ id }: { id: string }) {
               {title}
             </div>
 
-            {showWritersEditor ? (
+            {showWritersEditor && canEditShared ? (
               <SongWritersEditor
                 value={writers}
                 onClose={() => setShowWritersEditor(false)}
@@ -361,13 +505,19 @@ export default function SongDetailContent({ id }: { id: string }) {
               />
             ) : (
               <div className="pb-4">
-                <button
-                  type="button"
-                  onClick={() => setShowWritersEditor(true)}
-                  className="block w-full text-left text-azure-600 hover:text-azure-500 font-bold text-lg/5 text-balance"
-                >
-                  {writerCredit || "Add writers"}
-                </button>
+                {canEditShared ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowWritersEditor(true)}
+                    className="block w-full text-left text-azure-600 hover:text-azure-500 font-bold text-lg/5 text-balance"
+                  >
+                    {writerCredit || "Add writers"}
+                  </button>
+                ) : (
+                  <p className="font-bold text-lg/5 text-balance text-azure-600">
+                    {writerCredit || "No writer credits"}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -378,6 +528,11 @@ export default function SongDetailContent({ id }: { id: string }) {
       </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+        {(error || recordingsError) && (
+          <p className="mb-3 text-sm text-mojo-600">
+            {error || recordingsError}
+          </p>
+        )}
         <RecordingsSection
           songId={id}
           songTitle={title}
@@ -393,18 +548,53 @@ export default function SongDetailContent({ id }: { id: string }) {
             handleSave();
           }}
         >
+          {isAdmin && (
+            <label className="mb-5 flex items-start gap-3 rounded-md border border-line-200 p-3">
+              <input
+                type="checkbox"
+                checked={song.is_discoverable}
+                disabled={!isSaved}
+                onChange={(event) =>
+                  handleDiscoverabilityChange(event.target.checked)
+                }
+                className="mt-1 disabled:opacity-50"
+              />
+              <span>
+                <span className="block font-semibold">Visible to all users</span>
+                <span className="block text-sm text-ink-600">
+                  Other Standards users can find and add this Song. Your notes
+                  and display title remain private.
+                  {!isSaved && " Save other changes before changing visibility."}
+                </span>
+              </span>
+            </label>
+          )}
+
+          {titleEditsPrivate && (
+            <FormField
+              label="Shared title"
+              value={sharedTitle}
+              onChange={handleFieldChange(setSharedTitle)}
+              disabled={!canEditShared}
+              className="block mb-3"
+              labelClassName="block text-xs text-ink-600"
+              inputClassName="block w-full bg-transparent disabled:text-ink-500"
+            />
+          )}
+
           <FormField
             label="Year"
             type="text"
             value={year}
             onChange={handleFieldChange(setYear)}
+            disabled={!canEditShared}
             className="block mb-1"
             labelClassName="block text-xs text-ink-600"
             inputClassName="block w-full bg-transparent"
             placeholder="Year"
           />
 
-          {musicbrainzWorkId && (
+          {musicbrainzWorkId && canEditShared && (
             <div className="mb-3">
               <SyncFromMusicBrainzButton
                 syncing={syncingFromMusicBrainz}
@@ -445,9 +635,9 @@ export default function SongDetailContent({ id }: { id: string }) {
                   <WikipediaBackgroundCard
                     extract={wikipediaExtract}
                     url={wikipediaUrl}
-                    onRemove={handleRemoveBackground}
+                    onRemove={canEditShared ? handleRemoveBackground : undefined}
                   />
-                ) : (
+                ) : canEditShared ? (
                   <button
                     type="button"
                     onClick={
@@ -460,9 +650,9 @@ export default function SongDetailContent({ id }: { id: string }) {
                   >
                     {lookingUpBackground ? "Looking up..." : "Look up background"}
                   </button>
-                )}
+                ) : null}
 
-                {(musicbrainzWorkId || wikipediaExtract) && (
+                {canEditShared && (musicbrainzWorkId || wikipediaExtract) && (
                   <LinkButton
                     variant="muted"
                     onClick={handleOpenBackgroundSearch}
@@ -478,11 +668,14 @@ export default function SongDetailContent({ id }: { id: string }) {
             )}
           </div>
         </form>
-        <DeleteButton
-          label="Song"
-          confirmMessage="Are you sure you want to delete this song? This action cannot be undone."
-          onDelete={handleDelete}
-        />
+        <button
+          type="button"
+          onClick={handleRemove}
+          disabled={removing}
+          className="mt-4 w-full rounded-md bg-mojo-600 px-4 py-2 font-bold text-white hover:bg-mojo-700 disabled:opacity-60"
+        >
+          {removing ? "Checking..." : "Remove Song"}
+        </button>
       </div>
     </div>
   );

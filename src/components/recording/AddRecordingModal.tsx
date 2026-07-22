@@ -308,6 +308,7 @@ export default function AddRecordingModal({
                 onPlay: () =>
                   play({
                     name: result.title,
+                    songTitle,
                     artist: result.channelTitle.replace(/ - Topic$/, ""),
                     youtubeVideoId: result.videoId,
                     kind,

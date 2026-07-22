@@ -6,6 +6,7 @@ export default function FormField({
   placeholder,
   onKeyDown,
   autoFocus,
+  disabled,
   className,
   labelClassName,
   inputClassName = "block w-full p-1.5 rounded-md",
@@ -17,6 +18,7 @@ export default function FormField({
   placeholder?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   autoFocus?: boolean;
+  disabled?: boolean;
   className?: string;
   labelClassName?: string;
   inputClassName?: string;
@@ -31,6 +33,7 @@ export default function FormField({
         placeholder={placeholder}
         onKeyDown={onKeyDown}
         autoFocus={autoFocus}
+        disabled={disabled}
         className={inputClassName}
       />
     </label>

@@ -26,6 +26,11 @@ import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import { useFieldChange } from "@/hooks/useFieldChange";
 import { useSavedRecording } from "@/hooks/useSavedRecording";
 import { RecordingKind } from "@/types/types";
+import {
+  mapSongUserDataRow,
+  songWithUserDataSelect,
+} from "@/lib/songs";
+import { effectiveSongTitle } from "@/utils/songTitle";
 
 export default function RecordingDetailContent({
   id,
@@ -101,11 +106,12 @@ export default function RecordingDetailContent({
   useEffect(() => {
     const fetchSongTitle = async () => {
       const { data } = await supabase
-        .from("songs")
-        .select("name")
-        .eq("id", songId)
+        .from("song_user_data")
+        .select(songWithUserDataSelect)
+        .eq("song_id", songId)
         .single();
-      setSongTitle(data?.name || null);
+      const song = data ? mapSongUserDataRow(data as never) : null;
+      setSongTitle(song ? effectiveSongTitle(song, song.user_data) : null);
     };
     fetchSongTitle();
   }, [songId]);
@@ -309,6 +315,7 @@ export default function RecordingDetailContent({
           onClick={() =>
             play({
               name: recording.name,
+              songTitle,
               artist: recording.artist,
               kind,
               youtubeVideoId: videoId,
