@@ -1,4 +1,4 @@
-// src/utils/wikipedia.ts
+// src/lib/wikipedia.ts
 //
 // Server-only, same reasoning as musicbrainz.ts: Wikimedia's API etiquette
 // asks for an identifying User-Agent, which browsers won't let client-side

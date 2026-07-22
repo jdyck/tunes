@@ -1,18 +1,10 @@
-// src/utils/ytmusic.ts
-//
-// Server-only: calls YouTube Music's unofficial internal search endpoint via
-// the `ytmusic-api` package (Node-only, not browser-safe). Used as the
-// primary source for Recording search before falling back to the official
-// YouTube Data API -- see src/app/api/youtube-search/route.ts.
+// Server-only YouTube Music search adapter.
 
 import YTMusic from "ytmusic-api";
-import { YouTubeSearchResult, formatDurationSeconds } from "@/lib/youtube";
+import { YouTubeSearchResult } from "@/lib/youtube";
 
 const SEARCH_TIMEOUT_MS = 4000;
 
-// A broken/blocked scraper is more likely to hang than reject cleanly, so
-// every call into the client is raced against this timeout rather than
-// trusted to fail fast on its own.
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(
@@ -33,9 +25,6 @@ const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
 
 let clientPromise: Promise<YTMusic> | null = null;
 
-// Lazily creates and initializes a single client, reused across requests.
-// Reset on init failure so a later call gets a fresh attempt instead of
-// reusing a permanently-rejected promise.
 const getClient = (): Promise<YTMusic> => {
   if (!clientPromise) {
     const client = new YTMusic();
@@ -50,12 +39,6 @@ const getClient = (): Promise<YTMusic> => {
   return clientPromise;
 };
 
-// Searches YouTube Music for both songs and videos, mapped into the same
-// YouTubeSearchResult shape the official Data API search returns (see
-// searchYouTubeVideos in youtube.ts), so callers don't need to know which
-// source served a given result. isMusic comes from YouTube Music's own
-// content type here, rather than the "- Topic" channel-name guess the Data
-// API path relies on.
 export const searchYtMusic = async (
   query: string
 ): Promise<YouTubeSearchResult[]> => {
@@ -70,10 +53,14 @@ export const searchYtMusic = async (
     title: song.name,
     channelTitle: song.artist.name,
     thumbnail: song.thumbnails[0]?.url ?? "",
-    isMusic: true,
-    album: song.album?.name ?? null,
-    duration:
-      song.duration != null ? formatDurationSeconds(song.duration) : null,
+    searchCategory: "song",
+    discoverySource: "ytmusic_search",
+    artistId: song.artist.artistId ?? null,
+    artistName: song.artist.name,
+    albumId: song.album?.albumId ?? null,
+    albumName: song.album?.name ?? null,
+    durationSeconds: song.duration ?? null,
+    metadataFetchedAt: new Date().toISOString(),
   }));
 
   const videoResults: YouTubeSearchResult[] = videos.map((video) => ({
@@ -81,10 +68,14 @@ export const searchYtMusic = async (
     title: video.name,
     channelTitle: video.artist.name,
     thumbnail: video.thumbnails[0]?.url ?? "",
-    isMusic: false,
-    album: null,
-    duration:
-      video.duration != null ? formatDurationSeconds(video.duration) : null,
+    searchCategory: "video",
+    discoverySource: "ytmusic_search",
+    artistId: video.artist.artistId ?? null,
+    artistName: video.artist.name,
+    albumId: null,
+    albumName: null,
+    durationSeconds: video.duration ?? null,
+    metadataFetchedAt: new Date().toISOString(),
   }));
 
   return [...songResults, ...videoResults];

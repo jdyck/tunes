@@ -29,7 +29,12 @@ You'll need a `.env.local` with:
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+YOUTUBE_API_KEY=
 ```
+
+`YOUTUBE_API_KEY` is server-only. Do not expose it with a `NEXT_PUBLIC_`
+prefix; both YouTube search and selected-video enrichment run through server
+routes.
 
 ## Learn more about this project
 

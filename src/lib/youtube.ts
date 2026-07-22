@@ -1,7 +1,17 @@
-// src/utils/youtube.ts
+// src/lib/youtube.ts
+
+import type {
+  YouTubeDiscoverySource,
+  YouTubeSearchCategory,
+} from "@/types/types";
 
 // Converts YouTube's ISO 8601 duration (e.g. "PT4M13S") to "m:ss"
 export const formatYouTubeDuration = (isoDuration: string) => {
+  const seconds = parseYouTubeDurationSeconds(isoDuration);
+  return seconds == null ? null : formatDurationSeconds(seconds);
+};
+
+export const parseYouTubeDurationSeconds = (isoDuration: string) => {
   const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (!match) return null;
 
@@ -9,8 +19,7 @@ export const formatYouTubeDuration = (isoDuration: string) => {
   const minutes = parseInt(match[2] || "0", 10);
   const seconds = parseInt(match[3] || "0", 10);
 
-  const totalMinutes = hours * 60 + minutes;
-  return `${totalMinutes}:${seconds.toString().padStart(2, "0")}`;
+  return hours * 3600 + minutes * 60 + seconds;
 };
 
 // Converts a raw seconds count (e.g. from ytmusic-api) to "m:ss"
@@ -24,7 +33,7 @@ export const fetchYouTubeVideoData = async (
   videoId: string,
   apiKey: string
 ) => {
-  const url = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet,contentDetails,statistics&key=${apiKey}`;
+  const url = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet,contentDetails&key=${apiKey}`;
 
   try {
     const response = await fetch(url);
@@ -34,12 +43,11 @@ export const fetchYouTubeVideoData = async (
       const video = data.items[0];
       return {
         title: video.snippet.title,
-        description: video.snippet.description,
         channelTitle: video.snippet.channelTitle,
-        thumbnails: video.snippet.thumbnails,
-        viewCount: video.statistics.viewCount,
-        publishedAt: video.snippet.publishedAt,
-        duration: formatYouTubeDuration(video.contentDetails.duration),
+        durationSeconds: parseYouTubeDurationSeconds(
+          video.contentDetails.duration
+        ),
+        metadataFetchedAt: new Date().toISOString(),
       };
     } else {
       throw new Error("No video found for the given ID");
@@ -50,45 +58,19 @@ export const fetchYouTubeVideoData = async (
   }
 };
 
-// Topic-channel videos distributed by a label carry an auto-generated
-// description in a semi-standard format (e.g. "Provided to YouTube by
-// Columbia/Legacy\n\nTitle · Artist\n\nAlbum\n\n℗ ...\n\nReleased on: YYYY-MM-DD").
-// This is not an official metadata field, so treat it as best-effort.
-export const parseYouTubeMusicMetadata = (description: string) => {
-  if (!description || !description.startsWith("Provided to YouTube by")) {
-    return { album: null, releaseYear: null };
-  }
-
-  const blocks = description.split("\n\n").map((block) => block.trim());
-  const albumBlock = blocks[2];
-  const album =
-    albumBlock &&
-    !albumBlock.includes("\n") &&
-    !albumBlock.startsWith("℗") &&
-    !albumBlock.startsWith("Released on")
-      ? albumBlock
-      : null;
-
-  const releaseMatch = description.match(
-    /Released on:\s*(\d{4})-\d{2}-\d{2}/
-  );
-  const releaseYear = releaseMatch ? releaseMatch[1] : null;
-
-  return { album, releaseYear };
-};
-
 export interface YouTubeSearchResult {
   videoId: string;
   title: string;
   channelTitle: string;
   thumbnail: string;
-  isMusic: boolean;
-  // Only populated for YouTube Music results -- ytmusic-api returns these
-  // directly on the search result, so they're free. Plain YouTube search
-  // results don't have them until a per-video lookup (see
-  // fetchYouTubeVideoData) is made.
-  album?: string | null;
-  duration?: string | null;
+  searchCategory: YouTubeSearchCategory;
+  discoverySource: Exclude<YouTubeDiscoverySource, "legacy_recording_url">;
+  artistId?: string | null;
+  artistName?: string | null;
+  albumId?: string | null;
+  albumName?: string | null;
+  durationSeconds?: number | null;
+  metadataFetchedAt?: string | null;
 }
 
 export interface YouTubeSearchPage {
@@ -121,7 +103,10 @@ export const searchYouTubeVideos = async (
       title: item.snippet.title,
       channelTitle: item.snippet.channelTitle,
       thumbnail: item.snippet.thumbnails?.default?.url ?? "",
-      isMusic: item.snippet.channelTitle.endsWith(" - Topic"),
+      searchCategory: item.snippet.channelTitle.endsWith(" - Topic")
+        ? "song"
+        : "video",
+      discoverySource: "youtube_search",
     }));
 
     return { results, nextPageToken: data.nextPageToken ?? null };
@@ -133,8 +118,28 @@ export const searchYouTubeVideos = async (
 
 export const extractYouTubeID = (url: string | null | undefined) => {
   if (!url) return null;
-  const match = url.match(
-    /(?:youtube\.com\/(?:embed\/|v\/|.*v=)|youtu\.be\/)([\w-]{11})/
+  const trimmed = url.trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
+
+  const match = trimmed.match(
+    /(?:youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|shorts\/|watch\?[^# ]*v=)|youtu\.be\/)([A-Za-z0-9_-]{11})/i
   );
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 };
+
+export const youtubeThumbnailUrl = (videoId: string) =>
+  `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+export const mergeSearchCategory = (
+  current: YouTubeSearchCategory,
+  incoming: YouTubeSearchCategory
+): YouTubeSearchCategory =>
+  current === "song" || incoming === "song" ? "song" : "video";
+
+export const mergeDiscoverySources = (
+  current: YouTubeDiscoverySource[],
+  incoming: YouTubeDiscoverySource[]
+) => Array.from(new Set([...current, ...incoming])).sort();
+
+export const preferNonNull = <T>(current: T | null, incoming: T | null) =>
+  incoming ?? current;

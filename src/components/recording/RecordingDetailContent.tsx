@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { Recording } from "@/types/types";
-import { fetchYouTubeVideoData, extractYouTubeID } from "@/lib/youtube";
 import { PlayIcon } from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import PaneHeader from "@/components/layout/PaneHeader";
@@ -26,8 +24,8 @@ import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton
 import DeleteButton from "@/components/ui/DeleteButton";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import { useFieldChange } from "@/hooks/useFieldChange";
-
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+import { useSavedRecording } from "@/hooks/useSavedRecording";
+import { RecordingKind } from "@/types/types";
 
 export default function RecordingDetailContent({
   id,
@@ -40,10 +38,15 @@ export default function RecordingDetailContent({
 }) {
   const router = useRouter();
   const { play } = usePlayer();
+  const {
+    recording,
+    loading,
+    error: loadError,
+  } = useSavedRecording(id);
 
-  const [recording, setRecording] = useState<Recording | null>(null);
   const [songTitle, setSongTitle] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [kind, setKind] = useState<RecordingKind>("video_capture");
   const [notes, setNotes] = useState("");
   const [artist, setArtist] = useState("");
   const [album, setAlbum] = useState("");
@@ -52,7 +55,6 @@ export default function RecordingDetailContent({
   const [key, setKey] = useState("");
   const [tempo, setTempo] = useState("");
   const [tags, setTags] = useState("");
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(true);
@@ -80,58 +82,33 @@ export default function RecordingDetailContent({
   const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
+    if (!recording) return;
+    setName(recording.name || "");
+    setKind(recording.kind || "video_capture");
+    setNotes(recording.user_data.notes || "");
+    setArtist(recording.artist || "");
+    setAlbum(recording.album || "");
+    setYear(recording.year || "");
+    setDuration(recording.duration || "");
+    setKey(recording.key || "");
+    setTempo(recording.tempo != null ? String(recording.tempo) : "");
+    setTags((recording.user_data.tags || []).join(", "));
+    setVideoId(recording.youtube_items[0]?.video_id ?? null);
+    setMusicbrainzRecordingId(recording.musicbrainz_recording_id || null);
+    setMusicbrainzReleaseId(recording.musicbrainz_release_id || null);
+  }, [recording]);
 
-    const fetchRecording = async () => {
-      try {
-        const { data: recordingData, error: recordingError } = await supabase
-          .from("recordings")
-          .select("*")
-          .eq("id", id)
-          .single();
-
-        if (recordingError) {
-          throw new Error(
-            `Error fetching recording: ${recordingError.message}`
-          );
-        }
-
-        setRecording(recordingData as Recording);
-        setName(recordingData.name || "");
-        setNotes(recordingData.notes || "");
-        setArtist(recordingData.artist || "");
-        setAlbum(recordingData.album || "");
-        setYear(recordingData.year || "");
-        setDuration(recordingData.duration || "");
-        setKey(recordingData.key || "");
-        setTempo(
-          recordingData.tempo != null ? String(recordingData.tempo) : ""
-        );
-        setTags((recordingData.tags || []).join(", "));
-        setVideoId(extractYouTubeID(recordingData.url));
-        setMusicbrainzRecordingId(recordingData.musicbrainz_recording_id || null);
-        setMusicbrainzReleaseId(recordingData.musicbrainz_release_id || null);
-
-        const { data: songData } = await supabase
-          .from("songs")
-          .select("name")
-          .eq("id", songId)
-          .single();
-        setSongTitle(songData?.name || null);
-
-        setLoading(false);
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
-      }
+  useEffect(() => {
+    const fetchSongTitle = async () => {
+      const { data } = await supabase
+        .from("songs")
+        .select("name")
+        .eq("id", songId)
+        .single();
+      setSongTitle(data?.name || null);
     };
-
-    fetchRecording();
-  }, [id, songId]);
+    fetchSongTitle();
+  }, [songId]);
 
   // Once the Recording and its Song's title have loaded, proactively search
   // MusicBrainz for a likely match -- gated on an existing `artist` value,
@@ -178,27 +155,28 @@ export default function RecordingDetailContent({
   const handleSave = async () => {
     if (!id || !recording) return;
 
-    const { error } = await supabase
-      .from("recordings")
-      .update({
-        name,
-        notes,
-        artist: artist || null,
-        album: album || null,
-        year: year || null,
-        duration: duration || null,
-        key: key || null,
-        tempo: tempo ? parseInt(tempo, 10) : null,
-        tags: tags
-          ? tags
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean)
-          : null,
-        musicbrainz_recording_id: musicbrainzRecordingId,
-        musicbrainz_release_id: musicbrainzReleaseId,
-      })
-      .eq("id", id);
+    const { error } = await supabase.rpc("update_saved_recording", {
+      p_recording_id: id,
+      p_name: name,
+      p_kind: kind,
+      p_artist: artist || null,
+      p_album: album || null,
+      p_year: year || null,
+      p_duration: duration || null,
+      p_key: key || null,
+      p_tempo: tempo || null,
+      p_musicbrainz_recording_id: musicbrainzRecordingId,
+      p_musicbrainz_release_id: musicbrainzReleaseId,
+      p_notes: notes || null,
+      p_rating: recording.user_data.rating ?? null,
+      p_sort_order: recording.user_data.sort_order ?? null,
+      p_tags: tags
+        ? tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : null,
+    });
 
     if (error) {
       console.error("Error saving data:", error.message);
@@ -295,11 +273,14 @@ export default function RecordingDetailContent({
   const handleDelete = async () => {
     if (!id) return;
 
-    const { error } = await supabase.from("recordings").delete().eq("id", id);
+    const { error } = await supabase
+      .from("user_recording_data")
+      .delete()
+      .eq("recording_id", id);
 
     if (error) {
-      console.error("Error deleting recording:", error.message);
-      setError(`Error deleting recording: ${error.message}`);
+      console.error("Error removing recording:", error.message);
+      setError(`Error removing recording: ${error.message}`);
     } else {
       router.push(backHref);
     }
@@ -309,7 +290,10 @@ export default function RecordingDetailContent({
 
   if (loading)
     return <AsyncStateMessage>Loading recording...</AsyncStateMessage>;
-  if (error) return <AsyncStateMessage variant="error">{error}</AsyncStateMessage>;
+  if (error || loadError)
+    return (
+      <AsyncStateMessage variant="error">{error || loadError}</AsyncStateMessage>
+    );
   if (!recording)
     return <AsyncStateMessage>No recording found.</AsyncStateMessage>;
 
@@ -322,7 +306,14 @@ export default function RecordingDetailContent({
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       {videoId && recording && (
         <button
-          onClick={() => play(recording)}
+          onClick={() =>
+            play({
+              name: recording.name,
+              artist: recording.artist,
+              kind,
+              youtubeVideoId: videoId,
+            })
+          }
           className="mb-6 w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-800 text-white font-bold rounded-md hover:bg-green-900"
         >
           <PlayIcon className="w-5 h-5" />
@@ -355,6 +346,20 @@ export default function RecordingDetailContent({
         <div className="mb-4">
           <FormField label="Artist" value={artist} onChange={handleFieldChange(setArtist)} />
         </div>
+        <label className="block mb-4">
+          <span className="block text-xs text-ink-600">Recording kind</span>
+          <select
+            value={kind}
+            onChange={(event) => {
+              setKind(event.target.value as RecordingKind);
+              setIsSaved(false);
+            }}
+            className="block w-full p-1.5 rounded-md"
+          >
+            <option value="released">Released recording</option>
+            <option value="video_capture">Video capture</option>
+          </select>
+        </label>
         <div className="mb-4">
           <FormField label="Album" value={album} onChange={handleFieldChange(setAlbum)} />
         </div>
@@ -471,7 +476,8 @@ export default function RecordingDetailContent({
 
       <DeleteButton
         label="Recording"
-        confirmMessage="Are you sure you want to delete this recording? This action cannot be undone."
+        actionLabel="Remove from my Recordings"
+        confirmMessage="Remove this Recording from your saved Recordings? Shared metadata will remain available."
         onDelete={handleDelete}
       />
       </div>

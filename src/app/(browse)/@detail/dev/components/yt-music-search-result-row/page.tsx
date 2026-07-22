@@ -9,9 +9,10 @@ const result: YouTubeSearchResult = {
   title: "Autumn Leaves",
   channelTitle: "Bill Evans Trio",
   thumbnail: "",
-  isMusic: true,
-  album: "Portrait in Jazz",
-  duration: "5:04",
+  searchCategory: "song",
+  discoverySource: "ytmusic_search",
+  albumName: "Portrait in Jazz",
+  durationSeconds: 304,
 };
 
 export default function YtMusicSearchResultRowDemoPage() {
@@ -21,7 +22,9 @@ export default function YtMusicSearchResultRowDemoPage() {
     <ul className="max-w-md">
       <YtMusicSearchResultRow
         result={result}
+        kind="released"
         adding={adding}
+        onKindChange={() => {}}
         onPlay={() => console.log("[demo] play")}
         onAdd={() => {
           setAdding(true);

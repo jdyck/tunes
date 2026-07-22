@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchYtMusic } from "@/utils/ytmusic";
+import { searchYtMusic } from "@/lib/ytmusic";
 import { searchYouTubeVideos } from "@/lib/youtube";
 
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim();

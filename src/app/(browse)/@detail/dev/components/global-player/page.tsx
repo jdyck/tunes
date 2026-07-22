@@ -19,7 +19,7 @@ export default function GlobalPlayerDemoPage() {
           play({
             name: "Me at the zoo",
             artist: "jawed",
-            url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+            youtubeVideoId: "jNQXAC9IVRw",
             kind: "released",
           })
         }

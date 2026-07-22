@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Recording } from "@/types/types";
 import {
-  fetchYouTubeVideoData,
-  parseYouTubeMusicMetadata,
+  extractYouTubeID,
   YouTubeSearchResult,
 } from "@/lib/youtube";
 import {
@@ -13,17 +11,13 @@ import {
   SEARCH_PLATFORMS,
   SearchPlatformId,
 } from "@/lib/youtubeSearchClient";
+import { RecordingKind } from "@/types/types";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import Modal from "@/components/ui/Modal";
 import YtMusicSearchResultRow from "@/components/recording/YtMusicSearchResultRow";
 import YoutubeSearchResultRow from "@/components/recording/YoutubeSearchResultRow";
 import PrimaryButton from "@/components/ui/PrimaryButton";
 import FormField from "@/components/ui/FormField";
-import AddRecordingMatchSuggestion from "@/components/recording/AddRecordingMatchSuggestion";
-import { RecordingMatchResult } from "@/lib/musicbrainz";
-import { searchRecordingMetadata } from "@/lib/recordingMetadataClient";
-
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 interface PlatformSearchState {
   query: string;
@@ -32,6 +26,13 @@ interface PlatformSearchState {
   error: string | null;
   nextPageToken: string | null;
   loadingMore: boolean;
+}
+
+interface VideoMetadata {
+  title: string;
+  channelTitle: string;
+  durationSeconds: number | null;
+  metadataFetchedAt: string;
 }
 
 const emptyPlatformState = (query: string): PlatformSearchState => ({
@@ -43,15 +44,8 @@ const emptyPlatformState = (query: string): PlatformSearchState => ({
   loadingMore: false,
 });
 
-interface ResolvedFields {
-  kind: Recording["kind"];
-  url: string;
-  artist: string;
-  album: string | null;
-  duration: string | null;
-  year: string | null;
-  notes: string | null;
-}
+const defaultKind = (result: YouTubeSearchResult): RecordingKind =>
+  result.searchCategory === "song" ? "released" : "video_capture";
 
 export default function AddRecordingModal({
   songId,
@@ -65,14 +59,14 @@ export default function AddRecordingModal({
   onAdded: () => void;
 }) {
   const { play } = usePlayer();
-
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [addingVideoId, setAddingVideoId] = useState<string | null>(null);
-  const [pendingMatch, setPendingMatch] = useState<{
-    result: YouTubeSearchResult;
-    fields: ResolvedFields;
-    match: RecordingMatchResult;
-  } | null>(null);
+  const [selectedKinds, setSelectedKinds] = useState<
+    Record<string, RecordingKind>
+  >({});
+  const [manualUrl, setManualUrl] = useState("");
+  const [manualKind, setManualKind] =
+    useState<RecordingKind>("video_capture");
 
   const [activePlatform, setActivePlatform] =
     useState<SearchPlatformId>("ytmusic");
@@ -83,21 +77,19 @@ export default function AddRecordingModal({
     youtube: emptyPlatformState(""),
   }));
   const [currentPage, setCurrentPage] = useState(0);
-
   const search = platformStates[activePlatform];
 
   const updatePlatform = (
     id: SearchPlatformId,
     patch: Partial<PlatformSearchState>
   ) => {
-    setPlatformStates((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], ...patch },
+    setPlatformStates((previous) => ({
+      ...previous,
+      [id]: { ...previous[id], ...patch },
     }));
   };
 
   const RESULTS_PAGE_SIZE = 10;
-
   const totalPages = Math.max(
     1,
     Math.ceil(search.results.length / RESULTS_PAGE_SIZE)
@@ -109,7 +101,6 @@ export default function AddRecordingModal({
 
   const handleSelectPlatform = (id: SearchPlatformId) => {
     if (id === activePlatform) return;
-
     if (id === "youtube" && !platformStates.youtube.query.trim()) {
       updatePlatform("youtube", { query: platformStates.ytmusic.query });
     }
@@ -120,9 +111,7 @@ export default function AddRecordingModal({
   const handleSearch = async () => {
     const id = activePlatform;
     const query = platformStates[id].query;
-    if (!query.trim()) {
-      return;
-    }
+    if (!query.trim()) return;
 
     updatePlatform(id, { searching: true, error: null });
     try {
@@ -132,8 +121,7 @@ export default function AddRecordingModal({
     } catch (error) {
       updatePlatform(id, {
         searching: false,
-        error:
-          error instanceof Error ? error.message : "YouTube search failed.",
+        error: error instanceof Error ? error.message : "YouTube search failed.",
       });
     }
   };
@@ -141,9 +129,7 @@ export default function AddRecordingModal({
   const handleLoadMore = async () => {
     const id = activePlatform;
     const { query, nextPageToken } = platformStates[id];
-    if (!nextPageToken) {
-      return;
-    }
+    if (!nextPageToken) return;
 
     updatePlatform(id, { loadingMore: true });
     try {
@@ -152,17 +138,15 @@ export default function AddRecordingModal({
         id,
         nextPageToken
       );
-      setPlatformStates((prev) => {
+      setPlatformStates((previous) => {
         const byId = new Map(
-          prev[id].results.map((result) => [result.videoId, result])
+          previous[id].results.map((result) => [result.videoId, result])
         );
-        for (const result of results) {
-          byId.set(result.videoId, result);
-        }
+        results.forEach((result) => byId.set(result.videoId, result));
         return {
-          ...prev,
+          ...previous,
           [id]: {
-            ...prev[id],
+            ...previous[id],
             results: Array.from(byId.values()),
             nextPageToken: token,
             loadingMore: false,
@@ -172,174 +156,86 @@ export default function AddRecordingModal({
     } catch (error) {
       updatePlatform(id, {
         loadingMore: false,
-        error:
-          error instanceof Error ? error.message : "YouTube search failed.",
+        error: error instanceof Error ? error.message : "YouTube search failed.",
       });
     }
   };
 
-  const insertRecording = async (
-    newRecording: Omit<Recording, "id" | "user_id">
-  ) => {
-    setErrorMessage(null);
-
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
-    if (sessionError || !sessionData.session?.user) {
-      setErrorMessage("User not authenticated.");
-      return false;
-    }
-
-    const { error } = await supabase.from("recordings").insert({
-      ...newRecording,
-      user_id: sessionData.session.user.id,
-    });
-
-    if (error) {
-      setErrorMessage("Failed to add recording: " + error.message);
-      return false;
-    }
-
-    return true;
+  const fetchOfficialMetadata = async (videoId: string) => {
+    const response = await fetch(
+      `/api/youtube-video?videoId=${encodeURIComponent(videoId)}`
+    );
+    if (!response.ok) return null;
+    return (await response.json()) as VideoMetadata;
   };
 
-  const resolveFields = async (
-    result: YouTubeSearchResult
-  ): Promise<ResolvedFields> => {
-    const kind: Recording["kind"] = result.isMusic
-      ? "released"
-      : "video_capture";
-    const url = `https://www.youtube.com/watch?v=${result.videoId}`;
+  const saveResult = async (
+    result: YouTubeSearchResult,
+    kind: RecordingKind
+  ) => {
+    setAddingVideoId(result.videoId);
+    setErrorMessage(null);
 
-    let album = result.album ?? null;
-    let duration = result.duration ?? null;
-    let year: string | null = null;
-    let notes: string | null = null;
-
-    if (activePlatform === "youtube" && YOUTUBE_API_KEY) {
-      const videoData = await fetchYouTubeVideoData(
-        result.videoId,
-        YOUTUBE_API_KEY
-      );
-      if (videoData?.duration) duration = videoData.duration;
-      if (videoData?.description) {
-        notes = videoData.description;
-        const parsed = parseYouTubeMusicMetadata(videoData.description);
-        if (parsed.album) album = parsed.album;
-        if (parsed.releaseYear) year = parsed.releaseYear;
+    let selected = result;
+    if (result.discoverySource === "youtube_search") {
+      const metadata = await fetchOfficialMetadata(result.videoId);
+      if (metadata) {
+        selected = {
+          ...result,
+          title: metadata.title || result.title,
+          channelTitle: metadata.channelTitle || result.channelTitle,
+          durationSeconds:
+            metadata.durationSeconds ?? result.durationSeconds ?? null,
+          metadataFetchedAt: metadata.metadataFetchedAt,
+        };
       }
     }
 
-    return {
-      kind,
-      url,
-      artist: result.channelTitle.replace(/ - Topic$/, ""),
-      album,
-      duration,
-      year,
-      notes,
-    };
+    const { error } = await supabase.rpc("save_youtube_recording", {
+      p_song_id: songId,
+      p_video_id: selected.videoId,
+      p_title: selected.title,
+      p_channel_name: selected.channelTitle,
+      p_search_category: selected.searchCategory,
+      p_discovery_source: selected.discoverySource,
+      p_recording_kind: kind,
+      p_ytmusic_artist_id: selected.artistId ?? null,
+      p_ytmusic_artist_name: selected.artistName ?? null,
+      p_ytmusic_album_id: selected.albumId ?? null,
+      p_ytmusic_album_name: selected.albumName ?? null,
+      p_duration_seconds: selected.durationSeconds ?? null,
+      p_metadata_fetched_at: selected.metadataFetchedAt ?? null,
+    });
+
+    setAddingVideoId(null);
+    if (error) {
+      setErrorMessage(`Failed to add recording: ${error.message}`);
+      return;
+    }
+    onAdded();
   };
 
-  // Selecting a result resolves its YouTube metadata first, then checks
-  // MusicBrainz for a likely match using that metadata (title/artist/
-  // duration/album) -- surfacing the same duration+album+year ranking used
-  // on an existing recording's "Change match", but before anything is
-  // written, so a compilation/reissue album never gets persisted only to be
-  // fixed later. Falls straight through to a plain insert when nothing
-  // comes back, so the common case stays a single click.
-  const handleSelectResult = async (result: YouTubeSearchResult) => {
-    setAddingVideoId(result.videoId);
-    const fields = await resolveFields(result);
-
-    let match: RecordingMatchResult | null = null;
-    try {
-      const matches = await searchRecordingMetadata(
-        result.title,
-        fields.artist,
-        fields.duration,
-        fields.album
-      );
-      match = matches[0] ?? null;
-    } catch {
-      match = null;
-    }
-
-    if (match) {
-      setAddingVideoId(null);
-      setPendingMatch({ result, fields, match });
+  const handleManualAdd = async () => {
+    const videoId = extractYouTubeID(manualUrl);
+    if (!videoId) {
+      setErrorMessage("Enter a supported YouTube URL or 11-character video ID.");
       return;
     }
 
-    const ok = await insertRecording({
-      song_id: songId,
-      name: result.title,
-      notes: fields.notes,
-      url: fields.url,
-      kind: fields.kind,
-      artist: fields.artist,
-      year: fields.year,
-      album: fields.album,
-      duration: fields.duration,
-      key: null,
-      tempo: null,
-      tags: null,
-    });
-
-    setAddingVideoId(null);
-    if (ok) onAdded();
-  };
-
-  const handleConfirmMatch = async () => {
-    if (!pendingMatch) return;
-    const { fields, match } = pendingMatch;
-    setAddingVideoId(pendingMatch.result.videoId);
-    setPendingMatch(null);
-
-    const ok = await insertRecording({
-      song_id: songId,
-      name: match.title || pendingMatch.result.title,
-      notes: fields.notes,
-      url: fields.url,
-      kind: fields.kind,
-      artist: match.artistCredit || fields.artist,
-      year: match.year || fields.year,
-      album: match.album || fields.album,
-      duration: match.duration || fields.duration,
-      key: null,
-      tempo: null,
-      tags: null,
-      musicbrainz_recording_id: match.recordingId,
-      musicbrainz_release_id: match.albumReleaseId,
-    });
-
-    setAddingVideoId(null);
-    if (ok) onAdded();
-  };
-
-  const handleAddWithoutMatch = async () => {
-    if (!pendingMatch) return;
-    const { result, fields } = pendingMatch;
-    setAddingVideoId(result.videoId);
-    setPendingMatch(null);
-
-    const ok = await insertRecording({
-      song_id: songId,
-      name: result.title,
-      notes: fields.notes,
-      url: fields.url,
-      kind: fields.kind,
-      artist: fields.artist,
-      year: fields.year,
-      album: fields.album,
-      duration: fields.duration,
-      key: null,
-      tempo: null,
-      tags: null,
-    });
-
-    setAddingVideoId(null);
-    if (ok) onAdded();
+    const metadata = await fetchOfficialMetadata(videoId);
+    await saveResult(
+      {
+        videoId,
+        title: metadata?.title || `YouTube video ${videoId}`,
+        channelTitle: metadata?.channelTitle || "",
+        thumbnail: "",
+        searchCategory: "video",
+        discoverySource: "manual_url",
+        durationSeconds: metadata?.durationSeconds ?? null,
+        metadataFetchedAt: metadata?.metadataFetchedAt ?? null,
+      },
+      manualKind
+    );
   };
 
   return (
@@ -366,28 +262,30 @@ export default function AddRecordingModal({
           ))}
         </div>
         <FormField
-          label={`Search ${SEARCH_PLATFORMS.find((p) => p.id === activePlatform)?.label ?? ""}`}
+          label={`Search ${SEARCH_PLATFORMS.find((platform) => platform.id === activePlatform)?.label ?? ""}`}
           value={search.query}
-          onChange={(e) =>
-            updatePlatform(activePlatform, { query: e.target.value })
+          onChange={(event) =>
+            updatePlatform(activePlatform, { query: event.target.value })
           }
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
               handleSearch();
             }
           }}
           inputClassName="block w-full p-2 rounded-md border border-line-200 mb-2"
         />
-        <div className="flex items-center gap-2 mb-4">
-          <PrimaryButton onClick={handleSearch} disabled={search.searching} className="px-3 py-2">
-            {search.searching ? "Searching..." : "Search"}
-          </PrimaryButton>
-        </div>
+        <PrimaryButton
+          onClick={handleSearch}
+          disabled={search.searching}
+          className="mb-4 px-3 py-2"
+        >
+          {search.searching ? "Searching..." : "Search"}
+        </PrimaryButton>
         {search.error && (
           <p className="text-sm text-amber-700 mb-4">
             {activePlatform === "ytmusic"
-              ? "YouTube Music search isn't working right now. Try the YouTube tab above instead."
+              ? "YouTube Music search isn't working right now. Try the YouTube tab instead."
               : search.error}
           </p>
         )}
@@ -397,30 +295,24 @@ export default function AddRecordingModal({
         <>
           <ul className="mb-4">
             {pagedResults.map((result) => {
-              if (pendingMatch?.result.videoId === result.videoId) {
-                return (
-                  <li key={result.videoId} className="mb-2">
-                    <AddRecordingMatchSuggestion
-                      match={pendingMatch.match}
-                      onConfirm={handleConfirmMatch}
-                      onSkip={handleAddWithoutMatch}
-                      onCancel={() => setPendingMatch(null)}
-                    />
-                  </li>
-                );
-              }
-
+              const kind = selectedKinds[result.videoId] ?? defaultKind(result);
               const rowProps = {
                 result,
+                kind,
                 adding: addingVideoId === result.videoId,
+                onKindChange: (next: RecordingKind) =>
+                  setSelectedKinds((previous) => ({
+                    ...previous,
+                    [result.videoId]: next,
+                  })),
                 onPlay: () =>
                   play({
                     name: result.title,
                     artist: result.channelTitle.replace(/ - Topic$/, ""),
-                    url: `https://www.youtube.com/watch?v=${result.videoId}`,
-                    kind: result.isMusic ? "released" : "video_capture",
+                    youtubeVideoId: result.videoId,
+                    kind,
                   }),
-                onAdd: () => handleSelectResult(result),
+                onAdd: () => saveResult(result, kind),
               };
               return activePlatform === "ytmusic" ? (
                 <YtMusicSearchResultRow key={result.videoId} {...rowProps} />
@@ -439,9 +331,7 @@ export default function AddRecordingModal({
               >
                 Previous
               </button>
-              <span>
-                Page {currentPage + 1} of {totalPages}
-              </span>
+              <span>Page {currentPage + 1} of {totalPages}</span>
               <button
                 type="button"
                 onClick={() =>
@@ -465,6 +355,34 @@ export default function AddRecordingModal({
           )}
         </>
       )}
+
+      <div className="mt-6 pt-4 border-t border-line-200">
+        <FormField
+          label="Or add a YouTube URL"
+          value={manualUrl}
+          onChange={(event) => setManualUrl(event.target.value)}
+          placeholder="https://www.youtube.com/watch?v=..."
+          inputClassName="block w-full p-2 rounded-md border border-line-200 my-2"
+        />
+        <label className="block text-sm mb-3">
+          Recording kind
+          <select
+            value={manualKind}
+            onChange={(event) => setManualKind(event.target.value as RecordingKind)}
+            className="block mt-1 p-2 rounded-md border border-line-200"
+          >
+            <option value="video_capture">Video capture</option>
+            <option value="released">Released recording</option>
+          </select>
+        </label>
+        <PrimaryButton
+          onClick={handleManualAdd}
+          disabled={addingVideoId !== null || !manualUrl.trim()}
+          className="px-3 py-2"
+        >
+          {addingVideoId ? "Adding..." : "Add URL"}
+        </PrimaryButton>
+      </div>
     </Modal>
   );
 }

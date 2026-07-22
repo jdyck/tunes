@@ -3,8 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { Song, Recording } from "@/types/types";
-import { extractYouTubeID, fetchYouTubeVideoData } from "@/lib/youtube";
+import { Song } from "@/types/types";
 import { leagueGothic } from "@/lib/fonts";
 import { useSongsList } from "@/components/song/SongsListContext";
 import RecordingsSection from "@/components/song/RecordingsSection";
@@ -32,7 +31,7 @@ import {
 } from "@/lib/songMetadataClient";
 import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+import { useSavedRecordings } from "@/hooks/useSavedRecordings";
 
 const formatWriterInputCredit = (writers: WriterInput[]) => {
   const names = writers
@@ -80,9 +79,14 @@ const fitTitleFontSize = (element: HTMLElement) => {
 export default function SongDetailContent({ id }: { id: string }) {
   const router = useRouter();
   const { patchSong, removeSong } = useSongsList();
+  const {
+    recordings,
+    loading: recordingsLoading,
+    error: recordingsError,
+    refresh: refreshRecordings,
+  } = useSavedRecordings(id);
 
   const [song, setSong] = useState<Song | null>(null);
-  const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
@@ -104,7 +108,6 @@ export default function SongDetailContent({ id }: { id: string }) {
   const [syncingFromMusicBrainz, setSyncingFromMusicBrainz] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(true);
-  const [youtubeData, setYoutubeData] = useState<{ [key: string]: any }>({});
   const [showWritersEditor, setShowWritersEditor] = useState(false);
   const titleRef = useRef<HTMLDivElement | null>(null);
 
@@ -128,30 +131,6 @@ export default function SongDetailContent({ id }: { id: string }) {
       setMusicbrainzWorkId(songData?.musicbrainz_work_id || null);
       setWriters(await fetchSongWriters(id));
 
-      const { data: recordingsData, error: recordingsError } = await supabase
-        .from("recordings")
-        .select("*")
-        .eq("song_id", id)
-        .order("sortOrder");
-
-      if (recordingsError)
-        throw new Error(
-          `Error fetching recordings: ${recordingsError.message}`
-        );
-
-      setRecordings(recordingsData as Recording[]);
-
-      const videoData: { [key: string]: any } = {};
-      await Promise.all(
-        recordingsData.map(async (recording) => {
-          const videoId = extractYouTubeID(recording.url);
-          if (videoId && YOUTUBE_API_KEY) {
-            const data = await fetchYouTubeVideoData(videoId, YOUTUBE_API_KEY);
-            if (data) videoData[recording.id] = data;
-          }
-        })
-      );
-      setYoutubeData(videoData);
       setLoading(false);
     } catch (err) {
       console.error("Fetch error:", err);
@@ -332,8 +311,14 @@ export default function SongDetailContent({ id }: { id: string }) {
     setIsSaved(false);
   };
 
-  if (loading) return <AsyncStateMessage>Loading song...</AsyncStateMessage>;
-  if (error) return <AsyncStateMessage variant="error">{error}</AsyncStateMessage>;
+  if (loading || recordingsLoading)
+    return <AsyncStateMessage>Loading song...</AsyncStateMessage>;
+  if (error || recordingsError)
+    return (
+      <AsyncStateMessage variant="error">
+        {error || recordingsError}
+      </AsyncStateMessage>
+    );
   if (!song) return <AsyncStateMessage>No song found.</AsyncStateMessage>;
 
   const writerCredit = formatWriterInputCredit(writers);
@@ -397,8 +382,7 @@ export default function SongDetailContent({ id }: { id: string }) {
           songId={id}
           songTitle={title}
           recordings={recordings}
-          youtubeData={youtubeData}
-          onRecordingAdded={fetchSongAndRecordings}
+          onRecordingAdded={refreshRecordings}
         />
         <SaveStatusButton isSaved={isSaved} className="block relative shrink-0 mt-1" onClick={handleSave} />
 

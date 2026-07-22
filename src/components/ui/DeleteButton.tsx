@@ -2,11 +2,13 @@ export default function DeleteButton({
   label,
   confirmMessage,
   onDelete,
+  actionLabel,
   className = "mt-4 w-full px-4 py-2 bg-mojo-600 text-white font-bold rounded-md hover:bg-mojo-700",
 }: {
   label: string;
   confirmMessage: string;
   onDelete: () => void;
+  actionLabel?: string;
   className?: string;
 }) {
   const handleClick = () => {
@@ -16,7 +18,7 @@ export default function DeleteButton({
 
   return (
     <button onClick={handleClick} className={className}>
-      Delete {label}
+      {actionLabel ?? `Delete ${label}`}
     </button>
   );
 }

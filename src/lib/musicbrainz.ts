@@ -1,4 +1,4 @@
-// src/utils/musicbrainz.ts
+// src/lib/musicbrainz.ts
 //
 // Server-only: MusicBrainz asks that requests carry an identifying
 // User-Agent, which browsers won't let client-side JS set — so these

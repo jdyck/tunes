@@ -1,10 +1,12 @@
 {
   "name": "tunes",
+  "type": "module",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
     "start": "next start"
   },
   "dependencies": {
