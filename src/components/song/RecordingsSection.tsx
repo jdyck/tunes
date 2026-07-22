@@ -72,6 +72,7 @@ export default function RecordingsSection({
                       e.stopPropagation();
                       play({
                         name: recording.name,
+                        songTitle,
                         artist: recording.artist,
                         kind: recording.kind,
                         youtubeVideoId: youtubeItem.video_id,

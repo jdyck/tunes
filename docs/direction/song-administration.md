@@ -1,6 +1,6 @@
 # Song administration
 
-The planned `song_user_data` migration will introduce a Site-Admin-only **Visible to all users** switch backed by `songs.is_discoverable`. Its reviewed scope deliberately does not include a cross-User administration view for finding Songs that other Users created with discoverability disabled.
+The Song private-data split introduces a Site-Admin-only **Visible to all users** switch backed by `songs.is_discoverable`. Its reviewed scope deliberately does not include a cross-User administration view for finding Songs that other Users created with discoverability disabled.
 
 Before meaningful outside Users begin creating Songs, add a minimal admin-only Songs view that:
 

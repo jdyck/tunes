@@ -5,16 +5,27 @@ import { User as SupabaseUser } from "@supabase/supabase-js";
 export interface User extends SupabaseUser {}
 
 export interface Song {
-  id?: string;
+  id: string;
   name: string;
-  created_at?: string | null;
   year?: string | null;
-  notes: string;
-  user_id: string;
   song_writers?: SongWriter[];
   wikipedia_extract?: string | null;
   wikipedia_url?: string | null;
   musicbrainz_work_id?: string | null;
+  is_discoverable: boolean;
+  first_discoverable_at?: string | null;
+}
+
+export interface SongUserData {
+  user_id: string;
+  song_id: string;
+  notes?: string | null;
+  display_title?: string | null;
+  created_at: string;
+}
+
+export interface SongWithUserData extends Song {
+  user_data: SongUserData;
 }
 
 export type SongWriterRole = "composer" | "lyricist" | "writer";

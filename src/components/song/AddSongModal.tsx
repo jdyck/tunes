@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Song } from "@/types/types";
 import { SongWorkSearchResult } from "@/lib/musicbrainz";
@@ -34,6 +34,10 @@ export default function AddSongModal({
   const [name, setName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const createRequestId = useRef<string | null>(null);
+
+  const [discoverableSongs, setDiscoverableSongs] = useState<Song[]>([]);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 
   const [searchResults, setSearchResults] = useState<SongWorkSearchResult[]>(
     []
@@ -58,17 +62,55 @@ export default function AddSongModal({
 
   const handleSearch = async () => {
     setSearchError(null);
+    setDiscoveryError(null);
 
     if (!name.trim()) {
       return;
     }
 
     setSearching(true);
-    try {
-      setSearchResults(await searchSongMetadata(name));
-    } catch {
+    const [metadataResult, discoverableResult] = await Promise.allSettled([
+      searchSongMetadata(name),
+      (async () => {
+        const { data, error } = await supabase
+          .from("songs")
+          .select(
+            "id, name, year, wikipedia_extract, wikipedia_url, musicbrainz_work_id, is_discoverable, first_discoverable_at, song_writers(role, sort_order, people(name))"
+          )
+          .eq("is_discoverable", true)
+          .ilike("name", `%${name.trim()}%`)
+          .limit(10);
+        if (error) throw error;
+
+        const matches = (data ?? []) as unknown as Song[];
+        if (matches.length === 0) return [];
+
+        const { data: memberships, error: membershipsError } = await supabase
+          .from("song_user_data")
+          .select("song_id")
+          .in(
+            "song_id",
+            matches.map((song) => song.id)
+          );
+        if (membershipsError) throw membershipsError;
+
+        const savedIds = new Set((memberships ?? []).map((row) => row.song_id));
+        return matches.filter((song) => !savedIds.has(song.id));
+      })(),
+    ]);
+
+    if (metadataResult.status === "fulfilled") {
+      setSearchResults(metadataResult.value);
+    } else {
       setSearchError("Couldn't look up song metadata. Try again later.");
       setSearchResults([]);
+    }
+
+    if (discoverableResult.status === "fulfilled") {
+      setDiscoverableSongs(discoverableResult.value);
+    } else {
+      setDiscoveryError("Couldn't search existing Songs. Try again later.");
+      setDiscoverableSongs([]);
     }
     setSearching(false);
     setHasSearched(true);
@@ -108,28 +150,25 @@ export default function AddSongModal({
   }) => {
     setErrorMessage("");
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) {
-      setErrorMessage("User not logged in.");
+    const parsedYear = song.year ? Number(song.year) : null;
+    if (
+      parsedYear !== null &&
+      (!Number.isInteger(parsedYear) || parsedYear < -32768 || parsedYear > 32767)
+    ) {
+      setErrorMessage("Year must be a whole number.");
       return;
     }
 
     setSaving(true);
-    const newSong: Partial<Song> = {
-      name: song.name,
-      year: song.year,
-      user_id: user.id,
-      wikipedia_extract: song.wikipediaExtract,
-      wikipedia_url: song.wikipediaUrl,
-      musicbrainz_work_id: song.workId,
-    };
-
-    const { data, error } = await supabase
-      .from("songs")
-      .insert([newSong])
-      .select()
-      .single();
+    createRequestId.current ??= crypto.randomUUID();
+    const { data, error } = await supabase.rpc("create_song_with_membership", {
+      p_song_id: createRequestId.current,
+      p_name: song.name,
+      p_year: parsedYear,
+      p_wikipedia_extract: song.wikipediaExtract,
+      p_wikipedia_url: song.wikipediaUrl,
+      p_musicbrainz_work_id: song.workId,
+    });
 
     if (error) {
       setSaving(false);
@@ -138,7 +177,7 @@ export default function AddSongModal({
     }
 
     try {
-      await saveSongWriters(data.id, song.writers);
+      await saveSongWriters(data, song.writers);
     } catch (writersError) {
       setSaving(false);
       setErrorMessage(
@@ -151,7 +190,23 @@ export default function AddSongModal({
     }
 
     setSaving(false);
-    onCreated(data.id);
+    onCreated(data);
+  };
+
+  const addExistingSong = async (songId: string) => {
+    setErrorMessage("");
+    setSaving(true);
+    const { data, error } = await supabase.rpc("add_discoverable_song", {
+      p_song_id: songId,
+    });
+    setSaving(false);
+
+    if (error) {
+      setErrorMessage("Failed to add Song: " + error.message);
+      return;
+    }
+
+    onCreated(data);
   };
 
   const handleConfirmPreview = () => {
@@ -277,9 +332,40 @@ export default function AddSongModal({
       </PrimaryButton>
 
       {searchError && <p className="text-mojo-600 mb-3">{searchError}</p>}
+      {discoveryError && (
+        <p className="text-mojo-600 mb-3">{discoveryError}</p>
+      )}
 
       {hasSearched && !searching && (
         <>
+          {discoverableSongs.length > 0 && (
+            <div className="mb-5">
+              <h3 className="font-semibold mb-2">Already in Standards</h3>
+              <ul className="divide-y divide-line-200 rounded-md border border-line-200">
+                {discoverableSongs.map((song) => (
+                  <li
+                    key={song.id}
+                    className="flex items-center justify-between gap-3 p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{song.name}</p>
+                      {song.year && (
+                        <p className="text-xs text-ink-600">{song.year}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addExistingSong(song.id)}
+                      disabled={saving}
+                      className="shrink-0 text-sm text-teal-700 underline disabled:opacity-60"
+                    >
+                      Add this Song
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {searchResults.length === 0 && !searchError && (
             <p className="text-sm text-ink-600 mb-3">No matches found.</p>
           )}
