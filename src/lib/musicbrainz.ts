@@ -11,8 +11,11 @@ import type {
   MusicBrainzSongArtistCredit,
 } from "../utils/musicbrainzArtistCredits.ts";
 import { musicBrainzSongArtistCredits } from "../utils/musicbrainzArtistCredits.ts";
-
-const USER_AGENT = "songs-personal-app/0.1 (https://github.com/jdyck/songs)";
+import { earliestMusicBrainzWriterYear } from "../utils/musicbrainzSongYear.ts";
+import {
+  fetchMusicBrainzJson,
+  isMusicBrainzNotFound,
+} from "./musicbrainzTransport.ts";
 
 export interface SongWorkSearchResult {
   workId: string;
@@ -67,17 +70,6 @@ const mapWorkToSearchResult = (work: MusicBrainzWork): SongWorkSearchResult => {
   };
 };
 
-// Best-effort "year written": MusicBrainz works have no composition-date
-// field, so this approximates it as the earliest dated relation on the
-// work (first performance/recording) — close enough for songs written
-// for a film or show and recorded soon after. null when nothing is dated.
-const earliestYear = (relations: MusicBrainzWorkRelation[]): string | null => {
-  const years = relations
-    .map((r) => ("begin" in r ? r.begin?.match(/^\d{4}/)?.[0] : undefined))
-    .filter((year): year is string => Boolean(year));
-  return years.length > 0 ? years.sort()[0] : null;
-};
-
 export const searchSongWorks = async (
   title: string
 ): Promise<SongWorkSearchResult[]> => {
@@ -86,15 +78,7 @@ export const searchSongWorks = async (
   url.searchParams.set("fmt", "json");
   url.searchParams.set("limit", "15");
 
-  const response = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`MusicBrainz search failed with status ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await fetchMusicBrainzJson<{ works?: MusicBrainzWork[] }>(url);
   const works: MusicBrainzWork[] = data.works || [];
 
   return works.map(mapWorkToSearchResult);
@@ -117,21 +101,25 @@ export const fetchSongWork = async (
 ): Promise<SongWorkDetail | null> => {
   const url = new URL(`https://musicbrainz.org/ws/2/work/${workId}`);
   url.searchParams.set("fmt", "json");
-  url.searchParams.set("inc", "work-rels+artist-rels+recording-rels+url-rels");
+  url.searchParams.set("inc", "artist-rels+work-rels+url-rels");
 
-  const response = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-  });
+  let work: MusicBrainzWork;
+  try {
+    work = await fetchMusicBrainzJson<MusicBrainzWork>(url);
+  } catch (error) {
+    if (isMusicBrainzNotFound(error)) return null;
+    throw error;
+  }
 
-  if (!response.ok) return null;
-
-  const data = await response.json();
-  const work: MusicBrainzWork = data;
   const relations = work.relations || [];
+  const artistRelations = relations.filter(
+    (relation): relation is MusicBrainzArtistRelation =>
+      "artist" in relation && Boolean(relation.artist)
+  );
 
   return {
     ...mapWorkToSearchResult(work),
-    year: earliestYear(relations),
+    year: earliestMusicBrainzWriterYear(artistRelations),
     wikidataId: wikidataIdFromRelations(relations),
   };
 };
@@ -364,15 +352,9 @@ export const searchRecordingMatches = async (
   url.searchParams.set("fmt", "json");
   url.searchParams.set("limit", "25");
 
-  const response = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`MusicBrainz recording search failed with status ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await fetchMusicBrainzJson<{
+    recordings?: MusicBrainzRecording[];
+  }>(url);
   const recordings: MusicBrainzRecording[] = data.recordings || [];
 
   return rankCandidates(
@@ -392,12 +374,11 @@ export const fetchRecordingMatch = async (
   url.searchParams.set("fmt", "json");
   url.searchParams.set("inc", "artist-credits+releases+work-rels");
 
-  const response = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-  });
-
-  if (!response.ok) return null;
-
-  const data = await response.json();
-  return mapRecordingToMatchResult(data as MusicBrainzRecording);
+  try {
+    const recording = await fetchMusicBrainzJson<MusicBrainzRecording>(url);
+    return mapRecordingToMatchResult(recording);
+  } catch (error) {
+    if (isMusicBrainzNotFound(error)) return null;
+    throw error;
+  }
 };

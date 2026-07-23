@@ -29,7 +29,7 @@ Therefore the ranking evidence is a combination: title/artist, duration, exact W
 
 ## Calls
 
-All calls stay server-side, and components receive normalized Standards data rather than raw MusicBrainz JSON. How much shared transport infrastructure to introduce with the multi-call flow is still a blocked implementation-scope decision; see [Transport boundary](#transport-boundary).
+All calls stay server-side, pass through the shared [transport boundary](#transport-boundary), and return normalized Standards data rather than raw MusicBrainz JSON to components.
 
 ### 1. Find and resolve a Song's Work
 
@@ -205,30 +205,28 @@ The former non-Person identity blocker is settled by [ADR-0008](../adr/0008-prov
 
 ## Transport boundary
 
-[MusicBrainz requires](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting) a meaningful, contactable User-Agent and currently limits a source IP to an average of one request per second. The new workflow must obey those provider constraints before it adds multiple calls. Calls remain user-triggered by search, confirmation, or explicit Update; do not poll MusicBrainz for changes.
+[MusicBrainz requires](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting) a meaningful, contactable User-Agent and currently limits a source IP to an average of one request per second. Every MusicBrainz request uses the shared server-only transport in `src/lib/musicbrainzTransport.ts`, which:
 
-**Blocked — choose the implementation boundary.** These are cumulative choices, not one pre-decided foundation package:
+- spaces upstream request starts by at least one second through one per-process queue;
+- identifies Standards with the repository URL and requests JSON centrally;
+- starts a 20-second abort timeout only after queue waiting is complete; and
+- normalizes cancellation, timeout, rate-limit, upstream-status, malformed-response, and network failures.
 
-1. **Minimum compliance:** preserve the existing fetch sites but route upstream starts through a shared per-process one-request-per-second queue, with the existing JSON headers and a verified contactable User-Agent. Smallest change, but timeout and error behavior remain inconsistent and repeated requests are not reused.
-2. **Small transport helper:** also centralize abort timeout and normalized errors, and optionally one bounded 429/503 retry that respects `Retry-After`. More consistent behavior for the multi-call flow without committing to a cache design.
-3. **Cached transport layer:** additionally add keyed server-side caching and explicit stale-data bypass rules. This reduces repeated MusicBrainz traffic but introduces cache lifetime, invalidation, refresh, and deployment-lifetime decisions that are not required to define the matching algorithm.
-
-A per-process limiter is sufficient for the current solo deployment. Distributed rate limiting remains future work unless the deployment model changes.
+The transport does not retry or cache. Calls remain user-triggered by search, confirmation, or explicit Update; do not poll MusicBrainz for changes. A per-process limiter is sufficient for the current solo deployment. Reconsider bounded retries, caching, or distributed rate limiting only if observed usage or the deployment model warrants them.
 
 ## Code placement
 
-Extract pure normalization, date/release selection, and candidate ranking under `src/utils/` as those seams are implemented and tested. Keep effectful fetching and provider parsing in `src/lib/`, route handlers returning normalized app contracts, and components concerned with search state, evidence display, confirmation, and save state.
+Extract pure normalization, date/release selection, and candidate ranking under `src/utils/` as those seams are implemented and tested. Keep effectful fetching and provider parsing in `src/lib/`, including the shared `musicbrainzTransport.ts` boundary; keep route handlers returning normalized app contracts and components concerned with search state, evidence display, confirmation, and save state.
 
 A big-bang split of the current `src/lib/musicbrainz.ts` into a new directory is not part of the matching milestone. Further module reorganization can follow the existing lib/effectful and utils/pure rule when concrete file boundaries emerge.
 
 ## Work items and status
 
-1. **Ordinary Song sync cleanup — Unblocked.** Drop `recording-rels` from the existing Work detail request, prefer dated writer relationships for year written, and accept null as common when MusicBrainz has no suitable date.
-2. **Work-aware candidate join and true dates — Blocked on transport boundary for production integration.** Implement the text-search/Work-index join, exact-Work start/end parsing, evidence, and the `recording_date_start` / `recording_date_end` migration. Keep unlinked candidates visible. Pure parsing/ranking work and fixtures can proceed before the transport choice.
-3. **On-demand ambiguous candidate resolution — Unblocked as product behavior; production calls share the transport dependency.** Return an explicit ambiguous state, add the user-triggered comparison of at most three tied candidates, explain the fuller Release evidence, and preserve unresolved ties. Do not browse candidate Releases automatically.
-4. **Release Group resolution — Unblocked in semantics; production calls share the transport dependency.** Browse complete release history, resolve Original and Primary Release Groups independently, add shared Release Group storage and both Recording relationships, switch art to Primary with Original fallback, and retain Release ID only as a representative-edition pointer.
-5. **Work provenance — Unblocked, small.** Add the editable "Part of" field and normalized parent Work choices when that UI work is selected.
-6. **Structured selected performers — Unblocked.** Store selected performer relationships against the shared Artist identity per [artist-browsing.md](artist-browsing.md). Producer, engineer, publisher, arranger, and inferred group membership remain out of scope until explicitly wanted.
-7. **Release-level amortization — Blocked on items 2–4.** Use a sibling Recording's confirmed Release/Release Group as a strong suggestion when adding another track from the same Release Group.
+1. **Work-aware candidate join and true dates.** Implement the text-search/Work-index join, exact-Work start/end parsing, evidence, and the `recording_date_start` / `recording_date_end` migration. Keep unlinked candidates visible.
+2. **On-demand ambiguous candidate resolution.** Return an explicit ambiguous state, add the user-triggered comparison of at most three tied candidates, explain the fuller Release evidence, and preserve unresolved ties. Do not browse candidate Releases automatically.
+3. **Release Group resolution.** Browse complete release history, resolve Original and Primary Release Groups independently, add shared Release Group storage and both Recording relationships, switch art to Primary with Original fallback, and retain Release ID only as a representative-edition pointer.
+4. **Work provenance.** Add the editable "Part of" field and normalized parent Work choices when that UI work is selected.
+5. **Structured selected performers.** Store selected performer relationships against the shared Artist identity per [artist-browsing.md](artist-browsing.md). Producer, engineer, publisher, arranger, and inferred group membership remain out of scope until explicitly wanted.
+6. **Release-level amortization — Blocked on items 1–3.** Use a sibling Recording's confirmed Release/Release Group as a strong suggestion when adding another track from the same Release Group.
 
 **Future:** a broader MusicBrainz module reorganization, distributed rate limiting, sideways browsing through alternatives beyond the comparison required by item 3, a release-detail view for edition/media/remaster data, and user-triggered fallback artwork.
