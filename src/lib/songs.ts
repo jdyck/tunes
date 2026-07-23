@@ -36,6 +36,12 @@ export const songWithUserDataSelect = `
     musicbrainz_work_id,
     is_discoverable,
     first_discoverable_at,
-    song_writers(role, sort_order, people(name))
+    song_artist_credits(
+      artist_id,
+      role,
+      credited_as,
+      sort_order,
+      artists(id, name, kind, musicbrainz_artist_id)
+    )
   )
 `;

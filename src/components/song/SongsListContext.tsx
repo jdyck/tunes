@@ -10,7 +10,7 @@ import {
 } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
 
-type SongPatch = Partial<Omit<SongWithUserData, "song_writers" | "user_data">> & {
+type SongPatch = Partial<Omit<SongWithUserData, "song_artist_credits" | "user_data">> & {
   user_data?: Partial<SongWithUserData["user_data"]>;
   writers?: WriterInput[];
 };
@@ -78,13 +78,20 @@ export function SongsListProvider({
                   : {}),
                 ...(writers
                   ? {
-                      song_writers: writers
-                        .filter((w) => w.name.trim())
+                      song_artist_credits: writers
+                        .filter((writer) => writer.creditedAs.trim())
                         .map((w) => ({
                           song_id: id,
-                          person_id: "",
+                          artist_id: w.artistId || "",
                           role: w.role,
-                          people: { id: "", name: w.name },
+                          credited_as: w.creditedAs,
+                          artists: {
+                            id: w.artistId || "",
+                            name: w.canonicalName || w.creditedAs,
+                            kind: w.artistKind || null,
+                            musicbrainz_artist_id:
+                              w.musicbrainzArtistId || null,
+                          },
                         })),
                     }
                   : {}),

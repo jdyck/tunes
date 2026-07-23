@@ -6,6 +6,11 @@
 // directly from a component.
 
 import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
+import type {
+  MusicBrainzArtistRelation,
+  MusicBrainzSongArtistCredit,
+} from "../utils/musicbrainzArtistCredits.ts";
+import { musicBrainzSongArtistCredits } from "../utils/musicbrainzArtistCredits.ts";
 
 const USER_AGENT = "songs-personal-app/0.1 (https://github.com/jdyck/songs)";
 
@@ -13,19 +18,7 @@ export interface SongWorkSearchResult {
   workId: string;
   title: string;
   disambiguation: string | null;
-  composers: string[];
-  lyricists: string[];
-  // Names credited as a generic "writer" when MusicBrainz doesn't split
-  // the role into composer/lyricist (common for pop/rock songwriting
-  // credits) — kept as its own role rather than guessed onto
-  // composer/lyricist, since which part they wrote isn't known.
-  writers: string[];
-}
-
-interface MusicBrainzArtistRelation {
-  type: string;
-  artist?: { name: string };
-  begin?: string;
+  artistCredits: MusicBrainzSongArtistCredit[];
 }
 
 interface MusicBrainzUrlRelation {
@@ -63,10 +56,6 @@ const mapWorkToSearchResult = (work: MusicBrainzWork): SongWorkSearchResult => {
   const artistRelations = relations.filter(
     (r): r is MusicBrainzArtistRelation => "artist" in r && !!r.artist
   );
-  const namesForType = (type: string) =>
-    artistRelations
-      .filter((r) => r.type === type)
-      .map((r) => decodeHtmlEntities(r.artist!.name));
 
   return {
     workId: work.id,
@@ -74,9 +63,7 @@ const mapWorkToSearchResult = (work: MusicBrainzWork): SongWorkSearchResult => {
     disambiguation: work.disambiguation
       ? decodeHtmlEntities(work.disambiguation)
       : null,
-    composers: namesForType("composer"),
-    lyricists: namesForType("lyricist"),
-    writers: namesForType("writer"),
+    artistCredits: musicBrainzSongArtistCredits(artistRelations),
   };
 };
 

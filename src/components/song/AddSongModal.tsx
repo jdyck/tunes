@@ -6,6 +6,7 @@ import { Song } from "@/types/types";
 import { SongWorkSearchResult } from "@/lib/musicbrainz";
 import { WorkBackground } from "@/lib/wikipedia";
 import { WriterInput, saveSongWriters } from "@/lib/songWriters";
+import { writersFromMusicBrainz } from "@/utils/writerCredits";
 import { searchSongMetadata, fetchWorkPreview } from "@/lib/songMetadataClient";
 import Modal from "@/components/ui/Modal";
 import SongWritersEditor from "@/components/song/SongWritersEditor";
@@ -16,13 +17,12 @@ import WikipediaBackgroundCard from "@/components/song/WikipediaBackgroundCard";
 import PrimaryButton from "@/components/ui/PrimaryButton";
 
 const creditedNames = (result: SongWorkSearchResult): string[] =>
-  Array.from(new Set([...result.composers, ...result.lyricists, ...result.writers]));
+  Array.from(
+    new Set(result.artistCredits.map((credit) => credit.creditedAs))
+  );
 
-const writersFromResult = (result: SongWorkSearchResult): WriterInput[] => [
-  ...result.composers.map((name) => ({ name, role: "composer" as const })),
-  ...result.lyricists.map((name) => ({ name, role: "lyricist" as const })),
-  ...result.writers.map((name) => ({ name, role: "writer" as const })),
-];
+const writersFromResult = (result: SongWorkSearchResult): WriterInput[] =>
+  writersFromMusicBrainz(result.artistCredits);
 
 export default function AddSongModal({
   onClose,
@@ -75,7 +75,7 @@ export default function AddSongModal({
         const { data, error } = await supabase
           .from("songs")
           .select(
-            "id, name, year, wikipedia_extract, wikipedia_url, musicbrainz_work_id, is_discoverable, first_discoverable_at, song_writers(role, sort_order, people(name))"
+            "id, name, year, wikipedia_extract, wikipedia_url, musicbrainz_work_id, is_discoverable, first_discoverable_at, song_artist_credits(artist_id, role, credited_as, sort_order, artists(id, name, kind, musicbrainz_artist_id))"
           )
           .eq("is_discoverable", true)
           .ilike("name", `%${name.trim()}%`)

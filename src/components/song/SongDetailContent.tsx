@@ -22,6 +22,7 @@ import {
   fetchSongWriters,
   saveSongWriters,
 } from "@/lib/songWriters";
+import { writersFromMusicBrainz } from "@/utils/writerCredits";
 import { SongWorkSearchResult } from "@/lib/musicbrainz";
 import {
   searchSongMetadata,
@@ -39,7 +40,7 @@ import { effectiveSongTitle } from "@/utils/songTitle";
 
 const formatWriterInputCredit = (writers: WriterInput[]) => {
   const names = writers
-    .map((writer) => writer.name.trim())
+    .map((writer) => writer.creditedAs.trim())
     .filter(Boolean);
   const credited = Array.from(new Set(names));
 
@@ -222,13 +223,15 @@ export default function SongDetailContent({ id }: { id: string }) {
     }
 
     try {
+      let savedWriters = writers;
       if (canEditShared) {
         const { error: sharedError } = await supabase
           .from("songs")
           .update(sharedFields)
           .eq("id", id);
         if (sharedError) throw sharedError;
-        await saveSongWriters(id, writers);
+        savedWriters = await saveSongWriters(id, writers);
+        setWriters(savedWriters);
       }
 
       const nextUserData = {
@@ -250,7 +253,7 @@ export default function SongDetailContent({ id }: { id: string }) {
       patchSong(id, {
         ...(canEditShared ? sharedFields : {}),
         user_data: nextUserData,
-        ...(canEditShared ? { writers } : {}),
+        ...(canEditShared ? { writers: savedWriters } : {}),
       });
     } catch (writersError) {
       const message =
@@ -286,11 +289,7 @@ export default function SongDetailContent({ id }: { id: string }) {
     ) {
       setTitle(work.title);
     }
-    setWriters([
-      ...work.composers.map((name) => ({ name, role: "composer" as const })),
-      ...work.lyricists.map((name) => ({ name, role: "lyricist" as const })),
-      ...work.writers.map((name) => ({ name, role: "writer" as const })),
-    ]);
+    setWriters(writersFromMusicBrainz(work.artistCredits, writers));
     if (work.year) setYear(work.year);
     setIsSaved(false);
   };

@@ -27,7 +27,9 @@ export default function SongWorkResultsList({
               <p className="truncate text-xs text-ink-600">
                 {(() => {
                   const credited = Array.from(
-                    new Set([...result.composers, ...result.lyricists, ...result.writers])
+                    new Set(
+                      result.artistCredits.map((credit) => credit.creditedAs)
+                    )
                   );
                   return credited.length > 0
                     ? credited.join(", ")
