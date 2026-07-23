@@ -4,8 +4,13 @@
 // asks for an identifying User-Agent, which browsers won't let client-side
 // JS set.
 
+import {
+  fetchMusicBrainzJson,
+  isMusicBrainzNotFound,
+} from "./musicbrainzTransport.ts";
+
 const WIKIMEDIA_USER_AGENT =
-  "songs-personal-app/0.1 (https://github.com/jdyck/songs)";
+  "Standards/0.1.0 (https://github.com/jdyck/tunes)";
 
 export interface WorkBackground {
   extract: string;
@@ -19,12 +24,16 @@ const fetchWikidataIdForWork = async (
   url.searchParams.set("fmt", "json");
   url.searchParams.set("inc", "url-rels");
 
-  const response = await fetch(url, {
-    headers: { "User-Agent": WIKIMEDIA_USER_AGENT, Accept: "application/json" },
-  });
-  if (!response.ok) return null;
+  let data: {
+    relations?: { type: string; url?: { resource: string } }[];
+  };
+  try {
+    data = await fetchMusicBrainzJson(url);
+  } catch (error) {
+    if (isMusicBrainzNotFound(error)) return null;
+    throw error;
+  }
 
-  const data = await response.json();
   const relations: { type: string; url?: { resource: string } }[] =
     data.relations || [];
   const wikidataRelation = relations.find(
