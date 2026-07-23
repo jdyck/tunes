@@ -45,10 +45,13 @@ The folder scheme and lib/utils rule above are deliberate decisions (recorded in
 ```
 npm run dev      # start dev server (localhost:3000)
 npm run build    # production build
+npm test         # run the focused TypeScript test suite
 npm run start    # run production build
 ```
 
-No test suite exists yet (see [docs/direction/testing.md](docs/direction/testing.md)).
+The focused test suite covers pure normalization and MusicBrainz matching
+contracts; broader component/browser testing remains undecided. See
+[docs/direction/testing.md](docs/direction/testing.md).
 
 Login credentials for local dev are in `.env.local` (not checked in).
 

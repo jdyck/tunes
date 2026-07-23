@@ -1,7 +1,10 @@
 # Automated tests
 
-No test runner is configured (`package.json` has no test script). **Unblocked:** introduce a minimal TypeScript test runner as a narrow, standalone part of the [MusicBrainz matching work](musicbrainz-matching.md), where regressions are both likely and difficult to spot visually. This does not settle broader component/browser testing and does not require a big-bang provider-module refactor.
-
-Start with reduced provider fixtures, partial/range date parsing, settled candidate-ordering invariants, ambiguity detection, and Release Group/representative-edition evidence. The Nat King Cole "But Beautiful" fixture must prove that linked candidates rank above otherwise-similar unlinked candidates, unlinked candidates remain available, and multiple otherwise-tied Work-linked candidates produce an ambiguous state before Release browsing. Full Release evidence must separately select Original Release by earliest credible official publication and Primary Release by useful album context, allow both roles to point to one Release Group, and preserve null/ambiguity rather than forcing either role when the evidence is inconclusive. Primary tests must reject groups that do not contain the exact Recording, exclude Compilation/Remix by default, and prove that a provider album hint only breaks ties among eligible candidates.
+`npm test` runs the focused TypeScript suite with Node's built-in test runner.
+Keep pure normalization and provider-matching contracts covered with reduced
+local fixtures so regressions do not depend on live third-party responses.
+The MusicBrainz baseline includes partial/range dates, candidate-ordering
+invariants, ambiguity preservation, and separate Original Release, Primary
+Release, and representative-edition selection.
 
 **Future decision:** whether and when to add component, route, or browser testing. It does not block this focused suite.
