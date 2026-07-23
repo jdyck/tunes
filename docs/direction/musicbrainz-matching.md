@@ -201,7 +201,7 @@ Do **not** persist raw MusicBrainz JSON, search scores, evidence strings, Releas
 
 ### Artist identity
 
-The former non-Person identity blocker is settled by [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md): local Artist is broad enough for MusicBrainz Person, Group, Orchestra, Choir, Character, and Other identities. Song writing roles belong on Song-to-Artist credits, and structured Recording performer credits target the same Artist identity. Preserve credited-as text and never infer a group's members. Shared `artists`, private `artist_user_data`, and the target credit surfaces now exist; the temporary `people` / `song_writers` compatibility storage remains only until application verification and contraction.
+The former non-Person identity blocker is settled by [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md): local Artist is broad enough for MusicBrainz Person, Group, Orchestra, Choir, Character, and Other identities. Song writing roles belong on Song-to-Artist credits, and structured Recording performer credits target the same Artist identity. Preserve credited-as text and never infer a group's members. Shared `artists`, private `artist_user_data`, and the target credit relationships are the implemented storage boundary.
 
 ## Transport boundary
 
@@ -228,7 +228,7 @@ A big-bang split of the current `src/lib/musicbrainz.ts` into a new directory is
 3. **On-demand ambiguous candidate resolution — Unblocked as product behavior; production calls share the transport dependency.** Return an explicit ambiguous state, add the user-triggered comparison of at most three tied candidates, explain the fuller Release evidence, and preserve unresolved ties. Do not browse candidate Releases automatically.
 4. **Release Group resolution — Unblocked in semantics; production calls share the transport dependency.** Browse complete release history, resolve Original and Primary Release Groups independently, add shared Release Group storage and both Recording relationships, switch art to Primary with Original fallback, and retain Release ID only as a representative-edition pointer.
 5. **Work provenance — Unblocked, small.** Add the editable "Part of" field and normalized parent Work choices when that UI work is selected.
-6. **Structured selected performers — Unblocked after Artist rollout contraction.** Store selected performer relationships against the shared Artist identity per [artist-browsing.md](artist-browsing.md). Producer, engineer, publisher, arranger, and inferred group membership remain out of scope until explicitly wanted.
+6. **Structured selected performers — Unblocked.** Store selected performer relationships against the shared Artist identity per [artist-browsing.md](artist-browsing.md). Producer, engineer, publisher, arranger, and inferred group membership remain out of scope until explicitly wanted.
 7. **Release-level amortization — Blocked on items 2–4.** Use a sibling Recording's confirmed Release/Release Group as a strong suggestion when adding another track from the same Release Group.
 
 **Future:** a broader MusicBrainz module reorganization, distributed rate limiting, sideways browsing through alternatives beyond the comparison required by item 3, a release-detail view for edition/media/remaster data, and user-triggered fallback artwork.
