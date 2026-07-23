@@ -5,6 +5,8 @@
 // functions are only ever called from Next.js route handlers, never
 // directly from a component.
 
+import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
+
 const USER_AGENT = "songs-personal-app/0.1 (https://github.com/jdyck/songs)";
 
 export interface SongWorkSearchResult {
@@ -62,12 +64,16 @@ const mapWorkToSearchResult = (work: MusicBrainzWork): SongWorkSearchResult => {
     (r): r is MusicBrainzArtistRelation => "artist" in r && !!r.artist
   );
   const namesForType = (type: string) =>
-    artistRelations.filter((r) => r.type === type).map((r) => r.artist!.name);
+    artistRelations
+      .filter((r) => r.type === type)
+      .map((r) => decodeHtmlEntities(r.artist!.name));
 
   return {
     workId: work.id,
-    title: work.title,
-    disambiguation: work.disambiguation || null,
+    title: decodeHtmlEntities(work.title),
+    disambiguation: work.disambiguation
+      ? decodeHtmlEntities(work.disambiguation)
+      : null,
     composers: namesForType("composer"),
     lyricists: namesForType("lyricist"),
     writers: namesForType("writer"),
@@ -254,9 +260,11 @@ const mapRecordingToMatchResult = (
   const album = pickAlbum(recording.releases, recording["first-release-date"], albumHint);
   return {
     recordingId: recording.id,
-    title: recording.title,
-    artistCredit: (recording["artist-credit"] || []).map((c) => c.name).join(" & "),
-    album: album?.title ?? null,
+    title: decodeHtmlEntities(recording.title),
+    artistCredit: (recording["artist-credit"] || [])
+      .map((credit) => decodeHtmlEntities(credit.name))
+      .join(" & "),
+    album: album ? decodeHtmlEntities(album.title) : null,
     albumReleaseId: album?.id ?? null,
     year: yearFromReleaseDate(recording["first-release-date"]),
     duration: formatMsDuration(recording.length),

@@ -4,6 +4,7 @@ import type {
   YouTubeDiscoverySource,
   YouTubeSearchCategory,
 } from "@/types/types";
+import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
 
 // Converts YouTube's ISO 8601 duration (e.g. "PT4M13S") to "m:ss"
 export const formatYouTubeDuration = (isoDuration: string) => {
@@ -42,8 +43,8 @@ export const fetchYouTubeVideoData = async (
     if (data.items && data.items.length > 0) {
       const video = data.items[0];
       return {
-        title: video.snippet.title,
-        channelTitle: video.snippet.channelTitle,
+        title: decodeHtmlEntities(video.snippet.title),
+        channelTitle: decodeHtmlEntities(video.snippet.channelTitle),
         durationSeconds: parseYouTubeDurationSeconds(
           video.contentDetails.duration
         ),
@@ -100,8 +101,8 @@ export const searchYouTubeVideos = async (
 
     const results = data.items.map((item: any) => ({
       videoId: item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
+      title: decodeHtmlEntities(item.snippet.title),
+      channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
       thumbnail: item.snippet.thumbnails?.default?.url ?? "",
       searchCategory: item.snippet.channelTitle.endsWith(" - Topic")
         ? "song"
