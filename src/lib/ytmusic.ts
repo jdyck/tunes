@@ -2,6 +2,7 @@
 
 import YTMusic from "ytmusic-api";
 import { YouTubeSearchResult } from "@/lib/youtube";
+import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
 
 const SEARCH_TIMEOUT_MS = 4000;
 
@@ -50,28 +51,28 @@ export const searchYtMusic = async (
 
   const songResults: YouTubeSearchResult[] = songs.map((song) => ({
     videoId: song.videoId,
-    title: song.name,
-    channelTitle: song.artist.name,
+    title: decodeHtmlEntities(song.name),
+    channelTitle: decodeHtmlEntities(song.artist.name),
     thumbnail: song.thumbnails[0]?.url ?? "",
     searchCategory: "song",
     discoverySource: "ytmusic_search",
     artistId: song.artist.artistId ?? null,
-    artistName: song.artist.name,
+    artistName: decodeHtmlEntities(song.artist.name),
     albumId: song.album?.albumId ?? null,
-    albumName: song.album?.name ?? null,
+    albumName: song.album ? decodeHtmlEntities(song.album.name) : null,
     durationSeconds: song.duration ?? null,
     metadataFetchedAt: new Date().toISOString(),
   }));
 
   const videoResults: YouTubeSearchResult[] = videos.map((video) => ({
     videoId: video.videoId,
-    title: video.name,
-    channelTitle: video.artist.name,
+    title: decodeHtmlEntities(video.name),
+    channelTitle: decodeHtmlEntities(video.artist.name),
     thumbnail: video.thumbnails[0]?.url ?? "",
     searchCategory: "video",
     discoverySource: "ytmusic_search",
     artistId: video.artist.artistId ?? null,
-    artistName: video.artist.name,
+    artistName: decodeHtmlEntities(video.artist.name),
     albumId: null,
     albumName: null,
     durationSeconds: video.duration ?? null,

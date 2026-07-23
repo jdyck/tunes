@@ -31,6 +31,7 @@ import {
   songWithUserDataSelect,
 } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
+import { decodeHtmlEntities } from "@/utils/htmlEntities";
 
 export default function RecordingDetailContent({
   id,
@@ -88,19 +89,35 @@ export default function RecordingDetailContent({
 
   useEffect(() => {
     if (!recording) return;
-    setName(recording.name || "");
+    const storedName = recording.name || "";
+    const storedArtist = recording.artist || "";
+    const storedAlbum = recording.album || "";
+    const decodedName = decodeHtmlEntities(storedName);
+    const decodedArtist = decodeHtmlEntities(storedArtist);
+    const decodedAlbum = decodeHtmlEntities(storedAlbum);
+
+    setName(decodedName);
     setKind(recording.kind || "video_capture");
     setNotes(recording.user_data.notes || "");
-    setArtist(recording.artist || "");
-    setAlbum(recording.album || "");
+    setArtist(decodedArtist);
+    setAlbum(decodedAlbum);
     setYear(recording.year || "");
     setDuration(recording.duration || "");
-    setKey(recording.key || "");
-    setTempo(recording.tempo != null ? String(recording.tempo) : "");
+    setKey(recording.user_data.key || "");
+    setTempo(
+      recording.user_data.tempo != null
+        ? String(recording.user_data.tempo)
+        : ""
+    );
     setTags((recording.user_data.tags || []).join(", "));
     setVideoId(recording.youtube_items[0]?.video_id ?? null);
     setMusicbrainzRecordingId(recording.musicbrainz_recording_id || null);
     setMusicbrainzReleaseId(recording.musicbrainz_release_id || null);
+    setIsSaved(
+      decodedName === storedName &&
+        decodedArtist === storedArtist &&
+        decodedAlbum === storedAlbum
+    );
   }, [recording]);
 
   useEffect(() => {

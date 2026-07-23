@@ -9,7 +9,12 @@ const recordings: SavedRecording[] = [
     song_id: "demo-song",
     name: "Autumn Leaves",
     artist: "Bill Evans Trio",
-    user_data: { user_id: "demo-user", recording_id: "demo-1" },
+    user_data: {
+      user_id: "demo-user",
+      recording_id: "demo-1",
+      key: "G minor",
+      tempo: "120",
+    },
     youtube_items: [
       {
         video_id: "demo0000000",

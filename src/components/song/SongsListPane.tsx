@@ -88,9 +88,11 @@ export default function SongsListPane() {
     const filteredSongs = searchTerm
       ? songs.filter((song) => {
           const effectiveTitle = effectiveSongTitle(song, song.user_data);
+          const writerCredit = formatWriterCredit(song.song_writers ?? []) ?? "";
           return (
             effectiveTitle.toLowerCase().includes(searchTerm) ||
-            song.name.toLowerCase().includes(searchTerm)
+            song.name.toLowerCase().includes(searchTerm) ||
+            writerCredit.toLowerCase().includes(searchTerm)
           );
         })
       : songs;
@@ -222,7 +224,7 @@ export default function SongsListPane() {
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-12">
         {loading ? (
-          <p>Loading songs...</p>
+          <SongsListSkeleton />
         ) : error ? (
           <p className="text-mojo-600">{error}</p>
         ) : visibleSongs.length > 0 ? (
@@ -263,6 +265,29 @@ export default function SongsListPane() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function SongsListSkeleton() {
+  return (
+    <div role="status" aria-label="Loading songs">
+      <span className="sr-only">Loading songs...</span>
+      <ul aria-hidden="true">
+        {Array.from({ length: 5 }, (_, index) => (
+          <li key={index}>
+            <div className="flex h-20 items-center gap-2 border-b border-border-default p-6 pl-0">
+              <div className="min-w-0 flex-1 animate-pulse pl-6">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="h-5 w-2/3 rounded-sm bg-surface-sunken" />
+                  <div className="h-4 w-10 shrink-0 rounded-sm bg-surface-sunken" />
+                </div>
+                <div className="mt-2 h-3.5 w-1/2 rounded-sm bg-surface-sunken" />
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

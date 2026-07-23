@@ -1,5 +1,0 @@
-# Song / `song_user_data` deployment boundary
-
-The reviewed implementation is in `notes/plans-to-review/song-user-data-split.md`. Its expand migration adds and backfills the private relationship while retaining legacy `songs.user_id` and `songs.notes` plus a narrow dual-write/old-client policy. The membership-aware application must be deployed and smoke-tested against that expanded schema before contraction.
-
-After the deployed application successfully exercises membership-based list/detail reads, private title/notes updates, creation/reuse, Recording saves, discoverability, and bounded removal with both test accounts, add the contract migration. It must run the idempotent delta backfill and assertions from the reviewed plan, remove the legacy trigger/policies/grants, drop `songs.user_id` and `songs.notes`, and leave no ordinary shared-Song delete access. Delete this direction file once contraction and two-User verification are complete; the lasting model and policy live in the domain model and ADR-0003.

@@ -45,10 +45,13 @@ The folder scheme and lib/utils rule above are deliberate decisions (recorded in
 ```
 npm run dev      # start dev server (localhost:3000)
 npm run build    # production build
+npm test         # run the focused TypeScript test suite
 npm run start    # run production build
 ```
 
-No test suite exists yet (see [docs/direction/testing.md](docs/direction/testing.md)).
+The focused test suite covers pure normalization and MusicBrainz matching
+contracts; broader component/browser testing remains undecided. See
+[docs/direction/testing.md](docs/direction/testing.md).
 
 Login credentials for local dev are in `.env.local` (not checked in).
 
@@ -65,7 +68,7 @@ Use the git-ignored `notes/` folder as a local review workspace before extensive
 
 ## Rules and guardrails
 
-- **Terminology**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). The rename is complete through code and DB (`public.songs`, `song_id`); don't reintroduce "tune". The remaining Song / `song_user_data` split is a future scoped migration ([docs/direction/song-user-song-split.md](docs/direction/song-user-song-split.md)) — not a drive-by.
+- **Terminology and Song boundary**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). The rename and Song / `song_user_data` split are complete through code and DB: shared identity and metadata live on `public.songs`, while membership, notes, display title, and added time live in private `song_user_data`. Don't reintroduce "tune" or owner/private payload on `songs`.
 - **Canonical entity migrations are scoped work, not drive-bys**: Artist includes people and groups; Recording is provider-neutral; private Recording state belongs in `user_recording_data`; YouTube results belong in `youtube_items`; and Original/Primary Release point to shared Release Groups. The current schema has not caught up — follow [ADR-0008](docs/adr/0008-provider-neutral-music-entities-and-user-data.md) and [canonical-entity-migrations.md](docs/direction/canonical-entity-migrations.md) rather than extending transitional tables as if they were final.
 - **Song creation is not admin-gated**: any user can create a new Song on no search match; don't add approval/moderation gates here ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)).
 - **Lead Sheets are private by default and publishing is admin-only**, never self-service or automatic — don't build a user-facing "publish" action ([ADR-0002](docs/adr/0002-lead-sheets-admin-gated-publishing.md)).

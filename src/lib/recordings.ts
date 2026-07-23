@@ -1,4 +1,4 @@
-import {
+import type {
   Recording,
   RecordingYouTubeItem,
   SavedRecording,
@@ -50,6 +50,8 @@ export const mapSavedRecordingRow = (
       rating: row.rating,
       sort_order: row.sort_order,
       tags: row.tags,
+      key: row.key,
+      tempo: row.tempo,
     },
     youtube_items: youtubeItems,
   };
@@ -62,6 +64,8 @@ export const savedRecordingSelect = `
   rating,
   sort_order,
   tags,
+  key,
+  tempo,
   recordings!inner(
     *,
     recording_youtube_items(

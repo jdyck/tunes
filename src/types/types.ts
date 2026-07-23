@@ -55,8 +55,6 @@ export interface Recording {
   year?: string | null;
   album?: string | null;
   duration?: string | null;
-  key?: string | null;
-  tempo?: string | null;
   musicbrainz_recording_id?: string | null;
   musicbrainz_release_id?: string | null;
 }
@@ -68,6 +66,8 @@ export interface UserRecordingData {
   rating?: number | null;
   sort_order?: number | null;
   tags?: string[] | null;
+  key?: string | null;
+  tempo?: string | null;
 }
 
 export type YouTubeSearchCategory = "song" | "video";

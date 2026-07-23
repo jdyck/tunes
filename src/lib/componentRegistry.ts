@@ -1,5 +1,15 @@
 export const componentRegistry = [
   {
+    slug: "account-menu",
+    name: "AccountMenu",
+    path: "src/components/layout/AccountMenu.tsx",
+  },
+  {
+    slug: "add-recording-match-suggestion",
+    name: "AddRecordingMatchSuggestion",
+    path: "src/components/recording/AddRecordingMatchSuggestion.tsx",
+  },
+  {
     slug: "async-state-message",
     name: "AsyncStateMessage",
     path: "src/components/ui/AsyncStateMessage.tsx",
@@ -103,6 +113,11 @@ export const componentRegistry = [
     slug: "song-writers-editor",
     name: "SongWritersEditor",
     path: "src/components/song/SongWritersEditor.tsx",
+  },
+  {
+    slug: "songs-list-pane",
+    name: "SongsListPane",
+    path: "src/components/song/SongsListPane.tsx",
   },
   {
     slug: "spinner",
