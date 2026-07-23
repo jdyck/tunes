@@ -1,88 +1,87 @@
 // src/lib/songWriters.ts
 
 import { supabase } from "@/lib/supabaseClient";
-import { SongWriterRole } from "@/types/types";
+import type {
+  Artist,
+  SongArtistCredit,
+  SongArtistCreditInput,
+  SongArtistCreditRole,
+} from "@/types/types";
 
-export interface WriterInput {
-  name: string;
-  role: SongWriterRole;
-}
+export type WriterInput = SongArtistCreditInput;
 
-interface SongWriterRow {
-  role: SongWriterRole;
+interface SongArtistCreditRow {
+  artist_id: string;
+  role: SongArtistCreditRole;
+  credited_as: string;
   sort_order: number | null;
-  people: { name: string } | null;
+  artists: Artist | Artist[] | null;
 }
+
+const unwrapArtist = (value: Artist | Artist[] | null): Artist | null =>
+  Array.isArray(value) ? value[0] ?? null : value;
 
 export const fetchSongWriters = async (
   songId: string
 ): Promise<WriterInput[]> => {
   const { data, error } = await supabase
-    .from("song_writers")
-    .select("role, sort_order, people(name)")
+    .from("song_artist_credits")
+    .select(
+      "artist_id, role, credited_as, sort_order, artists(id, name, kind, musicbrainz_artist_id)"
+    )
     .eq("song_id", songId)
     .order("sort_order");
 
   if (error) throw error;
 
-  return ((data || []) as unknown as SongWriterRow[])
-    .filter((row) => row.people?.name)
-    .map((row) => ({ name: row.people!.name, role: row.role }));
+  return ((data || []) as unknown as SongArtistCreditRow[]).flatMap((row) => {
+    const artist = unwrapArtist(row.artists);
+    if (!artist) return [];
+
+    return [
+      {
+        artistId: row.artist_id,
+        canonicalName: artist.name,
+        creditedAs: row.credited_as || artist.name,
+        role: row.role,
+        artistKind: artist.kind ?? null,
+        musicbrainzArtistId: artist.musicbrainz_artist_id ?? null,
+      },
+    ];
+  });
 };
 
-const findOrCreatePerson = async (name: string): Promise<string> => {
-  const { data: existing, error: selectError } = await supabase
-    .from("people")
-    .select("id")
-    .ilike("name", name)
-    .maybeSingle();
-
-  if (selectError) throw selectError;
-  if (existing) return existing.id;
-
-  const { data: created, error: insertError } = await supabase
-    .from("people")
-    .insert({ name })
-    .select("id")
-    .single();
-
-  if (insertError) throw insertError;
-  return created.id;
-};
-
-// Full replace: simplest way to keep song_writers in sync with the editor's
-// local row list without incremental add/remove/reorder diffing, same
-// approach already used for Recording.tags.
 export const saveSongWriters = async (
   songId: string,
   writers: WriterInput[]
-): Promise<void> => {
-  const { error: deleteError } = await supabase
-    .from("song_writers")
-    .delete()
-    .eq("song_id", songId);
-  if (deleteError) throw deleteError;
-
-  const namedWriters = writers.filter((w) => w.name.trim());
-
-  for (const [index, writer] of namedWriters.entries()) {
-    const personId = await findOrCreatePerson(writer.name.trim());
-    const { error: insertError } = await supabase.from("song_writers").insert({
-      song_id: songId,
-      person_id: personId,
+): Promise<WriterInput[]> => {
+  const credits = writers
+    .filter((writer) => writer.creditedAs.trim())
+    .map((writer) => ({
+      artist_id: writer.artistId || null,
+      canonical_name:
+        writer.canonicalName?.trim() || writer.creditedAs.trim(),
+      credited_as: writer.creditedAs.trim(),
       role: writer.role,
-      sort_order: index,
-    });
-    if (insertError) throw insertError;
-  }
+      artist_kind: writer.artistKind || null,
+      musicbrainz_artist_id: writer.musicbrainzArtistId || null,
+    }));
+
+  const { error } = await supabase.rpc("replace_song_artist_credits", {
+    p_song_id: songId,
+    p_credits: credits,
+  });
+  if (error) throw error;
+
+  return fetchSongWriters(songId);
 };
 
 export const formatWriterCredit = (
-  writers: { role: SongWriterRole; people?: { name: string } | null }[]
+  credits: Pick<SongArtistCredit, "credited_as" | "artists">[]
 ): string | null => {
-  const names = writers
-    .filter((w) => w.people?.name)
-    .map((w) => w.people!.name);
+  const names = credits
+    .map((credit) => credit.credited_as || credit.artists?.name)
+    .filter((name): name is string => Boolean(name));
   const credited = Array.from(new Set(names));
 
   return credited.length > 0 ? credited.join(", ") : null;

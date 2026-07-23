@@ -6,8 +6,8 @@ import { WriterInput } from "@/lib/songWriters";
 
 export default function SongWritersEditorDemoPage() {
   const [writers, setWriters] = useState<WriterInput[]>([
-    { name: "Joseph Kosma", role: "composer" },
-    { name: "Jacques Prévert", role: "lyricist" },
+    { creditedAs: "Joseph Kosma", role: "composer" },
+    { creditedAs: "Jacques Prévert", role: "lyricist" },
   ]);
 
   return (

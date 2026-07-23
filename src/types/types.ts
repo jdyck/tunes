@@ -8,7 +8,7 @@ export interface Song {
   id: string;
   name: string;
   year?: string | null;
-  song_writers?: SongWriter[];
+  song_artist_credits?: SongArtistCredit[];
   wikipedia_extract?: string | null;
   wikipedia_url?: string | null;
   musicbrainz_work_id?: string | null;
@@ -28,20 +28,59 @@ export interface SongWithUserData extends Song {
   user_data: SongUserData;
 }
 
-export type SongWriterRole = "composer" | "lyricist" | "writer";
+export type ArtistKind =
+  | "person"
+  | "group"
+  | "orchestra"
+  | "choir"
+  | "character"
+  | "other";
 
-export interface Person {
+export interface Artist {
   id: string;
   name: string;
+  kind?: ArtistKind | null;
+  musicbrainz_artist_id?: string | null;
 }
 
-export interface SongWriter {
+export interface ArtistUserData {
+  user_id: string;
+  artist_id: string;
+  notes?: string | null;
+  tags?: string[] | null;
+}
+
+export type SongArtistCreditRole = "composer" | "lyricist" | "writer";
+
+export interface SongArtistCredit {
   id?: string;
   song_id: string;
-  person_id: string;
-  role: SongWriterRole;
+  artist_id: string;
+  role: SongArtistCreditRole;
+  credited_as: string;
   sort_order?: number | null;
-  people?: Person; // present when fetched via embedded select
+  artists?: Artist | null; // present when fetched via embedded select
+}
+
+export interface SongArtistCreditInput {
+  artistId?: string | null;
+  canonicalName?: string | null;
+  creditedAs: string;
+  role: SongArtistCreditRole;
+  artistKind?: ArtistKind | null;
+  musicbrainzArtistId?: string | null;
+}
+
+export type RecordingArtistCreditRole = "performer";
+
+export interface RecordingArtistCredit {
+  id?: string;
+  recording_id: string;
+  artist_id: string;
+  role: RecordingArtistCreditRole;
+  credited_as: string;
+  sort_order?: number | null;
+  artists?: Artist | null;
 }
 
 export type RecordingKind = "released" | "video_capture";

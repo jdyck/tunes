@@ -88,7 +88,8 @@ export default function SongsListPane() {
     const filteredSongs = searchTerm
       ? songs.filter((song) => {
           const effectiveTitle = effectiveSongTitle(song, song.user_data);
-          const writerCredit = formatWriterCredit(song.song_writers ?? []) ?? "";
+          const writerCredit =
+            formatWriterCredit(song.song_artist_credits ?? []) ?? "";
           return (
             effectiveTitle.toLowerCase().includes(searchTerm) ||
             song.name.toLowerCase().includes(searchTerm) ||
@@ -107,9 +108,9 @@ export default function SongsListPane() {
           titleForSorting(aTitle).localeCompare(titleForSorting(bTitle)) ||
           aTitle.localeCompare(bTitle);
       } else if (sortKey === "writers") {
-        comparison = (formatWriterCredit(a.song_writers ?? []) ?? "").localeCompare(
-          formatWriterCredit(b.song_writers ?? []) ?? ""
-        );
+        comparison = (
+          formatWriterCredit(a.song_artist_credits ?? []) ?? ""
+        ).localeCompare(formatWriterCredit(b.song_artist_credits ?? []) ?? "");
       } else if (sortKey === "date") {
         comparison = String(a.year ?? "").localeCompare(String(b.year ?? ""));
       } else {
@@ -293,7 +294,7 @@ function SongsListSkeleton() {
 }
 
 function SongRow({ song }: { song: SongWithUserData }) {
-  const credit = formatWriterCredit(song.song_writers ?? []);
+  const credit = formatWriterCredit(song.song_artist_credits ?? []);
   const title = effectiveSongTitle(song, song.user_data);
   return (
     <div className={`pl-6 flex-1 min-w-0 ${robotoCondensed.className}`}>

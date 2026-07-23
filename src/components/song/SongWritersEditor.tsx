@@ -1,10 +1,10 @@
 "use client";
 
 import { WriterInput } from "@/lib/songWriters";
-import { SongWriterRole } from "@/types/types";
+import { SongArtistCreditRole } from "@/types/types";
 import { XMarkIcon } from "@heroicons/react/20/solid";
 
-const ROLE_OPTIONS: { value: SongWriterRole; label: string }[] = [
+const ROLE_OPTIONS: { value: SongArtistCreditRole; label: string }[] = [
   { value: "composer", label: "Composer" },
   { value: "lyricist", label: "Lyricist" },
   { value: "writer", label: "Writer" },
@@ -28,7 +28,7 @@ export default function SongWritersEditor({
   };
 
   const addRow = () => {
-    onChange([...value, { name: "", role: "composer" }]);
+    onChange([...value, { creditedAs: "", role: "composer" }]);
   };
 
   return (
@@ -52,14 +52,24 @@ export default function SongWritersEditor({
             className="flex-1 min-w-0 p-2 rounded-md border border-line-200"
             type="text"
             placeholder="Name"
-            value={row.name}
-            onChange={(e) => updateRow(index, { name: e.target.value })}
+            value={row.creditedAs}
+            onChange={(e) =>
+              updateRow(index, {
+                creditedAs: e.target.value,
+                canonicalName: e.target.value,
+                artistId: null,
+                artistKind: null,
+                musicbrainzArtistId: null,
+              })
+            }
           />
           <select
             className="p-2 rounded-md border border-line-200"
             value={row.role}
             onChange={(e) =>
-              updateRow(index, { role: e.target.value as SongWriterRole })
+              updateRow(index, {
+                role: e.target.value as SongArtistCreditRole,
+              })
             }
           >
             {ROLE_OPTIONS.map((option) => (
