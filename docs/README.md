@@ -9,7 +9,7 @@ Use capitalized domain names—**User**, **Song**, **Artist**, **Recording**, an
 - [project-stage.md](project-stage.md) — the mutable, authoritative statement of who is using the app now and what privacy/migration assumptions are currently allowed. Check it before schema, RLS, auth, or data-migration work, and update it immediately when its transition trigger is reached.
 - [domain-model.md](domain-model.md) — ubiquitous language (Song, Artist, Recording, Release Group, and their user-data/provider layers) and *why* the model is shaped this way. Read this before touching naming or data model in code.
 - [adr/](adr/) — architecture decision records. Point-in-time decisions and the reasoning/rejected alternatives behind them.
-- [direction/](direction/) — one file per subject/issue (e.g. `song-user-song-split.md`, `music-player.md`). Each file mixes whatever's true about that subject — known problems, things to add, patterns to avoid — rather than being sorted into "bugs" vs "features" categories. Looser and more opinionated than an ADR; not all of it will happen.
+- [direction/](direction/) — one file per subject/issue (e.g. `music-player.md`, `artist-browsing.md`). Each file mixes whatever's true about that subject — known problems, things to add, patterns to avoid — rather than being sorted into "bugs" vs "features" categories. Looser and more opinionated than an ADR; not all of it will happen.
 
 See also, at repo root:
 
