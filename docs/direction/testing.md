@@ -1,8 +1,9 @@
 # Automated tests
 
 `npm test` runs the focused TypeScript suite with Node's built-in test runner.
-Keep pure normalization and provider-matching contracts covered with reduced
-local fixtures so regressions do not depend on live third-party responses.
+Keep pure normalization, composed private-data mapping, and provider-matching
+contracts covered with reduced local fixtures so regressions do not depend on
+live third-party responses.
 The MusicBrainz baseline includes partial/range dates, candidate-ordering
 invariants, ambiguity preservation, and separate Original Release, Primary
 Release, and representative-edition selection.

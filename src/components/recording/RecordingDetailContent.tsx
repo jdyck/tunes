@@ -103,8 +103,12 @@ export default function RecordingDetailContent({
     setAlbum(decodedAlbum);
     setYear(recording.year || "");
     setDuration(recording.duration || "");
-    setKey(recording.key || "");
-    setTempo(recording.tempo != null ? String(recording.tempo) : "");
+    setKey(recording.user_data.key || "");
+    setTempo(
+      recording.user_data.tempo != null
+        ? String(recording.user_data.tempo)
+        : ""
+    );
     setTags((recording.user_data.tags || []).join(", "));
     setVideoId(recording.youtube_items[0]?.video_id ?? null);
     setMusicbrainzRecordingId(recording.musicbrainz_recording_id || null);

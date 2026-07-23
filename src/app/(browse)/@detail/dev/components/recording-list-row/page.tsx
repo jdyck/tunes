@@ -9,6 +9,8 @@ const recording: SavedRecording = {
   user_data: {
     user_id: "demo-user",
     recording_id: "demo",
+    key: "G minor",
+    tempo: "120",
   },
   youtube_items: [
     {
