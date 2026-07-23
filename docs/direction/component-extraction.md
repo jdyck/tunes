@@ -16,10 +16,6 @@ All four auth-ish pages (`login`, `signup`, `forgot-password`, `account`) hand-r
 
 The problem: existing shared components don't match. `PrimaryButton` is `bg-slate-700 rounded-lg` (different color, no busy state); `FormField` has a different input style (`p-1.5 rounded-md`, no border). Whether these become new `TextInput`/`SubmitButton` components or the existing ones absorb them depends on the role→token mapping in [styling-cleanup.md](styling-cleanup.md) Task 2 — once that exists, extraction + recoloring of these pages land together. Do not pick silently.
 
-## NotesField (small)
-
-Both `SongDetailContent.tsx` and `RecordingDetailContent.tsx` have a near-identical notes `<textarea>` wired to the same dirty/save flow that `SaveStatusButton` indicates. Extract a `NotesField` (label, value, onChange, textarea styling). Keep the save-state logic in the parent — this is a presentational extraction only.
-
 ## Save feedback — replace the persistent status icon
 
 `SaveStatusButton` currently stays visible at all times as an icon that changes between saved and unsaved. Replace that pattern across detail editors:
@@ -36,7 +32,3 @@ When `SaveStatusButton` is removed, delete its `componentRegistry.ts` entry and 
 ## InlineSearchForm — deliberately deferred
 
 The label + input + checkbox + search/cancel button cluster in `RecordingDetailContent.tsx` (MusicBrainz search) resembles search UI in `AddSongModal`/`AddRecordingModal`, but the modals differ enough that a shared abstraction now would be speculative. Wait for a third use. Don't build this without being asked.
-
-## Registry gaps (independent of extraction)
-
-`componentRegistry.ts` lacks entries for existing components: `AccountMenu`, `SongsListPane`, `AddRecordingMatchSuggestion` (`SongDetailContent`/`RecordingDetailContent` are arguably too page-like for the gallery — skip unless asked). Adding the missing ones is fair game any time.
