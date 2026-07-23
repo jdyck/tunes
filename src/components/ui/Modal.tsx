@@ -22,7 +22,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 z-30 flex items-start sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-[var(--layer-modal)] flex items-start justify-center bg-black/40 p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div

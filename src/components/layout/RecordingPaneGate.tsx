@@ -17,7 +17,7 @@ export default function RecordingPaneGate({
   if (!isRecordingOpen) return null;
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-0 z-30 overscroll-none bg-surface-app lg:absolute lg:left-auto lg:right-0 lg:top-0 lg:bottom-0 lg:block lg:w-sm xl:w-md lg:h-full lg:border-l lg:border-line-100 lg:shadow-[-12px_0_24px_rgba(32,29,27,0.12)] 2xl:static 2xl:inset-auto 2xl:z-auto  2xl:shadow-none">
+    <div className="fixed inset-x-0 top-0 bottom-0 z-[var(--layer-recording-detail)] overscroll-none bg-surface-app lg:absolute lg:left-auto lg:right-0 lg:top-0 lg:bottom-0 lg:block lg:h-full lg:w-sm lg:border-l lg:border-line-100 lg:shadow-[-12px_0_24px_rgba(32,29,27,0.12)] xl:w-md 2xl:static 2xl:inset-auto 2xl:z-auto 2xl:shadow-none">
       {children}
     </div>
   );
