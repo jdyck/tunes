@@ -1,16 +1,17 @@
 "use client";
 
 import RecordingMatchSuggestion from "@/components/recording/RecordingMatchSuggestion";
-import { RecordingMatchResult } from "@/lib/musicbrainz";
+import type { RecordingCandidate } from "@/lib/musicbrainz";
 
-const match: RecordingMatchResult = {
+const match: RecordingCandidate = {
   recordingId: "demo-1",
   title: "Have You Met Miss Jones?",
   artistCredit: "Frank Sinatra",
-  album: "Sinatra Swings",
-  albumReleaseId: "e2bd0fa3-6eb0-41cd-8565-44aee7a305cd",
-  year: "1961",
-  duration: "2:35",
+  releaseHint: "Sinatra Swings",
+  releaseIdHint: "e2bd0fa3-6eb0-41cd-8565-44aee7a305cd",
+  durationMs: 155_000,
+  workMatch: true,
+  evidence: ["title", "artist", "linked Work"],
   score: 100,
 };
 

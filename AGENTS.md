@@ -55,26 +55,48 @@ contracts; broader component/browser testing remains undecided. See
 
 Login credentials for local dev are in `.env.local` (not checked in).
 
-## Flagged findings and plans to review
+## Collaboration workflow
 
-Use the git-ignored `notes/` folder as a local review workspace before extensive work becomes an implementation task:
+Codex and Claude share this local repository. Follow
+[docs/working-with-agents.md](docs/working-with-agents.md), check
+`git status --short` before editing and before finishing, and treat unrecognized
+changes as owner or other-agent work. Do not revert or overwrite them; inspect
+and merge deliberately when work overlaps.
 
-- `notes/flagged.md` is the index of observed gaps between the documentation and the current code. A finding records evidence and why the mismatch matters; it is not approval to fix the issue and should not grow into a detailed implementation plan.
-- For extensive work (for example, a schema migration, architectural change, risky cross-feature change, or coordinated multi-file refactor), create one focused draft in `notes/plans-to-review/<descriptive-slug>.md`. Link that path from the corresponding finding in `notes/flagged.md` rather than embedding the whole plan there.
-- A draft plan should state its status, the problem and documentation involved, current-code evidence, intended outcome, scope and non-goals, implementation phases or steps, risks and open questions, verification, and required documentation cleanup. Keep decisions that still need the owner's input visibly unresolved.
-- Treat `notes/plans-to-review/` as a human-review checkpoint. The owner may edit a plan directly or revise it through an AI conversation. Unless the owner explicitly requests planning and implementation together, stop after drafting or revising the plan; the existence of a plan alone does not authorize implementation.
-- When the owner approves a plan and asks for implementation, confirm whether the request covers the whole plan or named parts, then use the reviewed plan as the working scope. Re-check its assumptions against the current code before changing anything, and keep unfinished phases accurate if only part of the plan is attempted.
-- Plans in `notes/` are provisional and are not the repository's source of truth. As implementation settles direction, reflect lasting decisions in the appropriate committed docs or ADRs. Delete a completed, rejected, or superseded review plan when it no longer provides useful in-progress context; keep or revise a partially implemented plan so its remaining work is clear.
+## Local work in progress
+
+Use the git-ignored `local/` workspace for coordination that should not be
+repository source of truth:
+
+- `local/wip/flagged.md` records evidence-backed gaps. A finding is not approval
+  to fix an issue.
+- `local/wip/plans-to-review/` holds plans for extensive or risky work. Include
+  status, governing docs and evidence, outcome, scope and non-goals, phases,
+  risks and open decisions, verification, and documentation cleanup. A plan is
+  not approval to implement it.
+- `local/wip/queue.md` is the short, ordered list of owner-reviewed work. Queue
+  presence records priority but does not authorize implementation without a
+  user request.
+- `local/audits/` holds actionable production-content findings;
+  `local/snapshots/` holds dated, scoped source-content captures; and
+  `local/scratch/` is disposable.
+
+When implementation is requested, confirm whether it covers the whole reviewed
+plan or named parts, re-check the plan against current code, and keep unfinished
+work accurate. Promote lasting rules, approved direction, reusable procedures,
+and settled decisions into committed docs or ADRs. Delete completed, rejected,
+or superseded local material when it no longer helps. Because `local/` is not in
+Git, back up valuable WIP and audits independently.
 
 ## Rules and guardrails
 
 - **Terminology and Song boundary**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). The rename and Song / `song_user_data` split are complete through code and DB: shared identity and metadata live on `public.songs`, while membership, notes, display title, and added time live in private `song_user_data`. Don't reintroduce "tune" or owner/private payload on `songs`.
-- **Canonical entity migrations are scoped work, not drive-bys**: shared `artists` include people and groups; Song credits live in `song_artist_credits`; private Artist state belongs in `artist_user_data`; Recording is provider-neutral; private Recording state belongs in `user_recording_data`; and YouTube results belong in `youtube_items`. Original/Primary Release Groups remain future scoped work — follow [ADR-0008](docs/adr/0008-provider-neutral-music-entities-and-user-data.md) and [canonical-entity-migrations.md](docs/direction/canonical-entity-migrations.md) rather than extending transitional Recording release fields as if they were final.
+- **Canonical entity migrations are scoped work, not drive-bys**: shared `artists` include people and groups; Song credits live in `song_artist_credits`; private Artist state belongs in `artist_user_data`; Recording is provider-neutral; private Recording state belongs in `user_recording_data`; YouTube results belong in `youtube_items`; and `release_group_id` is the Recording's single normalized display/artwork context. Follow [ADR-0008](docs/adr/0008-provider-neutral-music-entities-and-user-data.md) and [canonical-entity-migrations.md](docs/direction/canonical-entity-migrations.md) rather than extending transitional Recording release fields as if they were final.
 - **Song creation is not admin-gated**: any user can create a new Song on no search match; don't add approval/moderation gates here ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)).
 - **Lead Sheets are private by default and publishing is admin-only**, never self-service or automatic — don't build a user-facing "publish" action ([ADR-0002](docs/adr/0002-lead-sheets-admin-gated-publishing.md)).
 - **One email = one account** across auth methods (password + Google) — don't treat them as separate identities ([ADR-0001](docs/adr/0001-unique-email-account-linking.md)).
 - **Only the owner commits — never an agent.** Agents stage changes (`git add`) and suggest a `git commit -m` message for the owner to run; never run `git commit` (or push, amend, etc.) themselves. When the work reaches a point where a commit seems like a good idea, proactively suggest one; if unsure whether it's commit-worthy, ask.
-- **Keep docs handoff-ready at all times.** The owner returns after long gaps and any session may be the last before a handoff, so update the relevant docs (`docs/direction/`, ADRs, this file, `docs/domain-model.md`) *as part of the work*, not as a follow-up: scope changes, decisions made, and completed/obsolete tasks must be reflected before the session ends. If a session were interrupted right now, the docs — not the conversation — must be enough for the next agent to pick up. Handoff context that shouldn't be committed (in-progress state, half-formed plans) goes in the git-ignored `notes/` folder.
+- **Keep docs handoff-ready at all times.** The owner returns after long gaps and any session may be the last before a handoff, so update the relevant docs (`docs/direction/`, ADRs, this file, `docs/domain-model.md`) *as part of the work*, not as a follow-up: scope changes, decisions made, and completed/obsolete tasks must be reflected before the session ends. If a session were interrupted right now, the docs — not the conversation — must be enough for the next agent to pick up. Handoff context that shouldn't be committed (in-progress state, half-formed plans) goes in `local/wip/`. Before finishing, explicitly report which docs changed or say `Docs impact: none.` after checking.
 - **Docs record direction and decisions, not history.** When work scoped in [docs/direction/](docs/direction/) is completed, *delete* that task/section (git history is the record — no "DONE" markers accumulating). Standing decisions worth keeping get an ADR; a direction file whose content is all completed gets deleted.
 - Before "fixing" something you notice in passing, check [docs/direction/](docs/direction/) for a file on that subject — it may already be a known, deliberately-not-yet-fixed issue, or something the owner has other plans for. A hit there needs a conversation, not a silent fix.
 - This is a solo hobby project the owner returns to after long gaps and is also using to learn broader dev practices — prefer clear, conventional patterns over clever ones, and explain non-obvious choices.

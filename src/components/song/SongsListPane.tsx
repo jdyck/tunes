@@ -13,6 +13,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/20/solid";
 import AddSongModal from "@/components/song/AddSongModal";
+import AlbumImportModal from "@/components/recording/AlbumImportModal";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import { formatWriterCredit } from "@/lib/songWriters";
 import { useSongsList } from "@/components/song/SongsListContext";
@@ -50,6 +51,7 @@ export default function SongsListPane() {
   const [user, setUser] = useState<User | null>(null);
   const [search, setSearch] = useState("");
   const [showAddSong, setShowAddSong] = useState(false);
+  const [showAlbumImport, setShowAlbumImport] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("title");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -134,14 +136,22 @@ export default function SongsListPane() {
           <h1 className={`text-7xl uppercase tracking-wide px-4 ${leagueGothic.className}`}>
             Songs
           </h1>
-          <button
-            onClick={() => setShowAddSong(true)}
-            aria-label="Add song"
-            className={`border-[2] border-mojo-600 text-mojo-600 p-2 py-1.75  rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
-          >
-            <PlusIcon className="h-5 w-5 " />
-            <span>Add Song</span>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowAlbumImport(true)}
+              className={`border-[2] border-azure-600 text-azure-700 p-2 py-1.75 rounded-sm tracking-widest uppercase font-medium ${robotoCondensed.className}`}
+            >
+              Import Album
+            </button>
+            <button
+              onClick={() => setShowAddSong(true)}
+              aria-label="Add song"
+              className={`border-[2] border-mojo-600 text-mojo-600 p-2 py-1.75 rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
+            >
+              <PlusIcon className="h-5 w-5 " />
+              <span>Add Song</span>
+            </button>
+          </div>
         </div>
         <div className="pb-2">
           <div className="relative">
@@ -263,6 +273,20 @@ export default function SongsListPane() {
             setShowAddSong(false);
             if (user) fetchSongs(user.id);
             goToSong(id);
+          }}
+        />
+      )}
+      {showAlbumImport && (
+        <AlbumImportModal
+          songs={songs.map((song) => ({
+            id: song.id,
+            title: effectiveSongTitle(song, song.user_data),
+            canonicalTitle: song.name,
+            musicbrainzWorkId: song.musicbrainz_work_id ?? null,
+          }))}
+          onClose={() => setShowAlbumImport(false)}
+          onImported={() => {
+            if (user) fetchSongs(user.id);
           }}
         />
       )}

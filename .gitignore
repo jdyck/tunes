@@ -42,8 +42,8 @@ next-env.d.ts
 # secrets
 /secrets
 
-# local session/handoff notes (never committed)
-/notes
+# shared local workbench, production audits, snapshots, and scratch files
+/local
 
 # editor/tooling
 .idea

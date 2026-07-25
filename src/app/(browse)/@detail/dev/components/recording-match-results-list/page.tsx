@@ -1,27 +1,29 @@
 "use client";
 
 import RecordingMatchResultsList from "@/components/recording/RecordingMatchResultsList";
-import { RecordingMatchResult } from "@/lib/musicbrainz";
+import type { RecordingCandidate } from "@/lib/musicbrainz";
 
-const results: RecordingMatchResult[] = [
+const results: RecordingCandidate[] = [
   {
     recordingId: "demo-1",
     title: "Autumn Leaves",
     artistCredit: "Bill Evans Trio",
-    album: "Portrait in Jazz",
-    albumReleaseId: null,
-    year: "1960",
-    duration: "5:04",
+    releaseHint: "Portrait in Jazz",
+    releaseIdHint: null,
+    durationMs: 304_000,
+    workMatch: true,
+    evidence: ["title", "artist", "linked Work"],
     score: 100,
   },
   {
     recordingId: "demo-2",
     title: "Autumn Leaves",
     artistCredit: "Cannonball Adderley",
-    album: "Somethin' Else",
-    albumReleaseId: null,
-    year: "1958",
-    duration: "10:59",
+    releaseHint: "Somethin' Else",
+    releaseIdHint: null,
+    durationMs: 659_000,
+    workMatch: true,
+    evidence: ["title", "artist", "linked Work"],
     score: 92,
   },
 ];

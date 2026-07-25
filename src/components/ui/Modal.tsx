@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { XMarkIcon } from "@heroicons/react/20/solid";
 
 export default function Modal({
@@ -20,7 +21,9 @@ export default function Modal({
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-[var(--layer-modal)] flex items-start justify-center bg-black/40 p-0 sm:items-center sm:p-4"
       onClick={onClose}
@@ -37,6 +40,7 @@ export default function Modal({
         </div>
         <div className="p-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

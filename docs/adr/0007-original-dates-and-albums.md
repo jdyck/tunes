@@ -1,6 +1,6 @@
 # Dates describe creation; release identity is master-level, not an edition
 
-Decided July 2026, while scoping MusicBrainz matching fixes ([direction/musicbrainz-matching.md](../direction/musicbrainz-matching.md)). The date semantics share one principle: this app cares about when music was *made*, not when some later edition was packaged. The release entity boundary was subsequently refined by [ADR-0008](0008-provider-neutral-music-entities-and-user-data.md), including separate Original Release provenance and Primary Release display context.
+Decided July 2026, while scoping MusicBrainz matching fixes ([direction/musicbrainz-matching.md](../direction/musicbrainz-matching.md)). The date semantics share one principle: this app cares about when music was *made*, not when some later edition was packaged. The release entity boundary was subsequently refined by [ADR-0008](0008-provider-neutral-music-entities-and-user-data.md), including one Release Group display context independent of performance date.
 
 **A Song's year is the year it was written**, approximated from the earliest `begin` date among the work's composer/writer/lyricist relationships. A MusicBrainz Work carries no date of its own — only its relationships do — so this is the most direct authorship signal available. Never fall back to a recording (performance) or release date: those post-date authorship and would falsely make a song look newer. These writing-relationship dates are frequently absent; null is preferable to substituting any later date, so coverage for this field is expected to be sparse.
 
@@ -8,7 +8,7 @@ Decided July 2026, while scoping MusicBrainz matching fixes ([direction/musicbra
 
 **Release identity is master-level.** A Standards Release Group represents the overall publication concept, which can be an album, EP, single, or another type. MusicBrainz Release Group and Discogs Master map to it; MusicBrainz Release and Discogs Release are particular editions. Mono/stereo editions, remasters, reissues, and regional variants therefore do not become the headline identity merely because they are the edition through which the Recording was found. A representative edition ID can be retained for source inspection, while Release Group art is the default artwork.
 
-**Original Release and Primary Release preserve both meanings.** Original Release points to the Release Group containing the earliest credible official publication of the exact Recording, including a single. Primary Release points to the most useful album context for display and browsing. It only considers Release Groups that contain the exact Recording, excludes compilations and remixes by default, prefers Album then EP, and otherwise falls back to Original Release. A trusted provider album hint can select among eligible groups but cannot establish eligibility by title alone. They can point to the same Release Group or to different ones. Neither relationship invents certainty when release history is incomplete.
+**One Release Group supplies recognizable display context.** It must contain the exact Recording. Prefer the earliest non-compilation, non-remix Album and otherwise the earliest available containing group. This pointer supplies title and artwork only; it does not claim complete original-publication provenance and never supplies the recording date. A trusted provider album can steer discovery without becoming the stored pointer.
 
 ## Considered
 
@@ -22,6 +22,6 @@ Decided July 2026, while scoping MusicBrainz matching fixes ([direction/musicbra
 - Matching and sync code must source dates from the recording→work relationship, not `first-release-date` (work item in [direction/musicbrainz-matching.md](../direction/musicbrainz-matching.md)).
 - Song year sync is best-effort and often null; correctness takes priority over filling the field.
 - `recordings.year` is superseded by `recording_date_start` / `recording_date_end` when that work lands.
-- The current `recordings.album` text is transitional. The target has `original_release_group_id` and `primary_release_group_id` relationships to shared Release Groups.
+- The current `recordings.album` text is transitional. `recordings.release_group_id` is the normalized display relationship to a shared Release Group.
 - A representative edition ID remains optional and subordinate to Release Group identity.
-- Default display and cover art use Primary Release, falling back to Original Release; provenance can show both.
+- Default display and cover art use the selected Release Group, with representative-edition artwork as a fallback.

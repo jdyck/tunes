@@ -37,17 +37,27 @@ test("parses partial MusicBrainz dates and valid ranges", () => {
     },
   });
   assert.equal(parseMusicBrainzDateRange("1958-06", "1958-05"), null);
+  assert.deepEqual(parseMusicBrainzDateRange("1958-05", "1958-05"), {
+    start: {
+      value: "1958-05",
+      precision: "month",
+      year: 1958,
+      month: 5,
+      day: null,
+    },
+    end: null,
+  });
 });
 
-test("ranks Work-linked candidates first without hiding unlinked results", () => {
+test("ranks by duration and album before Work linkage without hiding results", () => {
   const result = rankRecordingCandidateEvidence(butBeautifulCandidates, 229_000);
 
   assert.deepEqual(
     result.candidates.map((candidate) => candidate.recordingId),
     [
       "f2959512-37dd-4058-8937-97c77620bca8",
-      "c5564b36-9155-4bd6-b2db-6698d702936a",
       "unlinked-search-result",
+      "c5564b36-9155-4bd6-b2db-6698d702936a",
     ]
   );
   assert.equal(result.candidates.length, butBeautifulCandidates.length);
@@ -63,20 +73,18 @@ test("preserves ambiguity between otherwise-tied Work-linked candidates", () => 
   ]));
 });
 
-test("selects Original and Primary Release Groups independently", () => {
+test("selects the earliest non-compilation studio album", () => {
   const result = selectReleaseGroups(releaseGroups);
 
-  assert.equal(result.originalReleaseGroupId, "first-publication-compilation");
   assert.equal(
-    result.primaryReleaseGroupId,
+    result.releaseGroupId,
     "4c572b9f-bf8f-3238-a0c2-8185862ca5fa"
   );
+  assert.equal(result.title, "The Very Thought of You");
   assert.equal(result.representativeReleaseId, "album-first-edition");
-  assert.equal(result.originalAmbiguous, false);
-  assert.equal(result.primaryAmbiguous, false);
 });
 
-test("rejects ineligible groups and preserves unresolved ties", () => {
+test("uses chronology rather than an album hint between eligible albums", () => {
   const tiedOriginal = releaseGroups.map((group) =>
     group.releaseGroupId === "other-eligible-album"
       ? {
@@ -92,38 +100,34 @@ test("rejects ineligible groups and preserves unresolved ties", () => {
   );
   const result = selectReleaseGroups(tiedOriginal);
 
-  assert.equal(result.originalReleaseGroupId, null);
-  assert.equal(result.primaryReleaseGroupId, "other-eligible-album");
-  assert.equal(result.originalAmbiguous, true);
+  assert.equal(result.releaseGroupId, "other-eligible-album");
 });
 
-test("preserves Primary ambiguity when no eligible album wins the tie", () => {
+test("does not require an album hint to select a studio album", () => {
   const withoutHint = releaseGroups.map((group) => ({
     ...group,
     albumHintMatch: false,
   }));
   const result = selectReleaseGroups(withoutHint);
 
-  assert.equal(result.primaryReleaseGroupId, null);
-  assert.equal(result.primaryAmbiguous, true);
+  assert.equal(result.releaseGroupId, "4c572b9f-bf8f-3238-a0c2-8185862ca5fa");
 });
 
-test("does not force Original Release past undated official evidence", () => {
+test("falls back to any containing group when no studio album exists", () => {
   const result = selectReleaseGroups([
-    releaseGroups[2],
+    releaseGroups[1],
     {
-      ...releaseGroups[3],
+      ...releaseGroups[4],
       releases: [
         { releaseId: "undated-official", date: null, status: "Official" },
       ],
     },
   ]);
 
-  assert.equal(result.originalReleaseGroupId, null);
-  assert.equal(result.originalAmbiguous, true);
+  assert.equal(result.releaseGroupId, "first-publication-compilation");
 });
 
-test("allows Original and Primary to use the same Release Group", () => {
+test("selects a sole eligible Release Group", () => {
   const album = releaseGroups.find(
     (group) =>
       group.releaseGroupId === "4c572b9f-bf8f-3238-a0c2-8185862ca5fa"
@@ -131,7 +135,6 @@ test("allows Original and Primary to use the same Release Group", () => {
   assert.ok(album);
 
   const result = selectReleaseGroups([album]);
-  assert.equal(result.originalReleaseGroupId, album.releaseGroupId);
-  assert.equal(result.primaryReleaseGroupId, album.releaseGroupId);
+  assert.equal(result.releaseGroupId, album.releaseGroupId);
   assert.equal(result.representativeReleaseId, "album-first-edition");
 });

@@ -12,6 +12,8 @@ export interface Song {
   wikipedia_extract?: string | null;
   wikipedia_url?: string | null;
   musicbrainz_work_id?: string | null;
+  work_date_start?: string | null;
+  work_date_end?: string | null;
   is_discoverable: boolean;
   first_discoverable_at?: string | null;
 }
@@ -96,6 +98,17 @@ export interface Recording {
   duration?: string | null;
   musicbrainz_recording_id?: string | null;
   musicbrainz_release_id?: string | null;
+  recording_date_start?: string | null;
+  recording_date_end?: string | null;
+  recording_location?: string | null;
+  release_group_id?: string | null;
+  release_groups?: ReleaseGroup | null;
+}
+
+export interface ReleaseGroup {
+  id: string;
+  title: string;
+  musicbrainz_release_group_id: string;
 }
 
 export interface UserRecordingData {

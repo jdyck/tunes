@@ -10,6 +10,8 @@ Use capitalized domain names—**User**, **Song**, **Artist**, **Recording**, an
 - [domain-model.md](domain-model.md) — ubiquitous language (Song, Artist, Recording, Release Group, and their user-data/provider layers) and *why* the model is shaped this way. Read this before touching naming or data model in code.
 - [adr/](adr/) — architecture decision records. Point-in-time decisions and the reasoning/rejected alternatives behind them.
 - [direction/](direction/) — one file per subject/issue (e.g. `music-player.md`, `artist-browsing.md`). Each file mixes whatever's true about that subject — known problems, things to add, patterns to avoid — rather than being sorted into "bugs" vs "features" categories. Looser and more opinionated than an ADR; not all of it will happen.
+- [verifying-changes.md](verifying-changes.md) — reusable checks for code, UI, route, and Supabase changes.
+- [working-with-agents.md](working-with-agents.md) — collaboration, worktree safety, and best-practice pushback norms.
 
 See also, at repo root:
 
