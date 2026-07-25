@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MusicalNoteIcon } from "@heroicons/react/20/solid";
 
 // Shown in place of a recording/video thumbnail whenever the API didn't
@@ -9,16 +9,24 @@ import { MusicalNoteIcon } from "@heroicons/react/20/solid";
 // it into their own layout (fixed px box, w-full h-full, etc).
 export default function RecordingThumbnail({
   src,
+  fallbackSrc,
   alt = "",
   className = "",
 }: {
   src?: string | null;
+  fallbackSrc?: string | null;
   alt?: string;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [failedPrimary, setFailedPrimary] = useState(false);
+  const [failedFallback, setFailedFallback] = useState(false);
+  useEffect(() => {
+    setFailedPrimary(false);
+    setFailedFallback(false);
+  }, [src, fallbackSrc]);
+  const activeSrc = failedPrimary ? fallbackSrc : src;
 
-  if (!src || failed) {
+  if (!activeSrc || failedFallback) {
     return (
       <div
         className={`flex items-center justify-center bg-merino-200 ${className}`}
@@ -30,10 +38,13 @@ export default function RecordingThumbnail({
 
   return (
     <img
-      src={src}
+      src={activeSrc}
       alt={alt}
       className={`object-cover ${className}`}
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (!failedPrimary && fallbackSrc) setFailedPrimary(true);
+        else setFailedFallback(true);
+      }}
     />
   );
 }

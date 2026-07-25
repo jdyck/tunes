@@ -10,6 +10,7 @@ export interface MusicBrainzArtistRelation {
   };
   "target-credit"?: string;
   begin?: string;
+  end?: string;
 }
 
 export interface MusicBrainzSongArtistCredit {

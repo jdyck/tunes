@@ -7,10 +7,15 @@ import { PlayIcon } from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
-import { RecordingMatchResult } from "@/lib/musicbrainz";
+import type {
+  RecordingCandidate,
+  RecordingPerformer,
+  ResolvedRecordingMatch,
+} from "@/lib/musicbrainz";
 import {
   coverArtUrl,
   fetchRecordingDetail,
+  releaseGroupCoverArtUrl,
   searchRecordingMetadata,
 } from "@/lib/recordingMetadataClient";
 import RecordingMatchSuggestion from "@/components/recording/RecordingMatchSuggestion";
@@ -51,12 +56,16 @@ export default function RecordingDetailContent({
   } = useSavedRecording(id);
 
   const [songTitle, setSongTitle] = useState<string | null>(null);
+  const [songWorkId, setSongWorkId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<RecordingKind>("video_capture");
   const [notes, setNotes] = useState("");
   const [artist, setArtist] = useState("");
   const [album, setAlbum] = useState("");
   const [year, setYear] = useState("");
+  const [recordingDateStart, setRecordingDateStart] = useState("");
+  const [recordingDateEnd, setRecordingDateEnd] = useState("");
+  const [recordingLocation, setRecordingLocation] = useState("");
   const [duration, setDuration] = useState("");
   const [key, setKey] = useState("");
   const [tempo, setTempo] = useState("");
@@ -71,14 +80,19 @@ export default function RecordingDetailContent({
   const [musicbrainzReleaseId, setMusicbrainzReleaseId] = useState<
     string | null
   >(null);
+  const [releaseGroup, setReleaseGroup] = useState<{
+    title: string;
+    musicbrainzReleaseGroupId: string;
+  } | null>(null);
+  const [performers, setPerformers] = useState<RecordingPerformer[]>([]);
   const [matchStatus, setMatchStatus] = useState<
     "idle" | "searching" | "suggested" | "dismissed" | "no-results"
   >("idle");
   const [suggestedMatch, setSuggestedMatch] =
-    useState<RecordingMatchResult | null>(null);
+    useState<RecordingCandidate | null>(null);
   const [showManualSearch, setShowManualSearch] = useState(false);
   const [manualQuery, setManualQuery] = useState("");
-  const [manualResults, setManualResults] = useState<RecordingMatchResult[]>(
+  const [manualResults, setManualResults] = useState<RecordingCandidate[]>(
     []
   );
   const [manualSearching, setManualSearching] = useState(false);
@@ -91,7 +105,7 @@ export default function RecordingDetailContent({
     if (!recording) return;
     const storedName = recording.name || "";
     const storedArtist = recording.artist || "";
-    const storedAlbum = recording.album || "";
+    const storedAlbum = recording.release_groups?.title || recording.album || "";
     const decodedName = decodeHtmlEntities(storedName);
     const decodedArtist = decodeHtmlEntities(storedArtist);
     const decodedAlbum = decodeHtmlEntities(storedAlbum);
@@ -102,6 +116,9 @@ export default function RecordingDetailContent({
     setArtist(decodedArtist);
     setAlbum(decodedAlbum);
     setYear(recording.year || "");
+    setRecordingDateStart(recording.recording_date_start || "");
+    setRecordingDateEnd(recording.recording_date_end || "");
+    setRecordingLocation(recording.recording_location || "");
     setDuration(recording.duration || "");
     setKey(recording.user_data.key || "");
     setTempo(
@@ -113,6 +130,15 @@ export default function RecordingDetailContent({
     setVideoId(recording.youtube_items[0]?.video_id ?? null);
     setMusicbrainzRecordingId(recording.musicbrainz_recording_id || null);
     setMusicbrainzReleaseId(recording.musicbrainz_release_id || null);
+    setReleaseGroup(
+      recording.release_groups
+        ? {
+            title: recording.release_groups.title,
+            musicbrainzReleaseGroupId:
+              recording.release_groups.musicbrainz_release_group_id,
+          }
+        : null
+    );
     setIsSaved(
       decodedName === storedName &&
         decodedArtist === storedArtist &&
@@ -129,6 +155,7 @@ export default function RecordingDetailContent({
         .single();
       const song = data ? mapSongUserDataRow(data as never) : null;
       setSongTitle(song ? effectiveSongTitle(song, song.user_data) : null);
+      setSongWorkId(song?.musicbrainz_work_id ?? null);
     };
     fetchSongTitle();
   }, [songId]);
@@ -152,12 +179,21 @@ export default function RecordingDetailContent({
     let cancelled = false;
     setMatchStatus("searching");
 
-    searchRecordingMetadata(songTitle, artist, duration, album)
-      .then((results) => {
+    searchRecordingMetadata(songTitle, artist, duration, album, songWorkId, year)
+      .then((result) => {
         if (cancelled) return;
-        if (results.length > 0) {
-          setSuggestedMatch(results[0]);
+        if (result.state === "clear" && result.candidates.length > 0) {
+          setSuggestedMatch(result.candidates[0]);
           setMatchStatus("suggested");
+        } else if (result.candidates.length > 0) {
+          setManualResults(result.candidates);
+          setShowManualSearch(true);
+          setMatchStatus("dismissed");
+          setMatchError(
+            result.state === "degraded"
+              ? "MusicBrainz results are based on incomplete evidence. Choose a match."
+              : "Several MusicBrainz recordings are plausible. Choose a match."
+          );
         } else {
           setMatchStatus("no-results");
         }
@@ -173,32 +209,49 @@ export default function RecordingDetailContent({
     // including it would make the effect re-run (and cancel itself, via the
     // cleanup above) the instant it flips to "searching".
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, songTitle, artist, duration, album, musicbrainzRecordingId]);
+  }, [loading, songTitle, artist, duration, album, year, songWorkId, musicbrainzRecordingId]);
 
   const handleSave = async () => {
     if (!id || !recording) return;
 
     const { error } = await supabase.rpc("update_saved_recording", {
       p_recording_id: id,
-      p_name: name,
-      p_kind: kind,
-      p_artist: artist || null,
-      p_album: album || null,
-      p_year: year || null,
-      p_duration: duration || null,
-      p_key: key || null,
-      p_tempo: tempo || null,
-      p_musicbrainz_recording_id: musicbrainzRecordingId,
-      p_musicbrainz_release_id: musicbrainzReleaseId,
-      p_notes: notes || null,
-      p_rating: recording.user_data.rating ?? null,
-      p_sort_order: recording.user_data.sort_order ?? null,
-      p_tags: tags
-        ? tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-        : null,
+      p_shared: {
+        name,
+        kind,
+        artist: artist || null,
+        album: album || null,
+        year: year || null,
+        duration: duration || null,
+        musicbrainz_recording_id: musicbrainzRecordingId,
+        musicbrainz_release_id: musicbrainzReleaseId,
+        recording_date_start: recordingDateStart || null,
+        recording_date_end: recordingDateEnd || null,
+        recording_location: recordingLocation || null,
+        release_group: releaseGroup
+          ? {
+              title: releaseGroup.title,
+              musicbrainz_release_group_id:
+                releaseGroup.musicbrainzReleaseGroupId,
+            }
+          : null,
+        performers: performers.map((performer) => ({
+          name: performer.name,
+          credited_as: performer.creditedAs,
+          kind: performer.kind,
+          musicbrainz_artist_id: performer.musicbrainzArtistId,
+        })),
+      },
+      p_private: {
+        key: key || null,
+        tempo: tempo || null,
+        notes: notes || null,
+        rating: recording.user_data.rating ?? null,
+        sort_order: recording.user_data.sort_order ?? null,
+        tags: tags
+          ? tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+          : [],
+      },
     });
 
     if (error) {
@@ -215,18 +268,34 @@ export default function RecordingDetailContent({
   // autofill to a separate "Update from MusicBrainz" action, since autofill
   // on confirm is the point of this feature. Used by both the auto-suggest
   // confirm button and picking a result from manual search.
-  const applyMatch = (match: RecordingMatchResult) => {
+  const applyResolvedMatch = (match: ResolvedRecordingMatch) => {
     setMusicbrainzRecordingId(match.recordingId);
-    setMusicbrainzReleaseId(match.albumReleaseId);
+    setMusicbrainzReleaseId(match.representativeReleaseId);
     if (match.artistCredit) setArtist(match.artistCredit);
-    if (match.album) setAlbum(match.album);
-    if (match.year) setYear(match.year);
+    if (match.releaseGroup) setAlbum(match.releaseGroup.title);
+    setReleaseGroup(match.releaseGroup);
+    setRecordingDateStart(match.recordingDateStart || "");
+    setRecordingDateEnd(match.recordingDateEnd || "");
+    setRecordingLocation(match.recordingLocation || "");
+    setPerformers(match.performers);
     if (match.duration) setDuration(match.duration);
     setSuggestedMatch(null);
     setShowManualSearch(false);
     setManualResults([]);
     setMatchError(null);
     setIsSaved(false);
+  };
+
+  const applyMatch = async (candidate: RecordingCandidate) => {
+    setManualSearching(true);
+    setMatchError(null);
+    const match = await fetchRecordingDetail(candidate.recordingId, songWorkId);
+    setManualSearching(false);
+    if (!match) {
+      setMatchError("Couldn't load that MusicBrainz recording. Try again.");
+      return;
+    }
+    applyResolvedMatch(match);
   };
 
   const handleRejectSuggestion = () => {
@@ -247,14 +316,22 @@ export default function RecordingDetailContent({
     setManualSearching(true);
     setMatchError(null);
     try {
-      setManualResults(
-        await searchRecordingMetadata(
+      const result = await searchRecordingMetadata(
           manualQuery,
           artist,
           duration,
-          ignoreAlbumForMatch ? null : album
-        )
-      );
+          ignoreAlbumForMatch ? null : album,
+          songWorkId,
+          year
+        );
+      setManualResults(result.candidates);
+      if (result.state !== "clear") {
+        setMatchError(
+          result.state === "degraded"
+            ? "Results use incomplete evidence. Choose carefully."
+            : "Several results are plausible. Choose the correct recording."
+        );
+      }
     } catch {
       setMatchError("Couldn't search MusicBrainz. Try again later.");
     }
@@ -269,7 +346,7 @@ export default function RecordingDetailContent({
 
     setSyncError(null);
     setSyncingFromMusicBrainz(true);
-    const match = await fetchRecordingDetail(musicbrainzRecordingId);
+    const match = await fetchRecordingDetail(musicbrainzRecordingId, songWorkId);
     setSyncingFromMusicBrainz(false);
 
     if (!match) {
@@ -277,12 +354,7 @@ export default function RecordingDetailContent({
       return;
     }
 
-    if (match.artistCredit) setArtist(match.artistCredit);
-    if (match.album) setAlbum(match.album);
-    setMusicbrainzReleaseId(match.albumReleaseId);
-    if (match.year) setYear(match.year);
-    if (match.duration) setDuration(match.duration);
-    setIsSaved(false);
+    applyResolvedMatch(match);
   };
 
   const handleChangeMatch = () => {
@@ -352,9 +424,12 @@ export default function RecordingDetailContent({
         }}
       >
         <div className="flex justify-between items-center mb-4">
-          {musicbrainzReleaseId && (
+          {(releaseGroup || musicbrainzReleaseId) && (
             <RecordingThumbnail
-              src={coverArtUrl(musicbrainzReleaseId)}
+              src={releaseGroupCoverArtUrl(
+                releaseGroup?.musicbrainzReleaseGroupId
+              )}
+              fallbackSrc={coverArtUrl(musicbrainzReleaseId)}
               alt=""
               className="w-16 h-16 rounded shrink-0 mr-3"
             />
@@ -389,6 +464,27 @@ export default function RecordingDetailContent({
         </div>
         <div className="mb-4">
           <FormField label="Year" value={year} onChange={handleFieldChange(setYear)} />
+        </div>
+        <div className="mb-4">
+          <FormField
+            label="Recorded"
+            value={
+              recordingDateEnd
+                ? `${recordingDateStart} – ${recordingDateEnd}`
+                : recordingDateStart
+            }
+            onChange={() => undefined}
+            disabled
+            placeholder="Unknown"
+          />
+        </div>
+        <div className="mb-4">
+          <FormField
+            label="Recording location"
+            value={recordingLocation}
+            onChange={handleFieldChange(setRecordingLocation)}
+            placeholder="Unknown"
+          />
         </div>
         <div className="mb-4">
           <FormField label="Duration" value={duration} onChange={handleFieldChange(setDuration)} />

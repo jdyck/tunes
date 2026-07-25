@@ -99,6 +99,8 @@ export default function SongDetailContent({ id }: { id: string }) {
   const [sharedTitle, setSharedTitle] = useState("");
   const [writers, setWriters] = useState<WriterInput[]>([]);
   const [year, setYear] = useState("");
+  const [workDateStart, setWorkDateStart] = useState<string | null>(null);
+  const [workDateEnd, setWorkDateEnd] = useState<string | null>(null);
   const [wikipediaExtract, setWikipediaExtract] = useState<string | null>(null);
   const [wikipediaUrl, setWikipediaUrl] = useState<string | null>(null);
   const [musicbrainzWorkId, setMusicbrainzWorkId] = useState<string | null>(
@@ -144,6 +146,8 @@ export default function SongDetailContent({ id }: { id: string }) {
       setTitle(effectiveSongTitle(mappedSong, mappedSong.user_data));
       setSharedTitle(mappedSong.name || "");
       setYear(mappedSong.year || "");
+      setWorkDateStart(mappedSong.work_date_start || null);
+      setWorkDateEnd(mappedSong.work_date_end || null);
       setWikipediaExtract(mappedSong.wikipedia_extract || null);
       setWikipediaUrl(mappedSong.wikipedia_url || null);
       setMusicbrainzWorkId(mappedSong.musicbrainz_work_id || null);
@@ -206,6 +210,8 @@ export default function SongDetailContent({ id }: { id: string }) {
       wikipedia_extract: wikipediaExtract,
       wikipedia_url: wikipediaUrl,
       musicbrainz_work_id: musicbrainzWorkId,
+      work_date_start: workDateStart,
+      work_date_end: workDateEnd,
     };
 
     const { error: privateError } = await supabase
@@ -291,6 +297,8 @@ export default function SongDetailContent({ id }: { id: string }) {
     }
     setWriters(writersFromMusicBrainz(work.artistCredits, writers));
     if (work.year) setYear(work.year);
+    setWorkDateStart(work.workDateStart);
+    setWorkDateEnd(work.workDateEnd);
     setIsSaved(false);
   };
 

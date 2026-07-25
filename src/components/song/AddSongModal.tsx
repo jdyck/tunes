@@ -53,6 +53,8 @@ export default function AddSongModal({
   );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewYear, setPreviewYear] = useState<string | null>(null);
+  const [previewWorkDateStart, setPreviewWorkDateStart] = useState<string | null>(null);
+  const [previewWorkDateEnd, setPreviewWorkDateEnd] = useState<string | null>(null);
   const [previewBackground, setPreviewBackground] =
     useState<WorkBackground | null>(null);
 
@@ -119,12 +121,16 @@ export default function AddSongModal({
   const handleStartPreview = async (result: SongWorkSearchResult) => {
     setPreviewResult(result);
     setPreviewYear(null);
+    setPreviewWorkDateStart(null);
+    setPreviewWorkDateEnd(null);
     setPreviewBackground(null);
     setPreviewLoading(true);
 
     try {
       const { work, background } = await fetchWorkPreview(result.workId);
       setPreviewYear(work?.year ?? null);
+      setPreviewWorkDateStart(work?.workDateStart ?? null);
+      setPreviewWorkDateEnd(work?.workDateEnd ?? null);
       setPreviewBackground(background);
     } catch {
       // Best-effort: confirm screen still works with just the search
@@ -136,6 +142,8 @@ export default function AddSongModal({
   const handleCancelPreview = () => {
     setPreviewResult(null);
     setPreviewYear(null);
+    setPreviewWorkDateStart(null);
+    setPreviewWorkDateEnd(null);
     setPreviewBackground(null);
     setPreviewLoading(false);
   };
@@ -147,6 +155,8 @@ export default function AddSongModal({
     wikipediaExtract: string | null;
     wikipediaUrl: string | null;
     workId: string | null;
+    workDateStart: string | null;
+    workDateEnd: string | null;
   }) => {
     setErrorMessage("");
 
@@ -174,6 +184,21 @@ export default function AddSongModal({
       setSaving(false);
       setErrorMessage("Failed to add song: " + error.message);
       return;
+    }
+
+    if (song.workId) {
+      const { error: workDateError } = await supabase
+        .from("songs")
+        .update({
+          work_date_start: song.workDateStart,
+          work_date_end: song.workDateEnd,
+        })
+        .eq("id", data);
+      if (workDateError) {
+        setSaving(false);
+        setErrorMessage("Song was added, but saving its Work date failed: " + workDateError.message);
+        return;
+      }
     }
 
     try {
@@ -218,6 +243,8 @@ export default function AddSongModal({
       wikipediaExtract: previewBackground?.extract ?? null,
       wikipediaUrl: previewBackground?.url ?? null,
       workId: previewResult.workId,
+      workDateStart: previewWorkDateStart,
+      workDateEnd: previewWorkDateEnd,
     });
   };
 
@@ -233,6 +260,8 @@ export default function AddSongModal({
       wikipediaExtract: null,
       wikipediaUrl: null,
       workId: null,
+      workDateStart: null,
+      workDateEnd: null,
     });
   };
 

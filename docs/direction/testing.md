@@ -5,8 +5,8 @@ Keep pure normalization, composed private-data mapping, and provider-matching
 contracts covered with reduced local fixtures so regressions do not depend on
 live third-party responses.
 The MusicBrainz baseline includes partial/range dates, candidate-ordering
-invariants, ambiguity preservation, and separate Original Release, Primary
-Release, and representative-edition selection.
+invariants, ambiguity preservation, single Release Group display-context
+selection, and representative-edition selection.
 Artist-credit coverage includes provider identity, nullable kind,
 credited-as normalization, conflicting-identity protection, and stable local
 Artist reuse across refreshes and roles.

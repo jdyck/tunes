@@ -68,6 +68,7 @@ export const savedRecordingSelect = `
   tempo,
   recordings!inner(
     *,
+    release_groups(id, title, musicbrainz_release_group_id),
     recording_youtube_items(
       created_at,
       youtube_items(*)

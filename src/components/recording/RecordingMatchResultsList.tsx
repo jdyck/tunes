@@ -1,6 +1,6 @@
 "use client";
 
-import { RecordingMatchResult } from "@/lib/musicbrainz";
+import type { RecordingCandidate } from "@/lib/musicbrainz";
 import { coverArtUrl } from "@/lib/recordingMetadataClient";
 import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
@@ -9,8 +9,8 @@ export default function RecordingMatchResultsList({
   results,
   onSelect,
 }: {
-  results: RecordingMatchResult[];
-  onSelect: (result: RecordingMatchResult) => void;
+  results: RecordingCandidate[];
+  onSelect: (result: RecordingCandidate) => void;
 }) {
   if (results.length === 0) return null;
 
@@ -20,7 +20,7 @@ export default function RecordingMatchResultsList({
         <li key={result.recordingId} className="mb-2">
           <div className="flex items-center gap-2">
             <RecordingThumbnail
-              src={coverArtUrl(result.albumReleaseId)}
+              src={coverArtUrl(result.releaseIdHint)}
               alt=""
               className="w-10 h-10 rounded shrink-0"
             />
@@ -32,9 +32,9 @@ export default function RecordingMatchResultsList({
                 )}
               </p>
               <p className="truncate text-xs text-ink-600">
-                {[result.album, result.year, result.duration]
+                {[result.releaseHint, result.durationMs ? `${Math.round(result.durationMs / 1000)}s` : null]
                   .filter(Boolean)
-                  .join(" · ") || "No release details found"}
+                  .join(" · ") || "No provisional release details"}
               </p>
             </div>
             <button type="button" onClick={() => onSelect(result)} title="Use this match">

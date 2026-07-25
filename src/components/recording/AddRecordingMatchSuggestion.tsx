@@ -1,6 +1,6 @@
 "use client";
 
-import { RecordingMatchResult } from "@/lib/musicbrainz";
+import type { RecordingCandidate } from "@/lib/musicbrainz";
 import { coverArtUrl } from "@/lib/recordingMetadataClient";
 import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
@@ -11,7 +11,7 @@ export default function AddRecordingMatchSuggestion({
   onSkip,
   onCancel,
 }: {
-  match: RecordingMatchResult;
+  match: RecordingCandidate;
   onConfirm: () => void;
   onSkip: () => void;
   onCancel: () => void;
@@ -19,7 +19,7 @@ export default function AddRecordingMatchSuggestion({
   return (
     <div className="p-3 rounded-md border border-line-200 flex gap-3">
       <RecordingThumbnail
-        src={coverArtUrl(match.albumReleaseId)}
+        src={coverArtUrl(match.releaseIdHint)}
         alt=""
         className="w-14 h-14 rounded shrink-0"
       />
@@ -32,8 +32,8 @@ export default function AddRecordingMatchSuggestion({
           )}
         </p>
         <p className="truncate text-xs text-ink-600 mb-2">
-          {[match.album, match.year, match.duration].filter(Boolean).join(" · ") ||
-            "No release details found"}
+          {[match.releaseHint, match.durationMs ? `${Math.round(match.durationMs / 1000)}s` : null]
+            .filter(Boolean).join(" · ") || "No provisional release details"}
         </p>
         <div className="flex items-center gap-3">
           <button
