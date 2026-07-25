@@ -22,7 +22,9 @@ export default function SongDetailLayout({
         <SongDetailContent id={songId} />
         {children}
       </div>
-      <RecordingPaneGate>{recording}</RecordingPaneGate>
+      <RecordingPaneGate backHref={`/song/${songId}`}>
+        {recording}
+      </RecordingPaneGate>
     </>
   );
 }
