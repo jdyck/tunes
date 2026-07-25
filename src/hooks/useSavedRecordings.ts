@@ -5,8 +5,10 @@ import {
   savedRecordingSelect,
 } from "@/lib/recordings";
 import { SavedRecording } from "@/types/types";
+import { useSavedRecordingsRefresh } from "@/components/recording/SavedRecordingsRefreshContext";
 
 export const useSavedRecordings = (songId: string) => {
+  const { revision } = useSavedRecordingsRefresh();
   const [recordings, setRecordings] = useState<SavedRecording[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export const useSavedRecordings = (songId: string) => {
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+  }, [refresh, revision]);
 
   return { recordings, loading, error, refresh };
 };

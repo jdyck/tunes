@@ -37,6 +37,7 @@ import {
 } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import { decodeHtmlEntities } from "@/utils/htmlEntities";
+import { useSavedRecordingsRefresh } from "@/components/recording/SavedRecordingsRefreshContext";
 
 export default function RecordingDetailContent({
   id,
@@ -49,6 +50,8 @@ export default function RecordingDetailContent({
 }) {
   const router = useRouter();
   const { play } = usePlayer();
+  const { requestRefresh: refreshSavedRecordings } =
+    useSavedRecordingsRefresh();
   const {
     recording,
     loading,
@@ -377,6 +380,7 @@ export default function RecordingDetailContent({
       console.error("Error removing recording:", error.message);
       setError(`Error removing recording: ${error.message}`);
     } else {
+      refreshSavedRecordings();
       router.push(backHref);
     }
   };
