@@ -6,7 +6,10 @@ contracts covered with reduced local fixtures so regressions do not depend on
 live third-party responses.
 The MusicBrainz baseline includes partial/range dates, candidate-ordering
 invariants, ambiguity preservation, single Release Group display-context
-selection, and representative-edition selection.
+selection, representative-edition selection, and album-import matching by
+normalized title plus duration. Album-import fixtures must cover alternate
+takes, existing-Song-only attachment, and refusal of unmatched or ambiguous
+Song/Recording candidates.
 Artist-credit coverage includes provider identity, nullable kind,
 credited-as normalization, conflicting-identity protection, and stable local
 Artist reuse across refreshes and roles.
