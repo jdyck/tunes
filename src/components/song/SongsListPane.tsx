@@ -53,6 +53,7 @@ export default function SongsListPane() {
   const [sortKey, setSortKey] = useState<SortKey>("title");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const userId = user?.id;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -76,8 +77,8 @@ export default function SongsListPane() {
   }, [loadingUser, user, router]);
 
   useEffect(() => {
-    if (user) fetchSongs(user.id);
-  }, [user]);
+    if (userId) fetchSongs(userId);
+  }, [fetchSongs, userId]);
 
   const goToSong = (id: string) => {
     router.push(`/song/${id}`);
