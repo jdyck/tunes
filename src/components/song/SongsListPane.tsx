@@ -233,10 +233,10 @@ export default function SongsListPane() {
             {visibleSongs.map((song) => {
               const isActive = pathname.startsWith(`/song/${song.id}`);
               return (
-                <li key={song.id} className="[&:has(+_li:hover)>a]:border-b-0">
+                <li key={song.id} className="[&:has(+_li:hover)>a]:border-transparent">
                   <Link
                     href={`/song/${song.id}`}
-                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-old-lace-100 hover:border-b-0 hover:rounded-lg active:bg-old-lace-100 ${
+                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-old-lace-100 hover:border-transparent hover:rounded-lg active:bg-old-lace-100 ${
                       isActive ? "bg-old-lace-100" : ""
                     }`}
                   >
