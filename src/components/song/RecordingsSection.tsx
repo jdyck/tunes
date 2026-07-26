@@ -57,7 +57,7 @@ export default function RecordingsSection({
             return (
               <li
                 key={recording.id}
-                className="flex items-stretch border-b border-border-default hover:border-b-0 hover:bg-merino-200 active:bg-merino-300 [&:has(+_li:hover)]:border-b-0"
+                className="flex items-stretch border-b border-border-default hover:border-transparent hover:bg-merino-200 active:bg-merino-300 [&:has(+_li:hover)]:border-transparent"
               >
                 <Link
                   href={`/song/${songId}/recording/${recording.id}`}

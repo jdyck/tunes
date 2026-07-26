@@ -12,45 +12,60 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
 } from "@heroicons/react/20/solid";
-import AddSongModal from "@/components/song/AddSongModal";
-import { PlusIcon } from "@heroicons/react/24/solid";
-import { formatWriterCredit } from "@/lib/songWriters";
 import { useSongsList } from "@/components/song/SongsListContext";
-import { SongWithUserData } from "@/types/types";
+import { useRecordingArtists } from "@/hooks/useRecordingArtists";
+import { ArtistKind } from "@/types/types";
 import PaneHeader from "@/components/layout/PaneHeader";
-import { effectiveSongTitle } from "@/utils/songTitle";
 
-type SortKey = "title" | "writers" | "date" | "added";
+type SortKey = "name" | "songs" | "recordings";
 type SortDirection = "asc" | "desc";
 
 const sortLabels: Record<SortKey, string> = {
-  title: "Title",
-  writers: "Writers",
-  date: "Date",
-  added: "Added",
+  name: "Name",
+  songs: "Songs",
+  recordings: "Recordings",
 };
 
-const titleForSorting = (title: string) => {
-  const filingTitle = title
+const kindLabels: Record<ArtistKind, string> = {
+  person: "Person",
+  group: "Group",
+  orchestra: "Orchestra",
+  choir: "Choir",
+  character: "Character",
+  other: "Other",
+};
+
+type ArtistSummary = {
+  id: string;
+  name: string;
+  kind: ArtistKind | null;
+  songCount: number;
+  recordingCount: number;
+};
+
+const nameForSorting = (name: string) => {
+  const filingName = name
     .trim()
-    .replace(/^(?:\([^)]*\)\s*)+/, "")
-    .replace(/^[^A-Za-z0-9]+/, "")
     .replace(/^(?:a|an|the)\s+/i, "")
     .trim();
 
-  return filingTitle || title;
+  return filingName || name;
 };
 
-export default function SongsListPane() {
+export default function ArtistsListPane() {
   const router = useRouter();
   const pathname = usePathname();
-  const { songs, loading, error, fetchSongs } = useSongsList();
+  const { songs, loading: songsLoading, error, fetchSongs } = useSongsList();
+  const {
+    artists: recordingArtists,
+    loading: recordingArtistsLoading,
+  } = useRecordingArtists();
+  const loading = songsLoading || recordingArtistsLoading;
 
   const [loadingUser, setLoadingUser] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [search, setSearch] = useState("");
-  const [showAddSong, setShowAddSong] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("title");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showSortMenu, setShowSortMenu] = useState(false);
 
@@ -79,49 +94,80 @@ export default function SongsListPane() {
     if (user) fetchSongs(user.id);
   }, [user]);
 
-  const goToSong = (id: string) => {
-    router.push(`/song/${id}`);
-  };
+  const artists = useMemo(() => {
+    const byId = new Map<string, ArtistSummary>();
 
-  const visibleSongs = useMemo(() => {
+    // Writers: artists credited on the user's Songs.
+    for (const song of songs) {
+      const seenInSong = new Set<string>();
+      for (const credit of song.song_artist_credits ?? []) {
+        const artist = credit.artists;
+        if (!artist?.id) continue;
+        // Count each artist at most once per song, even with multiple roles.
+        if (seenInSong.has(artist.id)) continue;
+        seenInSong.add(artist.id);
+
+        const existing = byId.get(artist.id);
+        if (existing) {
+          existing.songCount += 1;
+        } else {
+          byId.set(artist.id, {
+            id: artist.id,
+            name: artist.name,
+            kind: artist.kind ?? null,
+            songCount: 1,
+            recordingCount: 0,
+          });
+        }
+      }
+    }
+
+    // Performers: artists credited on the user's saved Recordings. Merges
+    // into the same entry when the artist also wrote a Song.
+    for (const artist of recordingArtists) {
+      const existing = byId.get(artist.id);
+      if (existing) {
+        existing.recordingCount = artist.recordingCount;
+      } else {
+        byId.set(artist.id, {
+          id: artist.id,
+          name: artist.name,
+          kind: artist.kind,
+          songCount: 0,
+          recordingCount: artist.recordingCount,
+        });
+      }
+    }
+
+    return [...byId.values()];
+  }, [songs, recordingArtists]);
+
+  const visibleArtists = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
-    const filteredSongs = searchTerm
-      ? songs.filter((song) => {
-          const effectiveTitle = effectiveSongTitle(song, song.user_data);
-          const writerCredit =
-            formatWriterCredit(song.song_artist_credits ?? []) ?? "";
-          return (
-            effectiveTitle.toLowerCase().includes(searchTerm) ||
-            song.name.toLowerCase().includes(searchTerm) ||
-            writerCredit.toLowerCase().includes(searchTerm)
-          );
-        })
-      : songs;
+    const filtered = searchTerm
+      ? artists.filter((artist) =>
+          artist.name.toLowerCase().includes(searchTerm)
+        )
+      : artists;
 
-    return [...filteredSongs].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       let comparison = 0;
 
-      if (sortKey === "title") {
-        const aTitle = effectiveSongTitle(a, a.user_data);
-        const bTitle = effectiveSongTitle(b, b.user_data);
+      if (sortKey === "name") {
         comparison =
-          titleForSorting(aTitle).localeCompare(titleForSorting(bTitle)) ||
-          aTitle.localeCompare(bTitle);
-      } else if (sortKey === "writers") {
-        comparison = (
-          formatWriterCredit(a.song_artist_credits ?? []) ?? ""
-        ).localeCompare(formatWriterCredit(b.song_artist_credits ?? []) ?? "");
-      } else if (sortKey === "date") {
-        comparison = String(a.year ?? "").localeCompare(String(b.year ?? ""));
+          nameForSorting(a.name).localeCompare(nameForSorting(b.name)) ||
+          a.name.localeCompare(b.name);
+      } else if (sortKey === "songs") {
+        comparison =
+          a.songCount - b.songCount || a.name.localeCompare(b.name);
       } else {
-        comparison = String(a.user_data.created_at).localeCompare(
-          String(b.user_data.created_at)
-        );
+        comparison =
+          a.recordingCount - b.recordingCount || a.name.localeCompare(b.name);
       }
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [search, sortDirection, sortKey, songs]);
+  }, [artists, search, sortDirection, sortKey]);
 
   if (loadingUser || !user) {
     return <p className="p-4">Loading...</p>;
@@ -131,17 +177,11 @@ export default function SongsListPane() {
     <div className="w-full h-full flex flex-col">
       <PaneHeader backHref="/" backLabel="Back">
         <div className="flex items-center justify-between pb-2">
-          <h1 className={`text-7xl uppercase tracking-wide px-4 ${leagueGothic.className}`}>
-            Songs
-          </h1>
-          <button
-            onClick={() => setShowAddSong(true)}
-            aria-label="Add song"
-            className={`border-[2] border-mojo-600 text-mojo-600 p-2 py-1.75 rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
+          <h1
+            className={`text-7xl uppercase tracking-wide px-4 ${leagueGothic.className}`}
           >
-            <PlusIcon className="h-5 w-5 " />
-            <span>Add Song</span>
-          </button>
+            Artists
+          </h1>
         </div>
         <div className="pb-2">
           <div className="relative">
@@ -160,15 +200,18 @@ export default function SongsListPane() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search songs"
+              placeholder="Search artists"
               className="w-full pl-9 pr-9 py-2 rounded-sm border-[1.5] border-ink-400 bg-surface-app"
             />
           </div>
         </div>
 
-
         <div className="pb-4 text-sm text-ink-600 flex items-center justify-between gap-3 px-4 ">
-          <span className={`text-azure-600/90 font-bold uppercase ${leagueGothic.className} text-base tracking-widest`}>{visibleSongs.length} Songs</span>
+          <span
+            className={`text-azure-600/90 font-bold uppercase ${leagueGothic.className} text-base tracking-widest`}
+          >
+            {visibleArtists.length} Artists
+          </span>
           <div className="relative flex items-center">
             <button
               type="button"
@@ -187,7 +230,9 @@ export default function SongsListPane() {
                 )
               }
               className="p-1 rounded-sm text-ink-800 hover:bg-merino-200"
-              aria-label={`Sort ${sortDirection === "asc" ? "descending" : "ascending"}`}
+              aria-label={`Sort ${
+                sortDirection === "asc" ? "descending" : "ascending"
+              }`}
             >
               {sortDirection === "asc" ? (
                 <ChevronUpIcon className="h-4 w-4" />
@@ -200,7 +245,7 @@ export default function SongsListPane() {
                 role="menu"
                 className="absolute right-0 top-full z-20 mt-1 min-w-24 rounded-md border border-line-200 bg-surface-app py-1 shadow-md"
               >
-                {(["title", "writers", "date", "added"] as SortKey[]).map((key) => (
+                {(["name", "songs", "recordings"] as SortKey[]).map((key) => (
                   <button
                     key={key}
                     type="button"
@@ -220,27 +265,29 @@ export default function SongsListPane() {
             )}
           </div>
         </div>
-
       </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-12">
         {loading ? (
-          <SongsListSkeleton />
+          <ArtistsListSkeleton />
         ) : error ? (
           <p className="text-mojo-600">{error}</p>
-        ) : visibleSongs.length > 0 ? (
+        ) : visibleArtists.length > 0 ? (
           <ul>
-            {visibleSongs.map((song) => {
-              const isActive = pathname.startsWith(`/song/${song.id}`);
+            {visibleArtists.map((artist) => {
+              const isActive = pathname.startsWith(`/artist/${artist.id}`);
               return (
-                <li key={song.id} className="[&:has(+_li:hover)>a]:border-transparent">
+                <li
+                  key={artist.id}
+                  className="[&:has(+_li:hover)>a]:border-transparent"
+                >
                   <Link
-                    href={`/song/${song.id}`}
+                    href={`/artist/${artist.id}`}
                     className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-old-lace-100 hover:border-transparent hover:rounded-lg active:bg-old-lace-100 ${
                       isActive ? "bg-old-lace-100" : ""
                     }`}
                   >
-                    <SongRow song={song} />
+                    <ArtistRow artist={artist} />
                     {isActive && (
                       <div className="w-2 h-full absolute bg-mojo-700 shrink-0" />
                     )}
@@ -249,31 +296,23 @@ export default function SongsListPane() {
               );
             })}
           </ul>
-        ) : songs.length > 0 ? (
-          <p>No songs match “{search}”.</p>
+        ) : artists.length > 0 ? (
+          <p>No artists match “{search}”.</p>
         ) : (
-          <p>You don’t have any songs yet.</p>
+          <p>
+            No artists yet — they appear here once your songs or recordings
+            have credits.
+          </p>
         )}
       </div>
-
-      {showAddSong && (
-        <AddSongModal
-          onClose={() => setShowAddSong(false)}
-          onCreated={(id) => {
-            setShowAddSong(false);
-            if (user) fetchSongs(user.id);
-            goToSong(id);
-          }}
-        />
-      )}
     </div>
   );
 }
 
-function SongsListSkeleton() {
+function ArtistsListSkeleton() {
   return (
-    <div role="status" aria-label="Loading songs">
-      <span className="sr-only">Loading songs...</span>
+    <div role="status" aria-label="Loading artists">
+      <span className="sr-only">Loading artists...</span>
       <ul aria-hidden="true">
         {Array.from({ length: 5 }, (_, index) => (
           <li key={index}>
@@ -293,19 +332,34 @@ function SongsListSkeleton() {
   );
 }
 
-function SongRow({ song }: { song: SongWithUserData }) {
-  const credit = formatWriterCredit(song.song_artist_credits ?? []);
-  const title = effectiveSongTitle(song, song.user_data);
+function ArtistRow({ artist }: { artist: ArtistSummary }) {
+  const counts = [
+    artist.songCount > 0
+      ? `${artist.songCount} ${artist.songCount === 1 ? "song" : "songs"}`
+      : null,
+    artist.recordingCount > 0
+      ? `${artist.recordingCount} ${
+          artist.recordingCount === 1 ? "recording" : "recordings"
+        }`
+      : null,
+  ].filter(Boolean);
+
   return (
     <div className={`pl-6 flex-1 min-w-0 ${robotoCondensed.className}`}>
       <div className="flex justify-between items-start gap-2 tracking-wider">
-        <span className={`${leagueGothic.className} uppercase text-xl truncate min-w-0`}>{title}</span>
-        {song.year && (
-          <span className="text-sm text-ink-900 shrink-0">{song.year}</span>
-        )}
+        <span
+          className={`${leagueGothic.className} uppercase text-xl truncate min-w-0`}
+        >
+          {artist.name}
+        </span>
+        <span className="text-sm text-ink-900 shrink-0 text-right">
+          {counts.join(" · ")}
+        </span>
       </div>
-      {credit && (
-        <div className="text-sm tracking-wide text-ink-600 truncate">{credit}</div>
+      {artist.kind && (
+        <div className="text-sm tracking-wide text-ink-600 truncate">
+          {kindLabels[artist.kind]}
+        </div>
       )}
     </div>
   );

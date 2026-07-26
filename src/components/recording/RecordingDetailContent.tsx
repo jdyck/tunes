@@ -37,6 +37,8 @@ import {
 } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import { decodeHtmlEntities } from "@/utils/htmlEntities";
+import { useSavedRecordingsRefresh } from "@/components/recording/SavedRecordingsRefreshContext";
+import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 
 export default function RecordingDetailContent({
   id,
@@ -49,6 +51,8 @@ export default function RecordingDetailContent({
 }) {
   const router = useRouter();
   const { play } = usePlayer();
+  const { requestRefresh: refreshSavedRecordings } =
+    useSavedRecordingsRefresh();
   const {
     recording,
     loading,
@@ -72,6 +76,7 @@ export default function RecordingDetailContent({
   const [tags, setTags] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
+  const [showYouTubeMediaInfo, setShowYouTubeMediaInfo] = useState(false);
   const [isSaved, setIsSaved] = useState(true);
 
   const [musicbrainzRecordingId, setMusicbrainzRecordingId] = useState<
@@ -377,6 +382,7 @@ export default function RecordingDetailContent({
       console.error("Error removing recording:", error.message);
       setError(`Error removing recording: ${error.message}`);
     } else {
+      refreshSavedRecordings();
       router.push(backHref);
     }
   };
@@ -400,21 +406,30 @@ export default function RecordingDetailContent({
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       {videoId && recording && (
-        <button
-          onClick={() =>
-            play({
-              name: recording.name,
-              songTitle,
-              artist: recording.artist,
-              kind,
-              youtubeVideoId: videoId,
-            })
-          }
-          className="mb-6 w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-800 text-white font-bold rounded-md hover:bg-green-900"
-        >
-          <PlayIcon className="w-5 h-5" />
-          Play
-        </button>
+        <div className="mb-6 space-y-2">
+          <button
+            onClick={() =>
+              play({
+                name: recording.name,
+                songTitle,
+                artist: recording.artist,
+                kind,
+                youtubeVideoId: videoId,
+              })
+            }
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-800 text-white font-bold rounded-md hover:bg-green-900"
+          >
+            <PlayIcon className="w-5 h-5" />
+            Play
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowYouTubeMediaInfo(true)}
+            className="w-full rounded-md border border-line-200 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-old-lace-100"
+          >
+            YouTube media info
+          </button>
+        </div>
       )}
       <form
         className="w-full"
@@ -601,6 +616,12 @@ export default function RecordingDetailContent({
         onDelete={handleDelete}
       />
       </div>
+      {showYouTubeMediaInfo && (
+        <YouTubeMediaInfoModal
+          items={recording.youtube_items}
+          onClose={() => setShowYouTubeMediaInfo(false)}
+        />
+      )}
     </div>
   );
 }
