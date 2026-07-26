@@ -23,6 +23,7 @@ import {
   saveSongWriters,
 } from "@/lib/songWriters";
 import { writersFromMusicBrainz } from "@/utils/writerCredits";
+import { errorMessage } from "@/utils/errorMessage";
 import { SongWorkSearchResult } from "@/lib/musicbrainz";
 import {
   searchSongMetadata,
@@ -262,11 +263,8 @@ export default function SongDetailContent({ id }: { id: string }) {
         ...(canEditShared ? { writers: savedWriters } : {}),
       });
     } catch (writersError) {
-      const message =
-        writersError instanceof Error
-          ? writersError.message
-          : String(writersError);
-      console.error("Error saving writers:", message);
+      const message = errorMessage(writersError);
+      console.error("Error saving writers:", writersError);
       setError(`Error saving writers: ${message}`);
     }
   };
