@@ -7,6 +7,7 @@ import { SongWithUserData } from "@/types/types";
 import { leagueGothic } from "@/lib/fonts";
 import { useSongsList } from "@/components/song/SongsListContext";
 import RecordingsSection from "@/components/song/RecordingsSection";
+import SongWriterCredits from "@/components/song/SongWriterCredits";
 import SongWritersEditor from "@/components/song/SongWritersEditor";
 import SongWorkResultsList from "@/components/song/SongWorkResultsList";
 import SaveStatusButton from "@/components/ui/SaveStatusButton";
@@ -38,15 +39,8 @@ import {
   songWithUserDataSelect,
 } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
-
-const formatWriterInputCredit = (writers: WriterInput[]) => {
-  const names = writers
-    .map((writer) => writer.creditedAs.trim())
-    .filter(Boolean);
-  const credited = Array.from(new Set(names));
-
-  return credited.length > 0 ? credited.join(", ") : null;
-};
+import Modal from "@/components/ui/Modal";
+import { PencilIcon } from "@heroicons/react/20/solid";
 
 const normalizeTitleText = (value: string) =>
   value.replace(/\u00a0/g, " ").replace(/\s*\n\s*/g, " ");
@@ -466,7 +460,6 @@ export default function SongDetailContent({ id }: { id: string }) {
     );
   if (!song) return <AsyncStateMessage>No song found.</AsyncStateMessage>;
 
-  const writerCredit = formatWriterInputCredit(writers);
   const canEditShared = isAdmin || !song.is_discoverable;
   const titleEditsPrivate =
     song.is_discoverable || Boolean(song.user_data.display_title?.trim());
@@ -498,32 +491,21 @@ export default function SongDetailContent({ id }: { id: string }) {
               {title}
             </div>
 
-            {showWritersEditor && canEditShared ? (
-              <SongWritersEditor
-                value={writers}
-                onClose={() => setShowWritersEditor(false)}
-                onChange={(next) => {
-                  setWriters(next);
-                  setIsSaved(false);
-                }}
-              />
-            ) : (
-              <div className="pb-4">
-                {canEditShared ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowWritersEditor(true)}
-                    className="block w-full text-left text-azure-600 hover:text-azure-500 font-bold text-lg/5 text-balance"
-                  >
-                    {writerCredit || "Add writers"}
-                  </button>
-                ) : (
-                  <p className="font-bold text-lg/5 text-balance text-azure-600">
-                    {writerCredit || "No writer credits"}
-                  </p>
-                )}
+            <div className="flex items-start gap-2 pb-4">
+              <div className="min-w-0 font-bold text-lg/5 text-balance text-azure-600">
+                <SongWriterCredits writers={writers} />
               </div>
-            )}
+              {canEditShared && (
+                <button
+                  type="button"
+                  onClick={() => setShowWritersEditor(true)}
+                  aria-label="Edit writers"
+                  className="shrink-0 rounded-sm p-1 text-azure-600 hover:bg-merino-200 hover:text-azure-500"
+                >
+                  <PencilIcon className="h-5 w-5" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="grow-0 w-40">
             <div className="aspect-square bg-ink-500/10 w-36"></div>
@@ -683,6 +665,17 @@ export default function SongDetailContent({ id }: { id: string }) {
           {removing ? "Checking..." : "Remove Song"}
         </button>
       </div>
+      {showWritersEditor && canEditShared && (
+        <Modal title="Edit writers" onClose={() => setShowWritersEditor(false)}>
+          <SongWritersEditor
+            value={writers}
+            onChange={(next) => {
+              setWriters(next);
+              setIsSaved(false);
+            }}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

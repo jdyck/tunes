@@ -31,4 +31,12 @@ MusicBrainz Recording match. Their absence remains an ordinary empty state
 rather than an error; do not infer performers from the free-text credited-as
 field.
 
+Artist detail resolves an identity-backed image on first view through the
+stored MusicBrainz Artist ID, its Wikidata relationship, and Wikidata's
+Wikimedia Commons image. The shared Artist row caches both successful image
+metadata and a completed lookup with no result, so an ordinary miss is not
+retried on every view. Transient provider failures remain uncached. Never fall
+back to a name-based image search; a missing MusicBrainz identity or verified
+Commons image uses the ordinary no-image state.
+
 Because the pane combines shared canonical facts with private `artist_user_data`, saving notes/tags must never issue a broad update to the canonical Artist row. The write policy for editing shared Artist metadata is a separate migration concern; see [canonical-entity-migrations.md](canonical-entity-migrations.md).
