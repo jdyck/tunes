@@ -6,6 +6,7 @@
 // directly from a component.
 
 import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
+import { musicBrainzRecordingPerformers } from "../utils/musicbrainzPerformers.ts";
 import type {
   MusicBrainzArtistRelation,
   MusicBrainzSongArtistCredit,
@@ -495,24 +496,7 @@ export const fetchRecordingMatch = async (
     const placeRelation = relations.find(
       (relation) => relation.place && ["recorded at", "recorded in"].includes(relation.type)
     );
-    const performerRelationTypes = new Set([
-      "instrument",
-      "vocal",
-      "performer",
-      "conductor",
-      "orchestra",
-    ]);
-    const performers = relations
-      .filter(
-        (relation) =>
-          Boolean(relation.artist) && performerRelationTypes.has(relation.type)
-      )
-      .map((relation): RecordingPerformer => ({
-        musicbrainzArtistId: relation.artist!.id,
-        name: decodeHtmlEntities(relation.artist!.name),
-        creditedAs: decodeHtmlEntities(relation["target-credit"] || relation.artist!.name),
-        kind: relation.artist!.type?.toLowerCase() ?? null,
-      }));
+    const performers = musicBrainzRecordingPerformers(relations);
     const groups = new Map<string, ReleaseGroupEvidence>();
     for (const release of recording.releases ?? []) {
       const group = release["release-group"];

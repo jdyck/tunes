@@ -12,7 +12,7 @@ export default function BrowseLayoutShell({
 }) {
   const pathname = usePathname();
   const isRoot = pathname === "/";
-  const isSongsList = pathname === "/songs";
+  const isListRoute = pathname === "/songs" || pathname === "/artists";
 
   return (
     <div className="lg:flex lg:h-screen">
@@ -23,7 +23,7 @@ export default function BrowseLayoutShell({
       <div className="flex-1 flex lg:h-screen lg:overflow-hidden">
         <div
           className={`${
-            isSongsList ? "fixed" : "hidden"
+            isListRoute ? "fixed" : "hidden"
           } inset-x-0 top-0 bottom-0 z-[var(--layer-browse-list)] overflow-y-auto overscroll-none pt-[env(safe-area-inset-top)] pb-[calc(4rem+env(safe-area-inset-bottom))] bg-surface-app lg:block lg:static lg:inset-auto lg:z-auto lg:w-sm xl:w-md lg:shrink-0 lg:h-full lg:overflow-y-auto lg:pt-0 lg:pb-0 lg:border-r lg:border-line-100`}
         >
           <ListPaneSwitch />
