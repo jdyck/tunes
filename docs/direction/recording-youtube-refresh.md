@@ -7,8 +7,7 @@ workaround, which cannot refresh anything: delete only removes the current
 User's `user_recording_data` link, and the add path
 (`save_youtube_recording`) is intentionally non-destructive — it `coalesce`-
 merges the shared `youtube_items` row and reuses the existing `recordings` row
-as-is (see [add-recording-modal.md](add-recording-modal.md)). So re-adding
-returns the same stale data.
+as-is. So re-adding returns the same stale data.
 
 ## Why "search + pick" rather than a videoId lookup
 

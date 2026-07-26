@@ -17,12 +17,16 @@ export default function RecordingsSection({
   songId,
   songTitle,
   recordings,
-  onRecordingAdded,
+  onRecordingsChanged,
 }: {
   songId: string;
   songTitle: string;
   recordings: SavedRecording[];
-  onRecordingAdded: () => void;
+  onRecordingsChanged: () =>
+    | SavedRecording[]
+    | null
+    | void
+    | Promise<SavedRecording[] | null | void>;
 }) {
   const { play } = usePlayer();
   const [showAddRecording, setShowAddRecording] = useState(false);
@@ -42,6 +46,7 @@ export default function RecordingsSection({
         </div>
         <button
           onClick={() => setShowAddRecording(true)}
+          aria-label="Add recording"
           className="block p-2"
         >
           <PlusCircleIcon
@@ -103,11 +108,9 @@ export default function RecordingsSection({
         <AddRecordingModal
           songId={songId}
           songTitle={songTitle}
+          savedRecordings={recordings}
           onClose={() => setShowAddRecording(false)}
-          onAdded={() => {
-            setShowAddRecording(false);
-            onRecordingAdded();
-          }}
+          onChanged={onRecordingsChanged}
         />
       )}
     </>

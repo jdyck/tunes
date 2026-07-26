@@ -541,7 +541,9 @@ export default function SongDetailContent({ id }: { id: string }) {
           songId={id}
           songTitle={title}
           recordings={recordings}
-          onRecordingAdded={refreshRecordings}
+          onRecordingsChanged={() =>
+            refreshRecordings({ showLoading: false })
+          }
         />
         <SaveStatusButton isSaved={isSaved} className="block relative shrink-0 mt-1" onClick={handleSave} />
 

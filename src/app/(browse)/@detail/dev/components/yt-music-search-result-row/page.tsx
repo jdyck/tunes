@@ -16,19 +16,24 @@ const result: YouTubeSearchResult = {
 };
 
 export default function YtMusicSearchResultRowDemoPage() {
-  const [adding, setAdding] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [pending, setPending] = useState<"saving" | "removing" | null>(null);
 
   return (
     <ul className="max-w-md">
       <YtMusicSearchResultRow
         result={result}
         kind="released"
-        adding={adding}
+        saved={saved}
+        pending={pending}
         onKindChange={() => {}}
         onPlay={() => console.log("[demo] play")}
-        onAdd={() => {
-          setAdding(true);
-          setTimeout(() => setAdding(false), 1000);
+        onToggle={() => {
+          setPending(saved ? "removing" : "saving");
+          setTimeout(() => {
+            setSaved((previous) => !previous);
+            setPending(null);
+          }, 1000);
         }}
       />
     </ul>
