@@ -4,9 +4,15 @@ Standing placement rules (feature folders, lib = effectful / utils = pure) are i
 
 ## Move the YouTube Music client out of `utils`
 
-## Rename the match-suggestion pair — deferred deliberately
+## Rename the match-suggestion pair — opportunistically
 
-`AddRecordingMatchSuggestion` vs `RecordingMatchSuggestion`: the names don't communicate the distinction (one is used inside `AddRecordingModal`). The whole matching area needs functional rework first — MusicBrainz match quality is poor with the data available — and the naming will be settled as part of that rework, when the concepts are clearer. Do not rename these two components before then.
+`AddRecordingMatchSuggestion` vs `RecordingMatchSuggestion`: the names still do
+not communicate the distinction clearly. The former is used while creating a
+Recording from Add Recording; the latter is used to match an already-saved
+Recording from its detail pane. The MusicBrainz Recording rework has landed,
+so the old matching-quality blocker no longer applies. Rename or consolidate
+these components only when substantive work next touches both flows; a
+standalone rename is not useful.
 
 ## Split detail-content controllers — later, opportunistic
 
