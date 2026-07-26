@@ -7,6 +7,7 @@ export interface ArtistIdentity {
   id: string;
   name: string;
   kind: ArtistKind | null;
+  musicbrainz_artist_id: string | null;
 }
 
 // The user's saved recordings that credit this artist as a performer. The
@@ -26,7 +27,7 @@ const artistRecordingSelect = `
   recordings!inner(
     *,
     release_groups(id, title, musicbrainz_release_group_id),
-    recording_artist_credits!inner(artist_id, artists(id, name, kind)),
+    recording_artist_credits!inner(artist_id, artists(id, name, kind, musicbrainz_artist_id)),
     recording_youtube_items(
       created_at,
       youtube_items(*)
@@ -87,6 +88,8 @@ export const useArtistRecordings = (artistId: string) => {
           id: match.artists.id,
           name: match.artists.name,
           kind: match.artists.kind ?? null,
+          musicbrainz_artist_id:
+            match.artists.musicbrainz_artist_id ?? null,
         };
         break;
       }

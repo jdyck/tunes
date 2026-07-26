@@ -68,6 +68,7 @@ export default function ArtistsListPane() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const userId = user?.id;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -91,8 +92,8 @@ export default function ArtistsListPane() {
   }, [loadingUser, user, router]);
 
   useEffect(() => {
-    if (user) fetchSongs(user.id);
-  }, [user]);
+    if (userId) fetchSongs(userId);
+  }, [fetchSongs, userId]);
 
   const artists = useMemo(() => {
     const byId = new Map<string, ArtistSummary>();

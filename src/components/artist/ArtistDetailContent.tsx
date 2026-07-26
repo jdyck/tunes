@@ -16,6 +16,7 @@ import PaneHeader from "@/components/layout/PaneHeader";
 import { ArtistKind } from "@/types/types";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import { formatWriterCredit } from "@/lib/songWriters";
+import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
 
 const kindLabels: Record<ArtistKind, string> = {
   person: "Person",
@@ -98,6 +99,13 @@ export default function ArtistDetailContent({ id }: { id: string }) {
             >
               {kindLabels[artist.kind]}
             </p>
+          )}
+          {artist.musicbrainz_artist_id && (
+            <MusicBrainzLink
+              type="artist"
+              id={artist.musicbrainz_artist_id}
+              className="mt-2 block text-xs text-teal-700 underline"
+            />
           )}
         </div>
       </PaneHeader>
