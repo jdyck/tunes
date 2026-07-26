@@ -34,6 +34,7 @@ Current behavior that later phases build on:
 - Each result has a separate Play preview and Add action, so previewing never selects it accidentally.
 - YouTube Music results supply artist identity, duration, and album identity directly when present. The official YouTube path enriches a selected result server-side with `videos.list` title, channel, and duration; provider API credentials never enter the browser bundle.
 - The manual URL field is a fallback alongside search for videos search cannot find. Normalize it to the video ID, treat it as category `video`, visibly preselect `video_capture`, and allow the same inline override to `released`. Manual-entry provenance is recorded and YouTube Music-specific fields remain null until later enrichment supplies evidence.
+- Recording detail exposes the stored normalized YouTube media snapshot in a read-only modal. Keep provider title/channel/category/provenance, YouTube Music artist/album identity, duration, and timestamps visibly separate from editable canonical Recording metadata.
 
 ## Phase 2 (later): Spotify as a second search source
 

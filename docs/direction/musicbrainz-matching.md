@@ -81,11 +81,12 @@ indexes, Release type/status/date copies, artwork URLs, or every edition.
 
 ## Album import
 
-Album import is a Recording-only workflow entered from the Songs list. Search
-YouTube Music for the media album, choose its exact MusicBrainz Release, then
-match the two tracklists by normalized title and duration. The release remains
-a discovery vehicle; each selected Recording is enriched through the same
-single-Recording path described above.
+Album import is a Recording-only workflow. It is deliberately not exposed from
+the Songs list; its eventual product entry point remains undecided. The
+implemented matching flow searches YouTube Music for the media album, chooses
+its exact MusicBrainz Release, then matches the two tracklists by normalized
+title and duration. The release remains a discovery vehicle; each selected
+Recording is enriched through the same single-Recording path described above.
 
 The workflow may attach more than one Recording (such as alternate takes) to
 the same existing Song, but it never creates Songs. Tracks without exactly one
@@ -95,6 +96,8 @@ honest partial-success message if media persistence or enrichment fails.
 
 ## Remaining work
 
+- Decide whether album import belongs in the product, and if so where it starts,
+  before exposing the existing workflow again.
 - Add a rare, user-triggered, client-paged deep comparison only if real
   ambiguous cases need fuller Release evidence. Never make it a synchronous
   multi-candidate route.
