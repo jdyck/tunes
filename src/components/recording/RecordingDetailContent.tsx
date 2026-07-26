@@ -400,8 +400,7 @@ export default function RecordingDetailContent({
 
   const handleFieldChange = useFieldChange(setIsSaved);
 
-  if (loading)
-    return <AsyncStateMessage>Loading recording...</AsyncStateMessage>;
+  if (loading) return <RecordingDetailSkeleton backHref={backHref} />;
   if (error || loadError)
     return (
       <AsyncStateMessage variant="error">{error || loadError}</AsyncStateMessage>
@@ -633,6 +632,52 @@ export default function RecordingDetailContent({
           onClose={() => setShowYouTubeMediaInfo(false)}
         />
       )}
+    </div>
+  );
+}
+
+function RecordingDetailSkeleton({ backHref }: { backHref: string }) {
+  return (
+    <div
+      className="flex h-full w-full flex-col bg-surface-app"
+      role="status"
+      aria-label="Loading recording"
+    >
+      <span className="sr-only">Loading recording...</span>
+      <div aria-hidden="true" className="contents">
+        <PaneHeader backHref={backHref} backLabel="Back to song" safeAreaTop>
+          <div className="pb-4" />
+        </PaneHeader>
+
+        <div className="flex-1 overflow-hidden p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+          <div className="animate-pulse">
+            <div className="mb-6 space-y-2">
+              <div className="h-12 w-full rounded-md bg-surface-sunken" />
+              <div className="h-10 w-full rounded-md bg-surface-sunken" />
+            </div>
+
+            <div className="mb-4 flex items-center justify-between">
+              <div className="h-8 w-2/3 rounded-sm bg-surface-sunken" />
+              <div className="ml-2 h-6 w-6 shrink-0 rounded-full bg-surface-sunken" />
+            </div>
+
+            <RecordingFieldSkeleton width="w-2/3" />
+            <RecordingFieldSkeleton width="w-full" />
+            <RecordingFieldSkeleton width="w-3/4" />
+            <RecordingFieldSkeleton width="w-1/3" />
+            <RecordingFieldSkeleton width="w-1/2" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecordingFieldSkeleton({ width }: { width: string }) {
+  return (
+    <div className="mb-4">
+      <div className="mb-1 h-3 w-20 rounded-sm bg-surface-sunken" />
+      <div className={`h-8 ${width} rounded-md bg-surface-sunken`} />
     </div>
   );
 }
