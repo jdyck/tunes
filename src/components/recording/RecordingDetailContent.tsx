@@ -40,6 +40,11 @@ import { decodeHtmlEntities } from "@/utils/htmlEntities";
 import { useSavedRecordingsRefresh } from "@/components/recording/SavedRecordingsRefreshContext";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 
+const usableYouTubeAlbumName = (value: string | null | undefined) => {
+  const albumName = value?.trim();
+  return albumName && albumName.toLowerCase() !== "unknown" ? albumName : "";
+};
+
 export default function RecordingDetailContent({
   id,
   songId,
@@ -111,9 +116,15 @@ export default function RecordingDetailContent({
     const storedName = recording.name || "";
     const storedArtist = recording.artist || "";
     const storedAlbum = recording.release_groups?.title || recording.album || "";
+    const displayedAlbum =
+      storedAlbum ||
+      recording.youtube_items
+        .map((item) => usableYouTubeAlbumName(item.ytmusic_album_name))
+        .find(Boolean) ||
+      "";
     const decodedName = decodeHtmlEntities(storedName);
     const decodedArtist = decodeHtmlEntities(storedArtist);
-    const decodedAlbum = decodeHtmlEntities(storedAlbum);
+    const decodedAlbum = decodeHtmlEntities(displayedAlbum);
 
     setName(decodedName);
     setKind(recording.kind || "video_capture");
