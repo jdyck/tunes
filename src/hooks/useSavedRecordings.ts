@@ -13,8 +13,10 @@ export const useSavedRecordings = (songId: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (
+    { showLoading = true }: { showLoading?: boolean } = {}
+  ): Promise<SavedRecording[] | null> => {
+    if (showLoading) setLoading(true);
     setError(null);
     const { data, error: queryError } = await supabase
       .from("user_recording_data")
@@ -24,16 +26,16 @@ export const useSavedRecordings = (songId: string) => {
 
     if (queryError) {
       setError(`Error fetching recordings: ${queryError.message}`);
-      setLoading(false);
-      return;
+      if (showLoading) setLoading(false);
+      return null;
     }
 
-    setRecordings(
-      (data ?? [])
-        .map((row) => mapSavedRecordingRow(row as never))
-        .filter((row): row is SavedRecording => row !== null)
-    );
-    setLoading(false);
+    const nextRecordings = (data ?? [])
+      .map((row) => mapSavedRecordingRow(row as never))
+      .filter((row): row is SavedRecording => row !== null);
+    setRecordings(nextRecordings);
+    if (showLoading) setLoading(false);
+    return nextRecordings;
   }, [songId]);
 
   useEffect(() => {

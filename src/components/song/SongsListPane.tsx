@@ -10,6 +10,8 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   MagnifyingGlassIcon,
+  FunnelIcon,
+  StarIcon,
   XMarkIcon,
 } from "@heroicons/react/20/solid";
 import AddSongModal from "@/components/song/AddSongModal";
@@ -19,9 +21,48 @@ import { useSongsList } from "@/components/song/SongsListContext";
 import { SongWithUserData } from "@/types/types";
 import PaneHeader from "@/components/layout/PaneHeader";
 import { effectiveSongTitle } from "@/utils/songTitle";
+import Modal from "@/components/ui/Modal";
+import { useSessionState } from "@/hooks/useSessionState";
+import {
+  defaultExcludeHoliday,
+  matchesSongFilters,
+  projectedFavoriteCount,
+  projectedTagCount,
+  SongFilters,
+} from "@/utils/songFilters";
+import { collectTags, hasTag, tagKey } from "@/utils/songTags";
 
 type SortKey = "title" | "writers" | "date" | "added";
 type SortDirection = "asc" | "desc";
+
+interface SongsListState extends SongFilters {
+  search: string;
+  sortKey: SortKey;
+  sortDirection: SortDirection;
+}
+
+const initialSongsListState = (): SongsListState => ({
+  search: "",
+  sortKey: "title",
+  sortDirection: "asc",
+  favoriteOnly: false,
+  includedTags: [],
+  excludeHoliday: defaultExcludeHoliday(new Date()),
+});
+
+const isSongsListState = (value: unknown): value is SongsListState => {
+  if (!value || typeof value !== "object") return false;
+  const state = value as Partial<SongsListState>;
+  return (
+    typeof state.search === "string" &&
+    ["title", "writers", "date", "added"].includes(state.sortKey ?? "") &&
+    ["asc", "desc"].includes(state.sortDirection ?? "") &&
+    typeof state.favoriteOnly === "boolean" &&
+    Array.isArray(state.includedTags) &&
+    state.includedTags.every((tag) => typeof tag === "string") &&
+    typeof state.excludeHoliday === "boolean"
+  );
+};
 
 const sortLabels: Record<SortKey, string> = {
   title: "Title",
@@ -48,11 +89,16 @@ export default function SongsListPane() {
 
   const [loadingUser, setLoadingUser] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [search, setSearch] = useState("");
+  const [listState, setListState] = useSessionState(
+    "standards:songs-list-state",
+    initialSongsListState,
+    isSongsListState
+  );
+  const { search, sortKey, sortDirection, favoriteOnly, includedTags, excludeHoliday } = listState;
   const [showAddSong, setShowAddSong] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("title");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const userId = user?.id;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -76,16 +122,16 @@ export default function SongsListPane() {
   }, [loadingUser, user, router]);
 
   useEffect(() => {
-    if (user) fetchSongs(user.id);
-  }, [user]);
+    if (userId) fetchSongs(userId);
+  }, [fetchSongs, userId]);
 
   const goToSong = (id: string) => {
     router.push(`/song/${id}`);
   };
 
-  const visibleSongs = useMemo(() => {
+  const searchMatchedSongs = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
-    const filteredSongs = searchTerm
+    return searchTerm
       ? songs.filter((song) => {
           const effectiveTitle = effectiveSongTitle(song, song.user_data);
           const writerCredit =
@@ -97,6 +143,17 @@ export default function SongsListPane() {
           );
         })
       : songs;
+  }, [search, songs]);
+
+  const filters = useMemo<SongFilters>(
+    () => ({ favoriteOnly, includedTags, excludeHoliday }),
+    [excludeHoliday, favoriteOnly, includedTags]
+  );
+
+  const visibleSongs = useMemo(() => {
+    const filteredSongs = searchMatchedSongs.filter((song) =>
+      matchesSongFilters(song, filters)
+    );
 
     return [...filteredSongs].sort((a, b) => {
       let comparison = 0;
@@ -121,7 +178,32 @@ export default function SongsListPane() {
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [search, sortDirection, sortKey, songs]);
+  }, [filters, searchMatchedSongs, sortDirection, sortKey]);
+
+  const allTags = useMemo(
+    () => collectTags(songs.map((song) => song.user_data.tags)),
+    [songs]
+  );
+  const facetTags = useMemo(
+    () =>
+      allTags
+        .map((tag) => ({
+          tag,
+          selected: includedTags.some((item) => tagKey(item) === tagKey(tag)),
+          count: projectedTagCount(searchMatchedSongs, filters, tag),
+        }))
+        .filter(({ tag, selected, count }) => {
+          if (excludeHoliday && hasTag([tag], "Holiday")) return false;
+          return selected || count > 0;
+        }),
+    [allTags, excludeHoliday, filters, includedTags, searchMatchedSongs]
+  );
+  const favoriteCount = projectedFavoriteCount(searchMatchedSongs, filters);
+  const excludeHolidayCount = searchMatchedSongs.filter((song) =>
+    matchesSongFilters(song, { ...filters, excludeHoliday: true })
+  ).length;
+  const filterCount = includedTags.length + Number(favoriteOnly);
+  const hasActiveFilters = filterCount > 0 || excludeHoliday;
 
   if (loadingUser || !user) {
     return <p className="p-4">Loading...</p>;
@@ -143,13 +225,13 @@ export default function SongsListPane() {
             <span>Add Song</span>
           </button>
         </div>
-        <div className="pb-2">
-          <div className="relative">
+        <div className="flex gap-2 pb-2">
+          <div className="relative min-w-0 flex-1">
             <MagnifyingGlassIcon className="h-4 w-4 text-ink-700 absolute left-3 top-1/2 -translate-y-1/2" />
             {search && (
               <button
                 type="button"
-                onClick={() => setSearch("")}
+                onClick={() => setListState((state) => ({ ...state, search: "" }))}
                 aria-label="Clear search"
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-ink-600 hover:bg-merino-200 hover:text-ink-900"
               >
@@ -159,11 +241,30 @@ export default function SongsListPane() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => setListState((state) => ({ ...state, search: e.target.value }))}
               placeholder="Search songs"
               className="w-full pl-9 pr-9 py-2 rounded-sm border-[1.5] border-ink-400 bg-surface-app"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setShowFilterModal(true)}
+            className={`inline-flex shrink-0 items-center gap-1 rounded-sm border-[1.5] px-2.5 py-2 font-semibold ${
+              hasActiveFilters
+                ? "border-azure-600 bg-old-lace-100 text-azure-700"
+                : "border-ink-400 text-ink-800"
+            }`}
+            aria-label={`Filter songs${
+              filterCount
+                ? `, ${filterCount} selected`
+                : excludeHoliday
+                  ? ", filters active"
+                  : ""
+            }`}
+          >
+            <FunnelIcon className="h-5 w-5" />
+            {filterCount > 0 && <span aria-hidden="true">{filterCount}</span>}
+          </button>
         </div>
 
 
@@ -182,9 +283,10 @@ export default function SongsListPane() {
             <button
               type="button"
               onClick={() =>
-                setSortDirection((direction) =>
-                  direction === "asc" ? "desc" : "asc"
-                )
+                setListState((state) => ({
+                  ...state,
+                  sortDirection: state.sortDirection === "asc" ? "desc" : "asc",
+                }))
               }
               className="p-1 rounded-sm text-ink-800 hover:bg-merino-200"
               aria-label={`Sort ${sortDirection === "asc" ? "descending" : "ascending"}`}
@@ -206,7 +308,7 @@ export default function SongsListPane() {
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      setSortKey(key);
+                      setListState((state) => ({ ...state, sortKey: key }));
                       setShowSortMenu(false);
                     }}
                     className={`block w-full px-3 py-1.5 text-left hover:bg-old-lace-100 ${
@@ -266,6 +368,96 @@ export default function SongsListPane() {
           }}
         />
       )}
+
+      {showFilterModal && (
+        <Modal title="Filter songs" onClose={() => setShowFilterModal(false)}>
+          <div className="space-y-5">
+            {(favoriteOnly || favoriteCount > 0) && (
+              <label className="flex items-center justify-between gap-3 rounded-md border border-line-200 p-3">
+                <span>
+                  <span className="block font-semibold">Favorites only</span>
+                  <span className="block text-sm text-ink-600">
+                    {favoriteOnly ? visibleSongs.length : favoriteCount} Songs
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={favoriteOnly}
+                  onChange={(event) =>
+                    setListState((state) => ({ ...state, favoriteOnly: event.target.checked }))
+                  }
+                />
+              </label>
+            )}
+
+            <section aria-labelledby="song-tag-filters-heading">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h3 id="song-tag-filters-heading" className="font-semibold">Tags</h3>
+                {includedTags.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setListState((state) => ({ ...state, includedTags: [] }))}
+                    className="text-sm font-semibold text-azure-700 hover:underline"
+                  >
+                    Clear tag filters
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {facetTags.map(({ tag, selected, count }) => (
+                  <button
+                    key={tagKey(tag)}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setListState((state) => ({
+                        ...state,
+                        includedTags: selected
+                          ? state.includedTags.filter((item) => tagKey(item) !== tagKey(tag))
+                          : [...state.includedTags, tag],
+                      }))
+                    }
+                    className={`rounded-full border px-3 py-1.5 text-sm ${
+                      selected
+                        ? "border-azure-600 bg-azure-600 text-white"
+                        : "border-line-200 hover:bg-old-lace-100"
+                    }`}
+                  >
+                    {tag} <span aria-label={`${count} Songs`}>({count})</span>
+                  </button>
+                ))}
+                {facetTags.length === 0 && (
+                  <p className="text-sm text-ink-600">No tag filters are available.</p>
+                )}
+              </div>
+            </section>
+
+            {!includedTags.some((tag) => hasTag([tag], "Holiday")) &&
+              (excludeHoliday || excludeHolidayCount > 0) && (
+              <label className="flex items-center gap-3 border-t border-line-100 pt-4">
+                <input
+                  type="checkbox"
+                  checked={excludeHoliday}
+                  onChange={(event) =>
+                    setListState((state) => ({ ...state, excludeHoliday: event.target.checked }))
+                  }
+                />
+                <span className="font-semibold">Exclude Holiday</span>
+              </label>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowFilterModal(false)}
+                className="rounded-sm bg-azure-600 px-4 py-2 font-semibold text-white"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -299,7 +491,20 @@ function SongRow({ song }: { song: SongWithUserData }) {
   return (
     <div className={`pl-6 flex-1 min-w-0 ${robotoCondensed.className}`}>
       <div className="flex justify-between items-start gap-2 tracking-wider">
-        <span className={`${leagueGothic.className} uppercase text-xl truncate min-w-0`}>{title}</span>
+        <div className="flex min-w-0 items-center gap-1">
+          <span className={`${leagueGothic.className} min-w-0 truncate uppercase text-xl`}>
+            {title}
+          </span>
+          {song.user_data.favorite && (
+            <>
+              <StarIcon
+                className="h-4 w-4 shrink-0 text-mojo-600"
+                aria-hidden="true"
+              />
+              <span className="sr-only">Favorite</span>
+            </>
+          )}
+        </div>
         {song.year && (
           <span className="text-sm text-ink-900 shrink-0">{song.year}</span>
         )}

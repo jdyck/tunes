@@ -3,10 +3,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { SongWithUserData } from "@/types/types";
 import { leagueGothic } from "@/lib/fonts";
 import { useSongsList } from "@/components/song/SongsListContext";
 import RecordingsSection from "@/components/song/RecordingsSection";
+import SongWriterCredits from "@/components/song/SongWriterCredits";
 import SongWritersEditor from "@/components/song/SongWritersEditor";
 import SongWorkResultsList from "@/components/song/SongWorkResultsList";
 import SaveStatusButton from "@/components/ui/SaveStatusButton";
@@ -17,13 +17,8 @@ import WikipediaBackgroundCard from "@/components/song/WikipediaBackgroundCard";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import NotesField from "@/components/ui/NotesField";
 import { useFieldChange } from "@/hooks/useFieldChange";
-import {
-  WriterInput,
-  fetchSongWriters,
-  saveSongWriters,
-} from "@/lib/songWriters";
+import { WriterInput } from "@/lib/songWriters";
 import { writersFromMusicBrainz } from "@/utils/writerCredits";
-import { errorMessage } from "@/utils/errorMessage";
 import { SongWorkSearchResult } from "@/lib/musicbrainz";
 import {
   searchSongMetadata,
@@ -33,20 +28,16 @@ import {
 import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
 import { useSavedRecordings } from "@/hooks/useSavedRecordings";
-import {
-  mapSongUserDataRow,
-  songWithUserDataSelect,
-} from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
-
-const formatWriterInputCredit = (writers: WriterInput[]) => {
-  const names = writers
-    .map((writer) => writer.creditedAs.trim())
-    .filter(Boolean);
-  const credited = Array.from(new Set(names));
-
-  return credited.length > 0 ? credited.join(", ") : null;
-};
+import Modal from "@/components/ui/Modal";
+import {
+  PencilIcon,
+  StarIcon as SolidStarIcon,
+} from "@heroicons/react/20/solid";
+import { StarIcon as OutlineStarIcon } from "@heroicons/react/24/outline";
+import TagChipInput from "@/components/ui/TagChipInput";
+import { collectTags } from "@/utils/songTags";
+import { useSongDetail } from "@/hooks/useSongDetail";
 
 const normalizeTitleText = (value: string) =>
   value.replace(/\u00a0/g, " ").replace(/\s*\n\s*/g, " ");
@@ -84,7 +75,19 @@ const fitTitleFontSize = (element: HTMLElement) => {
 
 export default function SongDetailContent({ id }: { id: string }) {
   const router = useRouter();
-  const { patchSong, removeSong } = useSongsList();
+  const { songs, removeSong } = useSongsList();
+  const {
+    song,
+    writers: loadedWriters,
+    loading,
+    error,
+    isAdmin,
+    setError,
+    save,
+    saveFavorite,
+    saveTags,
+    setDiscoverability,
+  } = useSongDetail(id);
   const {
     recordings,
     loading: recordingsLoading,
@@ -92,10 +95,9 @@ export default function SongDetailContent({ id }: { id: string }) {
     refresh: refreshRecordings,
   } = useSavedRecordings(id);
 
-  const [song, setSong] = useState<SongWithUserData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
+  const [favorite, setFavorite] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [sharedTitle, setSharedTitle] = useState("");
   const [writers, setWriters] = useState<WriterInput[]>([]);
@@ -118,57 +120,25 @@ export default function SongDetailContent({ id }: { id: string }) {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(true);
   const [showWritersEditor, setShowWritersEditor] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [removing, setRemoving] = useState(false);
   const titleRef = useRef<HTMLDivElement | null>(null);
 
-  const fetchSongAndRecordings = async () => {
-    try {
-      const [{ data: songData, error: songError }, { data: adminData }] =
-        await Promise.all([
-          supabase
-            .from("song_user_data")
-            .select(songWithUserDataSelect)
-            .eq("song_id", id)
-            .single(),
-          supabase.rpc("is_site_admin"),
-        ]);
-
-      if (songError) {
-        throw new Error(`Error fetching Song: ${songError.message}`);
-      }
-
-      const mappedSong = mapSongUserDataRow(songData as never);
-      if (!mappedSong) throw new Error("Song not found in your list");
-
-      setSong(mappedSong);
-      setIsAdmin(Boolean(adminData));
-      setNotes(mappedSong.user_data.notes || "");
-      setTitle(effectiveSongTitle(mappedSong, mappedSong.user_data));
-      setSharedTitle(mappedSong.name || "");
-      setYear(mappedSong.year || "");
-      setWorkDateStart(mappedSong.work_date_start || null);
-      setWorkDateEnd(mappedSong.work_date_end || null);
-      setWikipediaExtract(mappedSong.wikipedia_extract || null);
-      setWikipediaUrl(mappedSong.wikipedia_url || null);
-      setMusicbrainzWorkId(mappedSong.musicbrainz_work_id || null);
-      setWriters(await fetchSongWriters(id));
-
-      setLoading(false);
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
-    }
-  };
-
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
+    if (!song) return;
     setShowWritersEditor(false);
-    fetchSongAndRecordings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    setNotes(song.user_data.notes || "");
+    setFavorite(song.user_data.favorite);
+    setTags(song.user_data.tags ?? []);
+    setTitle(effectiveSongTitle(song, song.user_data));
+    setSharedTitle(song.name || "");
+    setYear(song.year || "");
+    setWorkDateStart(song.work_date_start || null);
+    setWorkDateEnd(song.work_date_end || null);
+    setWikipediaExtract(song.wikipedia_extract || null);
+    setWikipediaUrl(song.wikipedia_url || null);
+    setMusicbrainzWorkId(song.musicbrainz_work_id || null);
+    setWriters(loadedWriters);
+  }, [loadedWriters, song]);
 
   useLayoutEffect(() => {
     const titleElement = titleRef.current;
@@ -190,82 +160,25 @@ export default function SongDetailContent({ id }: { id: string }) {
   }, [loading]);
 
   const handleSave = async () => {
-    if (!id || !song) return;
-
-    const canEditShared = isAdmin || !song.is_discoverable;
-    const usesPrivateTitle =
-      song.is_discoverable || Boolean(song.user_data.display_title?.trim());
-    const normalizedDisplayTitle = usesPrivateTitle
-      ? title.trim() || null
-      : null;
-    const nextSharedTitle = usesPrivateTitle ? sharedTitle.trim() : title.trim();
-
-    if (canEditShared && !nextSharedTitle) {
-      setError("A shared Song title is required.");
-      return;
-    }
-
-    const sharedFields = {
-      name: nextSharedTitle,
-      year: year || null,
-      wikipedia_extract: wikipediaExtract,
-      wikipedia_url: wikipediaUrl,
-      musicbrainz_work_id: musicbrainzWorkId,
-      work_date_start: workDateStart,
-      work_date_end: workDateEnd,
-    };
-
-    const { error: privateError } = await supabase
-      .from("song_user_data")
-      .update({
-        notes: notes.trim() || null,
-        display_title: normalizedDisplayTitle,
-      })
-      .eq("song_id", id);
-
-    if (privateError) {
-      console.error("Error saving private Song data:", privateError.message);
-      setError(`Error saving Song data: ${privateError.message}`);
-      return;
-    }
-
-    try {
-      let savedWriters = writers;
-      if (canEditShared) {
-        const { error: sharedError } = await supabase
-          .from("songs")
-          .update(sharedFields)
-          .eq("id", id);
-        if (sharedError) throw sharedError;
-        savedWriters = await saveSongWriters(id, writers);
-        setWriters(savedWriters);
-      }
-
-      const nextUserData = {
-        ...song.user_data,
-        notes: notes.trim() || null,
-        display_title: normalizedDisplayTitle,
-      };
-      const nextSong = {
-        ...song,
-        ...(canEditShared ? sharedFields : {}),
-        user_data: nextUserData,
-      };
-      const effectiveTitle = effectiveSongTitle(nextSong, nextUserData);
-      setSong(nextSong);
-      setSharedTitle(nextSong.name);
-      setTitle(effectiveTitle);
-      setError(null);
+    const result = await save({
+      title,
+      sharedTitle,
+      notes,
+      favorite,
+      tags,
+      year,
+      wikipediaExtract,
+      wikipediaUrl,
+      musicbrainzWorkId,
+      workDateStart,
+      workDateEnd,
+      writers,
+    });
+    if (result) {
+      setWriters(result.writers);
+      setSharedTitle(result.song.name);
+      setTitle(effectiveSongTitle(result.song, result.song.user_data));
       setIsSaved(true);
-      patchSong(id, {
-        ...(canEditShared ? sharedFields : {}),
-        user_data: nextUserData,
-        ...(canEditShared ? { writers: savedWriters } : {}),
-      });
-    } catch (writersError) {
-      const message = errorMessage(writersError);
-      console.error("Error saving writers:", writersError);
-      setError(`Error saving writers: ${message}`);
     }
   };
 
@@ -400,7 +313,7 @@ export default function SongDetailContent({ id }: { id: string }) {
         ? " The never-shared Song record will also be deleted."
         : " Shared Song and Recording information will remain.";
     const confirmed = window.confirm(
-      `Remove this Song from your list? This permanently deletes your private notes and display title${privateRecordingCopy}.${sharedCopy} This cannot be undone.`
+      `Remove this Song from your list? This permanently deletes your private notes, display title, favorite, and tags${privateRecordingCopy}.${sharedCopy} This cannot be undone.`
     );
     if (!confirmed) {
       setRemoving(false);
@@ -422,32 +335,7 @@ export default function SongDetailContent({ id }: { id: string }) {
   };
 
   const handleDiscoverabilityChange = async (nextValue: boolean) => {
-    if (!song || !isAdmin) return;
-
-    const { error: toggleError } = await supabase.rpc(
-      "set_song_discoverability",
-      { p_song_id: id, p_is_discoverable: nextValue }
-    );
-
-    if (toggleError) {
-      setError(`Could not change visibility: ${toggleError.message}`);
-      return;
-    }
-
-    const nextSong = {
-      ...song,
-      is_discoverable: nextValue,
-      first_discoverable_at:
-        nextValue && !song.first_discoverable_at
-          ? new Date().toISOString()
-          : song.first_discoverable_at,
-    };
-    setSong(nextSong);
-    patchSong(id, {
-      is_discoverable: nextValue,
-      first_discoverable_at: nextSong.first_discoverable_at,
-    });
-    setError(null);
+    await setDiscoverability(nextValue);
   };
 
   const handleFieldChange = useFieldChange(setIsSaved);
@@ -457,8 +345,7 @@ export default function SongDetailContent({ id }: { id: string }) {
     setIsSaved(false);
   };
 
-  if (loading || recordingsLoading)
-    return <AsyncStateMessage>Loading song...</AsyncStateMessage>;
+  if (loading || recordingsLoading) return <SongDetailSkeleton />;
   if ((error || recordingsError) && !song)
     return (
       <AsyncStateMessage variant="error">
@@ -467,7 +354,6 @@ export default function SongDetailContent({ id }: { id: string }) {
     );
   if (!song) return <AsyncStateMessage>No song found.</AsyncStateMessage>;
 
-  const writerCredit = formatWriterInputCredit(writers);
   const canEditShared = isAdmin || !song.is_discoverable;
   const titleEditsPrivate =
     song.is_discoverable || Boolean(song.user_data.display_title?.trim());
@@ -499,35 +385,43 @@ export default function SongDetailContent({ id }: { id: string }) {
               {title}
             </div>
 
-            {showWritersEditor && canEditShared ? (
-              <SongWritersEditor
-                value={writers}
-                onClose={() => setShowWritersEditor(false)}
-                onChange={(next) => {
-                  setWriters(next);
-                  setIsSaved(false);
-                }}
-              />
-            ) : (
-              <div className="pb-4">
-                {canEditShared ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowWritersEditor(true)}
-                    className="block w-full text-left text-azure-600 hover:text-azure-500 font-bold text-lg/5 text-balance"
-                  >
-                    {writerCredit || "Add writers"}
-                  </button>
-                ) : (
-                  <p className="font-bold text-lg/5 text-balance text-azure-600">
-                    {writerCredit || "No writer credits"}
-                  </p>
-                )}
+            <div className="flex items-start gap-2 pb-4">
+              <div className="min-w-0 font-bold text-lg/5 text-balance text-azure-600">
+                <SongWriterCredits writers={writers} />
               </div>
-            )}
+              {canEditShared && (
+                <button
+                  type="button"
+                  onClick={() => setShowWritersEditor(true)}
+                  aria-label="Edit writers"
+                  className="shrink-0 rounded-sm p-1 text-azure-600 hover:bg-merino-200 hover:text-azure-500"
+                >
+                  <PencilIcon className="h-5 w-5" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="grow-0 w-40">
             <div className="aspect-square bg-ink-500/10 w-36"></div>
+            <button
+              type="button"
+              aria-pressed={favorite}
+              aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+              onClick={() => {
+                const nextFavorite = !favorite;
+                setFavorite(nextFavorite);
+                void saveFavorite(nextFavorite).then((saved) => {
+                  if (!saved) setIsSaved(false);
+                });
+              }}
+              className="mt-2 flex w-36 justify-center rounded-sm p-1 text-mojo-600 hover:bg-merino-200"
+            >
+              {favorite ? (
+                <SolidStarIcon className="h-7 w-7" />
+              ) : (
+                <OutlineStarIcon className="h-7 w-7" />
+              )}
+            </button>
           </div>
         </div>
       </PaneHeader>
@@ -542,7 +436,9 @@ export default function SongDetailContent({ id }: { id: string }) {
           songId={id}
           songTitle={title}
           recordings={recordings}
-          onRecordingAdded={refreshRecordings}
+          onRecordingsChanged={() =>
+            refreshRecordings({ showLoading: false })
+          }
         />
         <SaveStatusButton isSaved={isSaved} className="block relative shrink-0 mt-1" onClick={handleSave} />
 
@@ -620,6 +516,18 @@ export default function SongDetailContent({ id }: { id: string }) {
             className="w-full p-1.5 rounded-md mb-4 mt-3"
           />
 
+          <TagChipInput
+            label="Tags"
+            value={tags}
+            suggestions={collectTags(songs.map((item) => item.user_data.tags))}
+            onChange={(nextTags) => {
+              setTags(nextTags);
+              void saveTags(nextTags).then((saved) => {
+                if (!saved) setIsSaved(false);
+              });
+            }}
+          />
+
           <div className="mb-4">
             {showBackgroundSearch ? (
               backgroundSearching ? (
@@ -681,6 +589,68 @@ export default function SongDetailContent({ id }: { id: string }) {
         >
           {removing ? "Checking..." : "Remove Song"}
         </button>
+      </div>
+      {showWritersEditor && canEditShared && (
+        <Modal title="Edit writers" onClose={() => setShowWritersEditor(false)}>
+          <SongWritersEditor
+            value={writers}
+            onChange={(next) => {
+              setWriters(next);
+              setIsSaved(false);
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function SongDetailSkeleton() {
+  return (
+    <div
+      className="flex h-full w-full flex-col bg-surface-app"
+      role="status"
+      aria-label="Loading song"
+    >
+      <span className="sr-only">Loading song...</span>
+      <div aria-hidden="true" className="contents">
+        <PaneHeader backHref="/songs" backLabel="Back to songs" safeAreaTop>
+          <div className="flex w-xl max-w-full items-center gap-4 pb-8 lg:max-w-md">
+            <div className="w-full animate-pulse">
+              <div className="h-14 w-4/5 rounded-sm bg-surface-sunken" />
+              <div className="mt-3 h-5 w-1/2 rounded-sm bg-surface-sunken" />
+            </div>
+            <div className="w-40 grow-0">
+              <div className="aspect-square w-36 animate-pulse bg-surface-sunken" />
+            </div>
+          </div>
+        </PaneHeader>
+
+        <div className="flex-1 overflow-hidden p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+          <div className="animate-pulse">
+            <div className="mb-2 flex max-w-xl items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-28 rounded-sm bg-surface-sunken" />
+                <div className="h-5 w-5 rounded-full bg-surface-sunken" />
+              </div>
+              <div className="h-6 w-6 rounded-full bg-surface-sunken" />
+            </div>
+
+            <div className="mb-5 border-b border-border-default py-4">
+              <div className="h-5 w-2/3 rounded-sm bg-surface-sunken" />
+              <div className="mt-2 h-3.5 w-1/2 rounded-sm bg-surface-sunken" />
+            </div>
+            <div className="mb-5 border-b border-border-default py-4">
+              <div className="h-5 w-1/2 rounded-sm bg-surface-sunken" />
+              <div className="mt-2 h-3.5 w-1/3 rounded-sm bg-surface-sunken" />
+            </div>
+
+            <div className="mb-4 h-8 w-24 rounded-md bg-surface-sunken" />
+            <div className="mb-1 h-3 w-10 rounded-sm bg-surface-sunken" />
+            <div className="mb-5 h-7 w-20 rounded-sm bg-surface-sunken" />
+            <div className="h-36 w-full max-w-xl rounded-md bg-surface-sunken" />
+          </div>
+        </div>
       </div>
     </div>
   );

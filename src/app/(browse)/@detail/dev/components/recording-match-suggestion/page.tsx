@@ -8,6 +8,7 @@ const match: RecordingCandidate = {
   title: "Have You Met Miss Jones?",
   artistCredit: "Frank Sinatra",
   releaseHint: "Sinatra Swings",
+  releaseYearHint: "1961",
   releaseIdHint: "e2bd0fa3-6eb0-41cd-8565-44aee7a305cd",
   durationMs: 155_000,
   workMatch: true,

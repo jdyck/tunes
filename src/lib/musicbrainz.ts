@@ -241,6 +241,7 @@ export interface RecordingCandidate {
   score: number;
   evidence: string[];
   releaseHint: string | null;
+  releaseYearHint: string | null;
   releaseIdHint: string | null;
 }
 
@@ -460,6 +461,7 @@ export const searchRecordingMatches = async (
           item.workMatch === true ? "linked Work" : null,
         ].filter((value): value is string => value !== null),
         releaseHint: hint ? decodeHtmlEntities(hint.title) : null,
+        releaseYearHint: hint?.date?.match(/^\d{4}/)?.[0] ?? null,
         releaseIdHint: hint?.id ?? null,
       };
     }),

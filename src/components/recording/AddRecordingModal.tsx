@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   extractYouTubeID,
@@ -11,13 +11,20 @@ import {
   SEARCH_PLATFORMS,
   SearchPlatformId,
 } from "@/lib/youtubeSearchClient";
-import { RecordingKind } from "@/types/types";
+import { RecordingKind, SavedRecording } from "@/types/types";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import Modal from "@/components/ui/Modal";
 import YtMusicSearchResultRow from "@/components/recording/YtMusicSearchResultRow";
 import YoutubeSearchResultRow from "@/components/recording/YoutubeSearchResultRow";
 import PrimaryButton from "@/components/ui/PrimaryButton";
 import FormField from "@/components/ui/FormField";
+import type { RecordingResultPendingState } from "@/components/recording/RecordingResultToggleButton";
+import {
+  deriveInitialSavedVideoState,
+  markRecordingRemoved,
+  markVideoSaved,
+  reconcileSavedVideoState,
+} from "@/utils/addRecordingSavedState";
 
 interface PlatformSearchState {
   query: string;
@@ -50,17 +57,37 @@ const defaultKind = (result: YouTubeSearchResult): RecordingKind =>
 export default function AddRecordingModal({
   songId,
   songTitle,
+  savedRecordings,
   onClose,
-  onAdded,
+  onChanged,
 }: {
   songId: string;
   songTitle: string;
+  savedRecordings: SavedRecording[];
   onClose: () => void;
-  onAdded: () => void;
+  onChanged: () =>
+    | SavedRecording[]
+    | null
+    | void
+    | Promise<SavedRecording[] | null | void>;
 }) {
   const { play } = usePlayer();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [addingVideoId, setAddingVideoId] = useState<string | null>(null);
+  const [manualSuccess, setManualSuccess] = useState<string | null>(null);
+  const [initialSavedState] = useState(() =>
+    deriveInitialSavedVideoState(savedRecordings)
+  );
+  const [savedByVideoId, setSavedByVideoId] = useState(
+    initialSavedState.savedByVideoId
+  );
+  const sessionRecordingIds = useRef(new Set<string>());
+  const [pendingByVideoId, setPendingByVideoId] = useState<
+    Record<string, Exclude<RecordingResultPendingState, null>>
+  >({});
+  const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
+  const [duplicateVideoIds, setDuplicateVideoIds] = useState(
+    () => new Set(initialSavedState.duplicateVideoIds)
+  );
   const [selectedKinds, setSelectedKinds] = useState<
     Record<string, RecordingKind>
   >({});
@@ -162,57 +189,179 @@ export default function AddRecordingModal({
   };
 
   const fetchOfficialMetadata = async (videoId: string) => {
-    const response = await fetch(
-      `/api/youtube-video?videoId=${encodeURIComponent(videoId)}`
-    );
-    if (!response.ok) return null;
-    return (await response.json()) as VideoMetadata;
+    try {
+      const response = await fetch(
+        `/api/youtube-video?videoId=${encodeURIComponent(videoId)}`
+      );
+      if (!response.ok) return null;
+      return (await response.json()) as VideoMetadata;
+    } catch {
+      return null;
+    }
+  };
+
+  const refreshSavedRecordings = async () => {
+    try {
+      return await onChanged();
+    } catch {
+      return null;
+    }
   };
 
   const saveResult = async (
     result: YouTubeSearchResult,
     kind: RecordingKind
   ) => {
-    setAddingVideoId(result.videoId);
-    setErrorMessage(null);
+    const { videoId } = result;
+    if (pendingByVideoId[videoId]) return false;
 
-    let selected = result;
-    if (result.discoverySource === "youtube_search") {
-      const metadata = await fetchOfficialMetadata(result.videoId);
-      if (metadata) {
-        selected = {
-          ...result,
-          title: metadata.title || result.title,
-          channelTitle: metadata.channelTitle || result.channelTitle,
-          durationSeconds:
-            metadata.durationSeconds ?? result.durationSeconds ?? null,
-          metadataFetchedAt: metadata.metadataFetchedAt,
-        };
+    setPendingByVideoId((previous) => ({ ...previous, [videoId]: "saving" }));
+    setActionErrors((previous) => ({ ...previous, [videoId]: "" }));
+
+    try {
+      let selected = result;
+      if (result.discoverySource === "youtube_search") {
+        const metadata = await fetchOfficialMetadata(videoId);
+        if (metadata) {
+          selected = {
+            ...result,
+            title: metadata.title || result.title,
+            channelTitle: metadata.channelTitle || result.channelTitle,
+            durationSeconds:
+              metadata.durationSeconds ?? result.durationSeconds ?? null,
+            metadataFetchedAt: metadata.metadataFetchedAt,
+          };
+        }
       }
+
+      const { data, error } = await supabase.rpc("save_youtube_recording", {
+        p_song_id: songId,
+        p_video_id: selected.videoId,
+        p_title: selected.title,
+        p_channel_name: selected.channelTitle,
+        p_search_category: selected.searchCategory,
+        p_discovery_source: selected.discoverySource,
+        p_recording_kind: kind,
+        p_ytmusic_artist_id: selected.artistId ?? null,
+        p_ytmusic_artist_name: selected.artistName ?? null,
+        p_ytmusic_album_id: selected.albumId ?? null,
+        p_ytmusic_album_name: selected.albumName ?? null,
+        p_duration_seconds: selected.durationSeconds ?? null,
+        p_metadata_fetched_at: selected.metadataFetchedAt ?? null,
+      });
+
+      if (error) throw error;
+      if (typeof data !== "string") {
+        throw new Error("The save did not return a Recording ID.");
+      }
+
+      setSavedByVideoId((previous) =>
+        markVideoSaved(previous, videoId, data)
+      );
+      sessionRecordingIds.current.add(data);
+      const refreshed = await refreshSavedRecordings();
+      if (Array.isArray(refreshed)) {
+        const reconciled = reconcileSavedVideoState(
+          refreshed,
+          sessionRecordingIds.current
+        );
+        setDuplicateVideoIds(new Set(reconciled.duplicateVideoIds));
+        setSavedByVideoId(reconciled.savedByVideoId);
+      }
+      return true;
+    } catch (error) {
+      setActionErrors((previous) => ({
+        ...previous,
+        [videoId]: `Failed to add recording: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      }));
+      return false;
+    } finally {
+      setPendingByVideoId((previous) => {
+        const next = { ...previous };
+        delete next[videoId];
+        return next;
+      });
+    }
+  };
+
+  const removeResult = async (videoId: string) => {
+    if (pendingByVideoId[videoId]) return false;
+
+    if (duplicateVideoIds.has(videoId)) {
+      setActionErrors((previous) => ({
+        ...previous,
+        [videoId]:
+          "More than one saved Recording uses this video. Remove it from Recording details.",
+      }));
+      return false;
     }
 
-    const { error } = await supabase.rpc("save_youtube_recording", {
-      p_song_id: songId,
-      p_video_id: selected.videoId,
-      p_title: selected.title,
-      p_channel_name: selected.channelTitle,
-      p_search_category: selected.searchCategory,
-      p_discovery_source: selected.discoverySource,
-      p_recording_kind: kind,
-      p_ytmusic_artist_id: selected.artistId ?? null,
-      p_ytmusic_artist_name: selected.artistName ?? null,
-      p_ytmusic_album_id: selected.albumId ?? null,
-      p_ytmusic_album_name: selected.albumName ?? null,
-      p_duration_seconds: selected.durationSeconds ?? null,
-      p_metadata_fetched_at: selected.metadataFetchedAt ?? null,
-    });
+    const saved = savedByVideoId[videoId];
+    if (!saved) return false;
 
-    setAddingVideoId(null);
-    if (error) {
-      setErrorMessage(`Failed to add recording: ${error.message}`);
-      return;
+    if (
+      saved.existedAtOpen &&
+      !window.confirm(
+        "Remove this saved Recording? Your private notes, tags, rating, order, key, and tempo for it will be permanently deleted. Shared Recording metadata will remain."
+      )
+    ) {
+      return false;
     }
-    onAdded();
+
+    setPendingByVideoId((previous) => ({
+      ...previous,
+      [videoId]: "removing",
+    }));
+    setActionErrors((previous) => ({ ...previous, [videoId]: "" }));
+
+    try {
+      const { error } = await supabase
+        .from("user_recording_data")
+        .delete()
+        .eq("recording_id", saved.recordingId);
+
+      if (error) throw error;
+
+      setSavedByVideoId((previous) =>
+        markRecordingRemoved(previous, saved.recordingId)
+      );
+      const refreshed = await refreshSavedRecordings();
+      if (Array.isArray(refreshed)) {
+        const reconciled = reconcileSavedVideoState(
+          refreshed,
+          sessionRecordingIds.current
+        );
+        setDuplicateVideoIds(new Set(reconciled.duplicateVideoIds));
+        setSavedByVideoId(reconciled.savedByVideoId);
+      }
+      return true;
+    } catch (error) {
+      setActionErrors((previous) => ({
+        ...previous,
+        [videoId]: `Failed to remove recording: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      }));
+      return false;
+    } finally {
+      setPendingByVideoId((previous) => {
+        const next = { ...previous };
+        delete next[videoId];
+        return next;
+      });
+    }
+  };
+
+  const toggleResult = (
+    result: YouTubeSearchResult,
+    kind: RecordingKind
+  ) => {
+    const saved =
+      duplicateVideoIds.has(result.videoId) ||
+      Boolean(savedByVideoId[result.videoId]);
+    return saved ? removeResult(result.videoId) : saveResult(result, kind);
   };
 
   const handleManualAdd = async () => {
@@ -222,8 +371,24 @@ export default function AddRecordingModal({
       return;
     }
 
+    setErrorMessage(null);
+    setManualSuccess(null);
+
+    if (duplicateVideoIds.has(videoId)) {
+      setErrorMessage(
+        "More than one saved Recording uses this video. Remove it from Recording details."
+      );
+      return;
+    }
+
+    if (savedByVideoId[videoId]) {
+      const removed = await removeResult(videoId);
+      if (removed) setManualSuccess("Saved Recording removed.");
+      return;
+    }
+
     const metadata = await fetchOfficialMetadata(videoId);
-    await saveResult(
+    const saved = await saveResult(
       {
         videoId,
         title: metadata?.title || `YouTube video ${videoId}`,
@@ -236,11 +401,24 @@ export default function AddRecordingModal({
       },
       manualKind
     );
+    if (saved) {
+      setManualUrl("");
+      setManualSuccess("Recording saved. You can add another URL.");
+    }
   };
+
+  const manualVideoId = extractYouTubeID(manualUrl);
+  const manualPending = manualVideoId
+    ? pendingByVideoId[manualVideoId] ?? null
+    : null;
 
   return (
     <Modal title="Add a Recording" onClose={onClose}>
-      {errorMessage && <p className="text-mojo-600 mb-2">{errorMessage}</p>}
+      {errorMessage && (
+        <p className="text-mojo-600 mb-2" role="alert">
+          {errorMessage}
+        </p>
+      )}
 
       <div className="w-full">
         <div className="flex gap-1 mb-2" role="tablist" aria-label="Search platform">
@@ -299,7 +477,11 @@ export default function AddRecordingModal({
               const rowProps = {
                 result,
                 kind,
-                adding: addingVideoId === result.videoId,
+                saved:
+                  duplicateVideoIds.has(result.videoId) ||
+                  Boolean(savedByVideoId[result.videoId]),
+                pending: pendingByVideoId[result.videoId] ?? null,
+                actionError: actionErrors[result.videoId],
                 onKindChange: (next: RecordingKind) =>
                   setSelectedKinds((previous) => ({
                     ...previous,
@@ -313,7 +495,7 @@ export default function AddRecordingModal({
                     youtubeVideoId: result.videoId,
                     kind,
                   }),
-                onAdd: () => saveResult(result, kind),
+                onToggle: () => toggleResult(result, kind),
               };
               return activePlatform === "ytmusic" ? (
                 <YtMusicSearchResultRow key={result.videoId} {...rowProps} />
@@ -378,11 +560,24 @@ export default function AddRecordingModal({
         </label>
         <PrimaryButton
           onClick={handleManualAdd}
-          disabled={addingVideoId !== null || !manualUrl.trim()}
+          disabled={
+            !manualUrl.trim() || manualPending !== null
+          }
           className="px-3 py-2"
         >
-          {addingVideoId ? "Adding..." : "Add URL"}
+          {manualPending === "saving"
+            ? "Adding..."
+            : manualPending === "removing"
+              ? "Removing..."
+              : manualVideoId && savedByVideoId[manualVideoId]
+                ? "Remove saved URL"
+                : "Add URL"}
         </PrimaryButton>
+        {manualSuccess && (
+          <p className="mt-2 text-sm text-green-800" role="status">
+            {manualSuccess}
+          </p>
+        )}
       </div>
     </Modal>
   );

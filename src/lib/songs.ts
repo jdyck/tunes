@@ -26,6 +26,8 @@ export const songWithUserDataSelect = `
   song_id,
   notes,
   display_title,
+  favorite,
+  tags,
   created_at,
   songs!inner(
     id,

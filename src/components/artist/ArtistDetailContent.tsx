@@ -16,6 +16,8 @@ import PaneHeader from "@/components/layout/PaneHeader";
 import { ArtistKind } from "@/types/types";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import { formatWriterCredit } from "@/lib/songWriters";
+import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
+import { useArtistIdentity } from "@/hooks/useArtistIdentity";
 
 const kindLabels: Record<ArtistKind, string> = {
   person: "Person",
@@ -29,6 +31,11 @@ const kindLabels: Record<ArtistKind, string> = {
 export default function ArtistDetailContent({ id }: { id: string }) {
   const { songs, loading: songsLoading } = useSongsList();
   const { play } = usePlayer();
+  const {
+    artist: canonicalArtist,
+    loading: artistLoading,
+    error: artistError,
+  } = useArtistIdentity(id);
 
   // An artist credited as a writer is already present in the loaded Songs and
   // their credits — no extra query. Performer-only artists (no writer credit)
@@ -73,9 +80,9 @@ export default function ArtistDetailContent({ id }: { id: string }) {
     error: recordingsError,
   } = useArtistRecordings(id);
 
-  const artist = writerArtist ?? performerArtist;
+  const artist = canonicalArtist ?? writerArtist ?? performerArtist;
 
-  if ((songsLoading || recordingsLoading) && !artist) {
+  if ((songsLoading || recordingsLoading || artistLoading) && !artist) {
     return <AsyncStateMessage>Loading artist...</AsyncStateMessage>;
   }
 
@@ -86,38 +93,75 @@ export default function ArtistDetailContent({ id }: { id: string }) {
   return (
     <div className="w-full h-full flex flex-col bg-surface-app">
       <PaneHeader backHref="/artists" backLabel="Back to artists" safeAreaTop>
-        <div className="pb-8">
-          <h1
-            className={`text-6xl uppercase leading-14 ${leagueGothic.className} tracking-wide mb-2 wrap-break-word`}
-          >
-            {artist.name}
-          </h1>
-          {artist.kind && (
-            <p
-              className={`text-ink-600 ${robotoCondensed.className} tracking-wide`}
+        <div className="flex items-start gap-4 pb-8">
+          <div className="min-w-0 flex-1">
+            <h1
+              className={`text-6xl uppercase leading-14 ${leagueGothic.className} tracking-wide mb-2 wrap-break-word`}
             >
-              {kindLabels[artist.kind]}
-            </p>
+              {artist.name}
+            </h1>
+            {artist.kind && (
+              <p
+                className={`text-ink-600 ${robotoCondensed.className} tracking-wide`}
+              >
+                {kindLabels[artist.kind]}
+              </p>
+            )}
+            {artist.musicbrainz_artist_id && (
+              <MusicBrainzLink
+                type="artist"
+                id={artist.musicbrainz_artist_id}
+                className="mt-2 block text-xs text-teal-700 underline"
+              />
+            )}
+          </div>
+          {canonicalArtist?.image_url && (
+            <div className="flex w-36 shrink-0 flex-col items-end">
+              <img
+                src={canonicalArtist.image_url}
+                alt={artist.name}
+                className="h-auto max-h-52 max-w-full rounded-md object-contain"
+              />
+              {canonicalArtist.image_source_url && (
+                <a
+                  href={canonicalArtist.image_source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 block text-right text-xs text-teal-700 underline"
+                >
+                  Image source
+                  {canonicalArtist.image_license
+                    ? ` · ${canonicalArtist.image_license}`
+                    : ""}
+                </a>
+              )}
+            </div>
           )}
         </div>
       </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
-        <section className="mb-8">
-          <div className="flex items-center gap-2 mb-2 max-w-xl">
-            <h3
-              className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
-            >
-              Songs
-            </h3>
-            <span
-              className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
-            >
-              {artistSongs.length}
-            </span>
-          </div>
+        {artistError && (
+          <p className="mb-3 text-sm text-mojo-600">{artistError}</p>
+        )}
+        {recordingsError && (
+          <p className="mb-3 text-sm text-mojo-600">{recordingsError}</p>
+        )}
+        {artistSongs.length > 0 && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-2 max-w-xl">
+              <h3
+                className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
+              >
+                Songs
+              </h3>
+              <span
+                className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
+              >
+                {artistSongs.length}
+              </span>
+            </div>
 
-          {artistSongs.length > 0 ? (
             <ul>
               {artistSongs.map((song) => (
                 <li
@@ -149,32 +193,24 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                 </li>
               ))}
             </ul>
-          ) : (
-            <p>No songs credit this artist.</p>
-          )}
-        </section>
+          </section>
+        )}
 
-        <section>
-          <div className="flex items-center gap-2 mb-2 max-w-xl">
-            <h3
-              className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
-            >
-              Recordings
-            </h3>
-            <span
-              className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
-            >
-              {recordings.length}
-            </span>
-          </div>
+        {recordings.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2 max-w-xl">
+              <h3
+                className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
+              >
+                Recordings
+              </h3>
+              <span
+                className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
+              >
+                {recordings.length}
+              </span>
+            </div>
 
-          {recordingsError && (
-            <p className="mb-3 text-sm text-mojo-600">{recordingsError}</p>
-          )}
-
-          {recordingsLoading ? (
-            <p className="text-ink-600">Loading recordings...</p>
-          ) : recordings.length > 0 ? (
             <ul>
               {recordings.map((recording) => {
                 const youtubeItem = recording.youtube_items[0];
@@ -226,10 +262,8 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                 );
               })}
             </ul>
-          ) : (
-            <p>No saved recordings credit this artist.</p>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </div>
   );

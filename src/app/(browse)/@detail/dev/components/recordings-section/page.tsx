@@ -42,7 +42,7 @@ export default function RecordingsSectionDemoPage() {
         songId="demo-song"
         songTitle="Autumn Leaves"
         recordings={recordings}
-        onRecordingAdded={() => {}}
+        onRecordingsChanged={() => {}}
       />
     </div>
   );

@@ -16,9 +16,26 @@ import { useSongsList } from "@/components/song/SongsListContext";
 import { useRecordingArtists } from "@/hooks/useRecordingArtists";
 import { ArtistKind } from "@/types/types";
 import PaneHeader from "@/components/layout/PaneHeader";
+import { useSessionState } from "@/hooks/useSessionState";
 
 type SortKey = "name" | "songs" | "recordings";
 type SortDirection = "asc" | "desc";
+
+interface ArtistsListState {
+  search: string;
+  sortKey: SortKey;
+  sortDirection: SortDirection;
+}
+
+const isArtistsListState = (value: unknown): value is ArtistsListState => {
+  if (!value || typeof value !== "object") return false;
+  const state = value as Partial<ArtistsListState>;
+  return (
+    typeof state.search === "string" &&
+    ["name", "songs", "recordings"].includes(state.sortKey ?? "") &&
+    ["asc", "desc"].includes(state.sortDirection ?? "")
+  );
+};
 
 const sortLabels: Record<SortKey, string> = {
   name: "Name",
@@ -64,10 +81,14 @@ export default function ArtistsListPane() {
 
   const [loadingUser, setLoadingUser] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [listState, setListState] = useSessionState<ArtistsListState>(
+    "standards:artists-list-state",
+    () => ({ search: "", sortKey: "name", sortDirection: "asc" }),
+    isArtistsListState
+  );
+  const { search, sortKey, sortDirection } = listState;
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const userId = user?.id;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -91,8 +112,8 @@ export default function ArtistsListPane() {
   }, [loadingUser, user, router]);
 
   useEffect(() => {
-    if (user) fetchSongs(user.id);
-  }, [user]);
+    if (userId) fetchSongs(userId);
+  }, [fetchSongs, userId]);
 
   const artists = useMemo(() => {
     const byId = new Map<string, ArtistSummary>();
@@ -189,7 +210,7 @@ export default function ArtistsListPane() {
             {search && (
               <button
                 type="button"
-                onClick={() => setSearch("")}
+                onClick={() => setListState((state) => ({ ...state, search: "" }))}
                 aria-label="Clear search"
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-ink-600 hover:bg-merino-200 hover:text-ink-900"
               >
@@ -199,7 +220,7 @@ export default function ArtistsListPane() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => setListState((state) => ({ ...state, search: e.target.value }))}
               placeholder="Search artists"
               className="w-full pl-9 pr-9 py-2 rounded-sm border-[1.5] border-ink-400 bg-surface-app"
             />
@@ -225,9 +246,10 @@ export default function ArtistsListPane() {
             <button
               type="button"
               onClick={() =>
-                setSortDirection((direction) =>
-                  direction === "asc" ? "desc" : "asc"
-                )
+                setListState((state) => ({
+                  ...state,
+                  sortDirection: state.sortDirection === "asc" ? "desc" : "asc",
+                }))
               }
               className="p-1 rounded-sm text-ink-800 hover:bg-merino-200"
               aria-label={`Sort ${
@@ -251,7 +273,7 @@ export default function ArtistsListPane() {
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      setSortKey(key);
+                      setListState((state) => ({ ...state, sortKey: key }));
                       setShowSortMenu(false);
                     }}
                     className={`block w-full px-3 py-1.5 text-left hover:bg-old-lace-100 ${

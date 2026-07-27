@@ -23,6 +23,8 @@ export interface SongUserData {
   song_id: string;
   notes?: string | null;
   display_title?: string | null;
+  favorite: boolean;
+  tags?: string[] | null;
   created_at: string;
 }
 
@@ -43,6 +45,11 @@ export interface Artist {
   name: string;
   kind?: ArtistKind | null;
   musicbrainz_artist_id?: string | null;
+  wikidata_id?: string | null;
+  image_url?: string | null;
+  image_source_url?: string | null;
+  image_license?: string | null;
+  image_lookup_completed_at?: string | null;
 }
 
 export interface ArtistUserData {

@@ -40,6 +40,11 @@ import { decodeHtmlEntities } from "@/utils/htmlEntities";
 import { useSavedRecordingsRefresh } from "@/components/recording/SavedRecordingsRefreshContext";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 
+const usableYouTubeAlbumName = (value: string | null | undefined) => {
+  const albumName = value?.trim();
+  return albumName && albumName.toLowerCase() !== "unknown" ? albumName : "";
+};
+
 export default function RecordingDetailContent({
   id,
   songId,
@@ -111,9 +116,15 @@ export default function RecordingDetailContent({
     const storedName = recording.name || "";
     const storedArtist = recording.artist || "";
     const storedAlbum = recording.release_groups?.title || recording.album || "";
+    const displayedAlbum =
+      storedAlbum ||
+      recording.youtube_items
+        .map((item) => usableYouTubeAlbumName(item.ytmusic_album_name))
+        .find(Boolean) ||
+      "";
     const decodedName = decodeHtmlEntities(storedName);
     const decodedArtist = decodeHtmlEntities(storedArtist);
-    const decodedAlbum = decodeHtmlEntities(storedAlbum);
+    const decodedAlbum = decodeHtmlEntities(displayedAlbum);
 
     setName(decodedName);
     setKind(recording.kind || "video_capture");
@@ -370,6 +381,20 @@ export default function RecordingDetailContent({
     setMatchError(null);
   };
 
+  const handleRemoveMusicBrainzMatch = () => {
+    setMusicbrainzRecordingId(null);
+    setMusicbrainzReleaseId(null);
+    setReleaseGroup(null);
+    setPerformers([]);
+    setSuggestedMatch(null);
+    setShowManualSearch(false);
+    setManualResults([]);
+    setMatchStatus("dismissed");
+    setMatchError(null);
+    setSyncError(null);
+    setIsSaved(false);
+  };
+
   const handleDelete = async () => {
     if (!id) return;
 
@@ -389,8 +414,7 @@ export default function RecordingDetailContent({
 
   const handleFieldChange = useFieldChange(setIsSaved);
 
-  if (loading)
-    return <AsyncStateMessage>Loading recording...</AsyncStateMessage>;
+  if (loading) return <RecordingDetailSkeleton backHref={backHref} />;
   if (error || loadError)
     return (
       <AsyncStateMessage variant="error">{error || loadError}</AsyncStateMessage>
@@ -559,6 +583,13 @@ export default function RecordingDetailContent({
               <LinkButton variant="muted" onClick={handleChangeMatch}>
                 Change match
               </LinkButton>
+              <button
+                type="button"
+                onClick={handleRemoveMusicBrainzMatch}
+                className="ml-3 text-xs text-mojo-600 underline"
+              >
+                Remove match
+              </button>
               {syncError && <p className="text-sm text-ink-600 mt-1">{syncError}</p>}
             </>
           ) : suggestedMatch ? (
@@ -622,6 +653,52 @@ export default function RecordingDetailContent({
           onClose={() => setShowYouTubeMediaInfo(false)}
         />
       )}
+    </div>
+  );
+}
+
+function RecordingDetailSkeleton({ backHref }: { backHref: string }) {
+  return (
+    <div
+      className="flex h-full w-full flex-col bg-surface-app"
+      role="status"
+      aria-label="Loading recording"
+    >
+      <span className="sr-only">Loading recording...</span>
+      <div aria-hidden="true" className="contents">
+        <PaneHeader backHref={backHref} backLabel="Back to song" safeAreaTop>
+          <div className="pb-4" />
+        </PaneHeader>
+
+        <div className="flex-1 overflow-hidden p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+          <div className="animate-pulse">
+            <div className="mb-6 space-y-2">
+              <div className="h-12 w-full rounded-md bg-surface-sunken" />
+              <div className="h-10 w-full rounded-md bg-surface-sunken" />
+            </div>
+
+            <div className="mb-4 flex items-center justify-between">
+              <div className="h-8 w-2/3 rounded-sm bg-surface-sunken" />
+              <div className="ml-2 h-6 w-6 shrink-0 rounded-full bg-surface-sunken" />
+            </div>
+
+            <RecordingFieldSkeleton width="w-2/3" />
+            <RecordingFieldSkeleton width="w-full" />
+            <RecordingFieldSkeleton width="w-3/4" />
+            <RecordingFieldSkeleton width="w-1/3" />
+            <RecordingFieldSkeleton width="w-1/2" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecordingFieldSkeleton({ width }: { width: string }) {
+  return (
+    <div className="mb-4">
+      <div className="mb-1 h-3 w-20 rounded-sm bg-surface-sunken" />
+      <div className={`h-8 ${width} rounded-md bg-surface-sunken`} />
     </div>
   );
 }
