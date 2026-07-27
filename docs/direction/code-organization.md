@@ -14,6 +14,10 @@ so the old matching-quality blocker no longer applies. Rename or consolidate
 these components only when substantive work next touches both flows; a
 standalone rename is not useful.
 
-## Split detail-content controllers — later, opportunistic
+## Split Recording detail controller — later, opportunistic
 
-`SongDetailContent.tsx` and `RecordingDetailContent.tsx` (~500 lines each) mix data fetching, save/dirty tracking, and rendering. Direction: extract the fetch/save logic into hooks in `src/hooks/` (e.g. `useSongDetail`, `useRecordingDetail`) when next doing substantial work in these files. Not worth a standalone churn-only PR.
+`RecordingDetailContent.tsx` still mixes data fetching, save/dirty tracking, and
+rendering. Extract that orchestration into a hook in `src/hooks/` (for example,
+`useRecordingDetail`) when next doing substantial work in this file. Not worth
+a standalone churn-only change. Song detail already uses `useSongDetail` for
+its fetch/save orchestration.

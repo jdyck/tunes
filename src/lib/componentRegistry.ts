@@ -130,6 +130,11 @@ export const componentRegistry = [
     path: "src/components/ui/SyncFromMusicBrainzButton.tsx",
   },
   {
+    slug: "tag-chip-input",
+    name: "TagChipInput",
+    path: "src/components/ui/TagChipInput.tsx",
+  },
+  {
     slug: "wikipedia-background-card",
     name: "WikipediaBackgroundCard",
     path: "src/components/song/WikipediaBackgroundCard.tsx",

@@ -23,6 +23,8 @@ export interface SongUserData {
   song_id: string;
   notes?: string | null;
   display_title?: string | null;
+  favorite: boolean;
+  tags?: string[] | null;
   created_at: string;
 }
 
