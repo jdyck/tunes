@@ -144,21 +144,24 @@ export default function ArtistDetailContent({ id }: { id: string }) {
         {artistError && (
           <p className="mb-3 text-sm text-mojo-600">{artistError}</p>
         )}
-        <section className="mb-8">
-          <div className="flex items-center gap-2 mb-2 max-w-xl">
-            <h3
-              className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
-            >
-              Songs
-            </h3>
-            <span
-              className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
-            >
-              {artistSongs.length}
-            </span>
-          </div>
+        {recordingsError && (
+          <p className="mb-3 text-sm text-mojo-600">{recordingsError}</p>
+        )}
+        {artistSongs.length > 0 && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-2 max-w-xl">
+              <h3
+                className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
+              >
+                Songs
+              </h3>
+              <span
+                className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
+              >
+                {artistSongs.length}
+              </span>
+            </div>
 
-          {artistSongs.length > 0 ? (
             <ul>
               {artistSongs.map((song) => (
                 <li
@@ -190,32 +193,24 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                 </li>
               ))}
             </ul>
-          ) : (
-            <p>No songs credit this artist.</p>
-          )}
-        </section>
+          </section>
+        )}
 
-        <section>
-          <div className="flex items-center gap-2 mb-2 max-w-xl">
-            <h3
-              className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
-            >
-              Recordings
-            </h3>
-            <span
-              className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
-            >
-              {recordings.length}
-            </span>
-          </div>
+        {recordings.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2 max-w-xl">
+              <h3
+                className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
+              >
+                Recordings
+              </h3>
+              <span
+                className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
+              >
+                {recordings.length}
+              </span>
+            </div>
 
-          {recordingsError && (
-            <p className="mb-3 text-sm text-mojo-600">{recordingsError}</p>
-          )}
-
-          {recordingsLoading ? (
-            <p className="text-ink-600">Loading recordings...</p>
-          ) : recordings.length > 0 ? (
             <ul>
               {recordings.map((recording) => {
                 const youtubeItem = recording.youtube_items[0];
@@ -267,10 +262,8 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                 );
               })}
             </ul>
-          ) : (
-            <p>No saved recordings credit this artist.</p>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </div>
   );

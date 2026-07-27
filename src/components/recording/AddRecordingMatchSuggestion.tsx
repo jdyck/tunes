@@ -4,6 +4,7 @@ import type { RecordingCandidate } from "@/lib/musicbrainz";
 import { coverArtUrl } from "@/lib/recordingMetadataClient";
 import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
+import { formatDurationSeconds } from "@/lib/youtube";
 
 export default function AddRecordingMatchSuggestion({
   match,
@@ -25,16 +26,25 @@ export default function AddRecordingMatchSuggestion({
       />
       <div className="min-w-0 flex-1">
         <p className="text-xs text-ink-600 mb-1">Found a likely match on MusicBrainz</p>
-        <p className="truncate">
+        <p className="truncate font-medium">
           {match.title}
-          {match.artistCredit && (
-            <span className="text-ink-600"> — {match.artistCredit}</span>
+          {match.durationMs != null && (
+            <span className="font-normal text-ink-600">
+              {` (${formatDurationSeconds(Math.round(match.durationMs / 1000))})`}
+            </span>
           )}
         </p>
-        <p className="truncate text-xs text-ink-600 mb-2">
-          {[match.releaseHint, match.durationMs ? `${Math.round(match.durationMs / 1000)}s` : null]
-            .filter(Boolean).join(" · ") || "No provisional release details"}
-        </p>
+        {match.artistCredit && (
+          <p className="truncate text-sm text-ink-700">
+            {match.artistCredit}
+          </p>
+        )}
+        {match.releaseHint && (
+          <p className="mb-2 truncate text-xs text-ink-600">
+            {match.releaseHint}
+            {match.releaseYearHint && ` (${match.releaseYearHint})`}
+          </p>
+        )}
         <div className="flex items-center gap-3">
           <button
             type="button"

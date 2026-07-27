@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 import {
   ChevronRightIcon,
@@ -29,7 +30,11 @@ export default function RecordingsSection({
     | Promise<SavedRecording[] | null | void>;
 }) {
   const { play } = usePlayer();
+  const { recordingId } = useParams<{ recordingId?: string | string[] }>();
   const [showAddRecording, setShowAddRecording] = useState(false);
+  const selectedRecordingId = Array.isArray(recordingId)
+    ? recordingId[0]
+    : recordingId;
 
   return (
     <>
@@ -59,13 +64,19 @@ export default function RecordingsSection({
         <ul>
           {recordings.map((recording) => {
             const youtubeItem = recording.youtube_items[0];
+            const isSelected = recording.id === selectedRecordingId;
             return (
               <li
                 key={recording.id}
-                className="flex items-stretch border-b border-border-default hover:border-transparent hover:bg-merino-200 active:bg-merino-300 [&:has(+_li:hover)]:border-transparent"
+                className={`flex items-stretch border-b hover:border-transparent hover:bg-merino-200 active:bg-merino-300 [&:has(+_li:hover)]:border-transparent ${
+                  isSelected
+                    ? "border-transparent bg-merino-300"
+                    : "border-border-default"
+                }`}
               >
                 <Link
                   href={`/song/${songId}/recording/${recording.id}`}
+                  aria-current={isSelected ? "page" : undefined}
                   className="flex flex-1 min-w-0"
                 >
                   <RecordingListRow recording={recording} />

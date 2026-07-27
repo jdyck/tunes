@@ -381,6 +381,20 @@ export default function RecordingDetailContent({
     setMatchError(null);
   };
 
+  const handleRemoveMusicBrainzMatch = () => {
+    setMusicbrainzRecordingId(null);
+    setMusicbrainzReleaseId(null);
+    setReleaseGroup(null);
+    setPerformers([]);
+    setSuggestedMatch(null);
+    setShowManualSearch(false);
+    setManualResults([]);
+    setMatchStatus("dismissed");
+    setMatchError(null);
+    setSyncError(null);
+    setIsSaved(false);
+  };
+
   const handleDelete = async () => {
     if (!id) return;
 
@@ -569,6 +583,13 @@ export default function RecordingDetailContent({
               <LinkButton variant="muted" onClick={handleChangeMatch}>
                 Change match
               </LinkButton>
+              <button
+                type="button"
+                onClick={handleRemoveMusicBrainzMatch}
+                className="ml-3 text-xs text-mojo-600 underline"
+              >
+                Remove match
+              </button>
               {syncError && <p className="text-sm text-ink-600 mt-1">{syncError}</p>}
             </>
           ) : suggestedMatch ? (
