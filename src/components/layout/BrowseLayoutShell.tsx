@@ -12,7 +12,10 @@ export default function BrowseLayoutShell({
 }) {
   const pathname = usePathname();
   const isRoot = pathname === "/";
-  const isListRoute = pathname === "/songs" || pathname === "/artists";
+  const isListRoute =
+    pathname === "/songs" ||
+    pathname === "/artists" ||
+    pathname === "/dev/components";
 
   return (
     <div className="lg:flex lg:h-screen">

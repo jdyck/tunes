@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSelectedLayoutSegment } from "next/navigation";
+import { usePathname } from "next/navigation";
+import {
+  componentRegistry,
+  getComponentFromGalleryPathname,
+  getComponentGalleryHref,
+} from "@/lib/componentRegistry";
 
 type TokenUsage = {
   class: string;
@@ -21,7 +26,8 @@ type ChildComponent = {
 // uses, split into @theme tokens vs raw Tailwind palettes (drift) --
 // docs/direction/styling-cleanup.md, Task 1.
 export default function TokenInventoryPanel() {
-  const slug = useSelectedLayoutSegment();
+  const pathname = usePathname();
+  const slug = getComponentFromGalleryPathname(pathname)?.slug;
   const [tokens, setTokens] = useState<TokenUsage[] | null>(null);
   const [childComponents, setChildComponents] = useState<
     ChildComponent[] | null
@@ -97,7 +103,9 @@ export default function TokenInventoryPanel() {
               <li key={component.path}>
                 {component.slug ? (
                   <Link
-                    href={`/dev/components/${component.slug}`}
+                    href={getComponentGalleryHref(
+                      getRegistryEntry(component.slug),
+                    )}
                     className="inline-flex rounded border border-line-100 px-1.5 py-0.5 font-mono text-xs text-azure-700 hover:bg-old-lace-100"
                     title={component.path}
                   >
@@ -118,4 +126,12 @@ export default function TokenInventoryPanel() {
       </section>
     </div>
   );
+}
+
+function getRegistryEntry(slug: string) {
+  const component = componentRegistry.find((entry) => entry.slug === slug);
+  if (!component) {
+    throw new Error(`Missing component registry entry for ${slug}`);
+  }
+  return component;
 }

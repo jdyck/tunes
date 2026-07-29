@@ -175,3 +175,29 @@ export const componentRegistry = [
     path: "src/components/recording/YtMusicSearchResultRow.tsx",
   },
 ] as const;
+
+export type ComponentRegistryEntry = (typeof componentRegistry)[number];
+
+export function getComponentFolder(component: ComponentRegistryEntry) {
+  return component.path.split("/")[2];
+}
+
+export const componentFolders = Array.from(
+  new Set(componentRegistry.map(getComponentFolder)),
+).sort();
+
+export function getComponentsInFolder(folder: string) {
+  return componentRegistry.filter(
+    (component) => getComponentFolder(component) === folder,
+  );
+}
+
+export function getComponentGalleryHref(component: ComponentRegistryEntry) {
+  return `/dev/components/folders/${getComponentFolder(component)}/${component.slug}`;
+}
+
+export function getComponentFromGalleryPathname(pathname: string) {
+  return componentRegistry.find(
+    (component) => getComponentGalleryHref(component) === pathname,
+  );
+}

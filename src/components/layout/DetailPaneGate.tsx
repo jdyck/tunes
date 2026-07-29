@@ -23,7 +23,7 @@ export default function DetailPaneGate({
   }
 
   const message = pathname.startsWith("/dev/components")
-    ? "Pick a component from the menu."
+    ? "Pick a component folder from the menu."
     : pathname === "/artists"
       ? "Choose an artist to see their recordings."
       : "Choose a song, or add a song to get started.";
