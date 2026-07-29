@@ -11,6 +11,7 @@ import SongWritersEditor from "@/components/song/SongWritersEditor";
 import SongWorkResultsList from "@/components/song/SongWorkResultsList";
 import SaveStatusButton from "@/components/ui/SaveStatusButton";
 import FormField from "@/components/ui/FormField";
+import Switch from "@/components/ui/Switch";
 import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
 import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton";
 import WikipediaBackgroundCard from "@/components/song/WikipediaBackgroundCard";
@@ -451,14 +452,11 @@ export default function SongDetailContent({ id }: { id: string }) {
         >
           {isAdmin && (
             <label className="mb-5 flex items-start gap-3 rounded-md border border-line-200 p-3">
-              <input
-                type="checkbox"
+              <Switch
                 checked={song.is_discoverable}
                 disabled={!isSaved}
-                onChange={(event) =>
-                  handleDiscoverabilityChange(event.target.checked)
-                }
-                className="mt-1 disabled:opacity-50"
+                onChange={handleDiscoverabilityChange}
+                className="mt-1"
               />
               <span>
                 <span className="block font-semibold">Visible to all users</span>

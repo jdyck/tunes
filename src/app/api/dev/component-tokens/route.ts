@@ -20,6 +20,8 @@ const NOT_COLORS = new Set([
   "xs", "sm", "base", "lg", "xl", "t", "b", "l", "r", "x", "y", "s", "e",
 ]);
 
+const COMPONENT_IMPORT = /from\s+["']@\/components\/([^"']+)["']/g;
+
 export async function GET(request: NextRequest) {
   if (process.env.NODE_ENV !== "development") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -61,5 +63,27 @@ export async function GET(request: NextRequest) {
     }))
     .sort((a, b) => b.count - a.count);
 
-  return NextResponse.json({ component: entry.name, path: entry.path, tokens });
+  const childComponents = [...source.matchAll(COMPONENT_IMPORT)]
+    .map((match) => `src/components/${match[1]}.tsx`)
+    .filter((componentPath, index, all) => all.indexOf(componentPath) === index)
+    .map((componentPath) => {
+      const registered = componentRegistry.find(
+        (component) => component.path === componentPath
+      );
+      return {
+        name:
+          registered?.name ??
+          path.basename(componentPath, path.extname(componentPath)),
+        path: componentPath,
+        slug: registered?.slug ?? null,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return NextResponse.json({
+    component: entry.name,
+    path: entry.path,
+    tokens,
+    childComponents,
+  });
 }
