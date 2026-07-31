@@ -3,11 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { leagueGothic } from "@/lib/fonts";
-import { componentRegistry } from "@/lib/componentRegistry";
+import {
+  componentFolders,
+  getComponentFromGalleryPathname,
+  getComponentFolder,
+} from "@/lib/componentRegistry";
 import BackLink from "@/components/ui/BackLink";
 
 export default function ComponentsListPane() {
   const pathname = usePathname();
+  const selectedComponent = getComponentFromGalleryPathname(pathname);
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -20,12 +25,15 @@ export default function ComponentsListPane() {
 
       <div className="flex-1 overflow-y-auto overscroll-none px-4 pb-12">
         <ul>
-          {componentRegistry.map((c) => {
-            const isActive = pathname === `/dev/components/${c.slug}`;
+          {componentFolders.map((folder) => {
+            const isActive =
+              pathname === `/dev/components/folders/${folder}` ||
+              (selectedComponent !== undefined &&
+                getComponentFolder(selectedComponent) === folder);
             return (
-              <li key={c.slug}>
+              <li key={folder}>
                 <Link
-                  href={`/dev/components/${c.slug}`}
+                  href={`/dev/components/folders/${folder}`}
                   className={`relative flex items-center border-b border-border-default h-14 p-6 pl-0 hover:bg-merino-200 hover:border-b-0 hover:rounded-lg active:bg-cream-300 ${
                     isActive ? "bg-merino-200" : ""
                   }`}
@@ -33,7 +41,7 @@ export default function ComponentsListPane() {
                   <span
                     className={`pl-6 uppercase text-xl truncate min-w-0 ${leagueGothic.className}`}
                   >
-                    {c.name}
+                    {folder}
                   </span>
                   {isActive && (
                     <div className="w-2 h-full absolute bg-mojo-500 shrink-0" />

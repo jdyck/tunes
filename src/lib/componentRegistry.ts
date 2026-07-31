@@ -60,6 +60,11 @@ export const componentRegistry = [
     path: "src/components/ui/MusicBrainzLink.tsx",
   },
   {
+    slug: "nav-link",
+    name: "NavLink",
+    path: "src/components/ui/NavLink.tsx",
+  },
+  {
     slug: "notes-field",
     name: "NotesField",
     path: "src/components/ui/NotesField.tsx",
@@ -90,6 +95,11 @@ export const componentRegistry = [
     path: "src/components/recording/RecordingMatchSuggestion.tsx",
   },
   {
+    slug: "recording-result-toggle-button",
+    name: "RecordingResultToggleButton",
+    path: "src/components/recording/RecordingResultToggleButton.tsx",
+  },
+  {
     slug: "recording-thumbnail",
     name: "RecordingThumbnail",
     path: "src/components/recording/RecordingThumbnail.tsx",
@@ -108,6 +118,11 @@ export const componentRegistry = [
     slug: "song-work-results-list",
     name: "SongWorkResultsList",
     path: "src/components/song/SongWorkResultsList.tsx",
+  },
+  {
+    slug: "song-writer-credits",
+    name: "SongWriterCredits",
+    path: "src/components/song/SongWriterCredits.tsx",
   },
   {
     slug: "song-writers-editor",
@@ -130,6 +145,11 @@ export const componentRegistry = [
     path: "src/components/ui/SyncFromMusicBrainzButton.tsx",
   },
   {
+    slug: "switch",
+    name: "Switch",
+    path: "src/components/ui/Switch.tsx",
+  },
+  {
     slug: "tag-chip-input",
     name: "TagChipInput",
     path: "src/components/ui/TagChipInput.tsx",
@@ -138,6 +158,11 @@ export const componentRegistry = [
     slug: "wikipedia-background-card",
     name: "WikipediaBackgroundCard",
     path: "src/components/song/WikipediaBackgroundCard.tsx",
+  },
+  {
+    slug: "youtube-media-info-modal",
+    name: "YouTubeMediaInfoModal",
+    path: "src/components/recording/YouTubeMediaInfoModal.tsx",
   },
   {
     slug: "youtube-search-result-row",
@@ -150,3 +175,29 @@ export const componentRegistry = [
     path: "src/components/recording/YtMusicSearchResultRow.tsx",
   },
 ] as const;
+
+export type ComponentRegistryEntry = (typeof componentRegistry)[number];
+
+export function getComponentFolder(component: ComponentRegistryEntry) {
+  return component.path.split("/")[2];
+}
+
+export const componentFolders = Array.from(
+  new Set(componentRegistry.map(getComponentFolder)),
+).sort();
+
+export function getComponentsInFolder(folder: string) {
+  return componentRegistry.filter(
+    (component) => getComponentFolder(component) === folder,
+  );
+}
+
+export function getComponentGalleryHref(component: ComponentRegistryEntry) {
+  return `/dev/components/folders/${getComponentFolder(component)}/${component.slug}`;
+}
+
+export function getComponentFromGalleryPathname(pathname: string) {
+  return componentRegistry.find(
+    (component) => getComponentGalleryHref(component) === pathname,
+  );
+}
