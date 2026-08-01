@@ -6,6 +6,48 @@ Release Group, Release → representative edition, and Artist → credited Artis
 Calls stay server-side behind `musicbrainzTransport.ts`, and API routes return
 normalized app contracts rather than raw provider JSON.
 
+## Original Works, translations, and repertoire identity
+
+MusicBrainz may represent one piece of music as a family of related Works: an
+original instrumental composition or original-language Song plus separate
+translated or adapted lyric versions. Standards must not assume that the title
+printed on a Recording identifies the exact Work. In particular, an English
+title may be the common performance name, a literal translation, or a distinct
+lyric adaptation with its own lyricist and Work identity.
+
+For an instrumental repertoire Song, anchor `musicbrainz_work_id` to the
+original composition or original-language Work. A User who normally calls it
+by another title should use their private display title; the familiar title is
+not by itself a reason to replace the shared canonical Work identity. Examples
+include Portuguese `Desafinado` with recordings titled “Off Key” or “Slightly
+Out of Tune,” `Corcovado` with “Quiet Nights of Quiet Stars,” and `Meditação`
+with “Meditation.” MusicBrainz models several of those English lyrics as
+distinct later Works. `Wave` is more explicit still: MusicBrainz has an
+original instrumental Work and separate later English, Portuguese, and other
+lyric Works.
+
+Create a separate Standards Song for an adapted or translated Work when that
+exact lyric version matters independently—for example, the User sings it,
+needs the correct lyricist credit, or wants its Recordings kept distinct. Do
+not merge the original and adaptation credits into one Song merely because the
+melody is shared. Conversely, do not force an instrumental player to keep
+duplicate repertoire Songs solely because provider metadata divides the lyric
+versions.
+
+The current one-`musicbrainz_work_id` Song model cannot match every member of a
+Work family. Recording search for an original Work can miss a Recording linked
+only to a translated/adapted Work, while broad title search can return it
+without proving the relationship. Until Work-family matching exists, preserve
+the original Work anchor, keep text-search candidates visible, and require
+manual confirmation for the related lyric-version case.
+
+A future Work-family implementation should traverse explicit MusicBrainz
+translated-version, version-of, and basis relationships from the anchored
+Work; use those related Work IDs as matching evidence; and retain the exact
+Work relationship for each selected Recording. It must not treat title
+similarity alone as proof of family membership or silently change the Song's
+canonical Work and credits.
+
 ## Recording matching
 
 The normal flow is cheap and bounded for Vercel Hobby:
@@ -108,3 +150,7 @@ honest partial-success message if media persistence or enrichment fails.
   unmatched/manual editing paths have replacements.
 - Add normalized parent-Work choices and the editable Song “Part of” field as
   its own metadata-field task.
+- Add explicit Work-family discovery and Recording matching for translated and
+  adapted lyric versions. Keep this separate from the parent-Work “Part of”
+  hierarchy: derivation/translation and containment are different
+  relationships.
