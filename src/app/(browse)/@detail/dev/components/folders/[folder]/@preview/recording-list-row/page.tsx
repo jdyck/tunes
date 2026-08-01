@@ -6,6 +6,11 @@ const recording: SavedRecording = {
   song_id: "demo-song",
   name: "Autumn Leaves",
   artist: "Bill Evans Trio",
+  release_groups: {
+    id: "demo-release-group",
+    title: "Portrait in Jazz",
+    musicbrainz_release_group_id: "demo-mbid",
+  },
   user_data: {
     user_id: "demo-user",
     recording_id: "demo",

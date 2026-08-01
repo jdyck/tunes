@@ -29,6 +29,8 @@ import {
 import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
 import { useSavedRecordings } from "@/hooks/useSavedRecordings";
+import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
+import { recordingArtwork } from "@/utils/recordingArtwork";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import Modal from "@/components/ui/Modal";
 import {
@@ -94,6 +96,7 @@ export default function SongDetailContent({ id }: { id: string }) {
     loading: recordingsLoading,
     error: recordingsError,
     refresh: refreshRecordings,
+    reorder: reorderRecordings,
   } = useSavedRecordings(id);
 
   const [notes, setNotes] = useState("");
@@ -355,6 +358,14 @@ export default function SongDetailContent({ id }: { id: string }) {
     );
   if (!song) return <AsyncStateMessage>No song found.</AsyncStateMessage>;
 
+  // A Song has no artwork of its own -- it's a composition, and cover art
+  // belongs to a release (ADR-0007). The header borrows the first Recording's
+  // image as display context, which is this User's own top-ordered one.
+  const firstRecording = recordings[0];
+  const songArtwork = firstRecording
+    ? recordingArtwork(firstRecording)
+    : { src: null, fallbackSrc: null };
+
   const canEditShared = isAdmin || !song.is_discoverable;
   const titleEditsPrivate =
     song.is_discoverable || Boolean(song.user_data.display_title?.trim());
@@ -403,7 +414,16 @@ export default function SongDetailContent({ id }: { id: string }) {
             </div>
           </div>
           <div className="grow-0 w-40">
-            <div className="aspect-square bg-ink-500/10 w-36"></div>
+            {firstRecording ? (
+              <RecordingThumbnail
+                src={songArtwork.src}
+                fallbackSrc={songArtwork.fallbackSrc}
+                alt=""
+                className="aspect-square w-36"
+              />
+            ) : (
+              <div className="aspect-square bg-ink-500/10 w-36"></div>
+            )}
             <button
               type="button"
               aria-pressed={favorite}
@@ -440,6 +460,7 @@ export default function SongDetailContent({ id }: { id: string }) {
           onRecordingsChanged={() =>
             refreshRecordings({ showLoading: false })
           }
+          onReorder={reorderRecordings}
         />
         <SaveStatusButton isSaved={isSaved} className="block relative shrink-0 mt-1" onClick={handleSave} />
 

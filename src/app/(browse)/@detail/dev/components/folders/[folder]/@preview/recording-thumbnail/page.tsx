@@ -6,7 +6,7 @@ export default function RecordingThumbnailDemoPage() {
       <div>
         <p className="text-xs text-ink-600 mb-2">With image</p>
         <RecordingThumbnail
-          src="https://i.ytimg.com/vi/jNQXAC9IVRw/hqdefault.jpg"
+          src="https://i.ytimg.com/vi/jNQXAC9IVRw/mqdefault.jpg"
           className="w-20 h-16 rounded"
         />
       </div>

@@ -31,7 +31,10 @@ export default function RecordingThumbnail({
       <div
         className={`flex items-center justify-center bg-merino-200 ${className}`}
       >
-        <MusicalNoteIcon className="h-5 w-5 text-ink-400" />
+        {/* Sized as a fraction of the box rather than a fixed 20px, so the
+            note stays proportional whether it's a list row or the much larger
+            Song header. A quarter of an 80px row box is the original 20px. */}
+        <MusicalNoteIcon className="h-1/4 w-1/4 text-ink-400" />
       </div>
     );
   }
