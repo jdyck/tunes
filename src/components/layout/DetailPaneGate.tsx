@@ -29,7 +29,7 @@ export default function DetailPaneGate({
       : "Choose a song, or add a song to get started.";
 
   return (
-    <div className="hidden lg:flex lg:w-full lg:h-full lg:items-center lg:justify-center p-8 text-center text-ink-400">
+    <div className="hidden lg:flex lg:w-full lg:h-full lg:items-center lg:justify-center p-8 text-center text-text-muted">
       <p>{message}</p>
     </div>
   );

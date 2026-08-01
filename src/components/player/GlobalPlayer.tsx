@@ -226,7 +226,7 @@ export default function GlobalPlayer({
                 className="w-full"
                 aria-label="Seek"
               />
-              <div className="flex justify-between text-[10px] text-ink-400">
+              <div className="flex justify-between text-[10px] text-text-muted">
                 <span>{formatTime(progress)}</span>
                 <span>{formatTime(duration)}</span>
               </div>
@@ -253,7 +253,7 @@ export default function GlobalPlayer({
             </button>
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto px-4 py-3 items-center gap-3 text-ink-400">
+          <div className="max-w-3xl mx-auto px-4 py-3 items-center gap-3 text-text-muted">
             <div className={`flex gap-3`}>
               <div className={`bg-ink-800 w-10 h-10`}></div>
               <div className={`text-xs`}>

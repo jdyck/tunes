@@ -60,7 +60,7 @@ export default function TokenInventoryPanel() {
           Color tokens in source
         </h2>
         {tokens.length === 0 ? (
-          <p className="text-xs text-ink-400">No color classes found.</p>
+          <p className="text-xs text-text-muted">No color classes found.</p>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {tokens.map((t) => (
@@ -78,7 +78,7 @@ export default function TokenInventoryPanel() {
                   }}
                 />
                 {t.class}
-                {t.count > 1 && <span className="text-ink-400">×{t.count}</span>}
+                {t.count > 1 && <span className="text-text-muted">×{t.count}</span>}
               </li>
             ))}
           </ul>
@@ -96,7 +96,7 @@ export default function TokenInventoryPanel() {
           Child components in source
         </h2>
         {childComponents.length === 0 ? (
-          <p className="text-xs text-ink-400">No child components found.</p>
+          <p className="text-xs text-text-muted">No child components found.</p>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {childComponents.map((component) => (
