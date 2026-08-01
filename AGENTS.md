@@ -39,6 +39,7 @@ The folder scheme and lib/utils rule above are deliberate decisions (recorded in
 - Tailwind CSS
 - Supabase (`@supabase/supabase-js`) — auth + Postgres, client in `src/lib/supabaseClient.ts`; schema migrations in `supabase/migrations/` (applied with `npx supabase db push`)
 - Persistent custom player for Recordings, backed by the YouTube IFrame API (`src/components/player/GlobalPlayer.tsx`, `src/lib/youtube.ts`) — see [docs/direction/music-player.md](docs/direction/music-player.md)
+- dnd-kit (`@dnd-kit/core`, `/sortable`, `/utilities`) — drag-to-reorder for a User's Recordings within a Song (`src/components/song/RecordingsSection.tsx`). Order is private state: `useSavedRecordings.reorder` writes `user_recording_data.sort_order` directly under owner RLS. Do **not** persist order through the `update_saved_recording` RPC — it rewrites shared `recordings` fields as a side effect, and position within a Song is private to the User.
 
 ## Commands
 

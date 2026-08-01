@@ -128,8 +128,13 @@ export const extractYouTubeID = (url: string | null | undefined) => {
   return match?.[1] ?? null;
 };
 
+// mqdefault, not hqdefault: hqdefault is a 480x360 4:3 frame with black
+// letterbox bars baked in around 16:9 video, which survive an object-cover
+// crop into a square box. mqdefault is a clean 320x180 with no bars, and is
+// still larger than any box we render it in. Don't "upgrade" this to hq/sd --
+// those are the 4:3 ones. maxresdefault has no bars but 404s on many videos.
 export const youtubeThumbnailUrl = (videoId: string) =>
-  `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
 
 export const mergeSearchCategory = (
   current: YouTubeSearchCategory,

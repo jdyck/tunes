@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -27,6 +28,11 @@ export interface Playable {
 
 interface PlayerContextValue {
   play: (playable: Playable) => void;
+  // Which video the player is holding, and whether it is actually running.
+  // Enough for a list row to show itself as the one currently playing, without
+  // handing out the player's controls or its progress.
+  nowPlayingVideoId: string | null;
+  isPlaying: boolean;
 }
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -184,8 +190,16 @@ export default function GlobalPlayer({
     setDuration(0);
   }, [clearProgressPoll]);
 
+  // Memoized because progress polls twice a second: without this, every tick
+  // would hand consumers a new context object and re-render every recording row
+  // in the list along with it.
+  const playerValue = useMemo(
+    () => ({ play, nowPlayingVideoId: videoId, isPlaying }),
+    [play, videoId, isPlaying]
+  );
+
   return (
-    <PlayerContext.Provider value={{ play }}>
+    <PlayerContext.Provider value={playerValue}>
       {children}
 
       <div className="fixed bottom-0 inset-x-0 z-[var(--layer-player)] border-t border-line-100 bg-surface-app pb-[env(safe-area-inset-bottom)] lg:inset-x-auto lg:left-0 lg:w-64 lg:border-r">

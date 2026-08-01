@@ -10,6 +10,14 @@ composer credits, counts, labels, metadata, section eyebrows — is navy or ink.
 Cream and tan are surface. Nothing else is a brand color. Any color on screen
 must be explainable by this rule.
 
+**Bare icon controls are the exception: ink at rest, vermillion on hover.** A
+row of naked glyphs — play, chevron, drag handle — reads as clutter when every
+one of them is shouting in accent colour, and rows repeat down a list. They are
+still "things you do", so vermillion is what they resolve to on interaction;
+they just don't wear it at rest. This does not apply to controls with a filled
+container (buttons with a background), which stay vermillion throughout. The
+recordings list in `RecordingsSection.tsx` is the reference implementation.
+
 ## What is actually wrong
 
 Not the token file — `globals.css` already has primitives, semantic aliases, and
@@ -114,9 +122,13 @@ Native controls have no styling story at all: 5 raw `<select>`, 4 raw
 1. **Primitive rename + semantic repoint.** Mechanical, `globals.css` plus a
    find-and-replace across call sites. No visual change except where teal,
    green, and slate resolve to new values.
-2. **Green and slate purge.** 15 green usages → navy per the rule; 6 slate
-   usages → vermillion (`PrimaryButton`) or navy. Highest visual impact per
-   unit of effort.
+2. **Green and slate purge.** Green splits by what the usage means, not by
+   being green: success/confirmation states → navy, action controls → the
+   ink-at-rest/vermillion-on-hover treatment above. The recordings list is
+   already converted; ~15 green usages remain, concentrated in the auth forms,
+   `SaveStatusButton`, and the add/match result lists. 6 slate usages →
+   vermillion (`PrimaryButton`) or navy. Highest visual impact per unit of
+   effort.
 3. **Semantic adoption.** Convert the ~315 primitive call sites to layer-2
    roles, one component or page per commit. Auth pages get converted in the
    same pass their form components are extracted.

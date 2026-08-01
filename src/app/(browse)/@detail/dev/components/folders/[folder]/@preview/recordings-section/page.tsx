@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import RecordingsSection from "@/components/song/RecordingsSection";
 import { SavedRecording } from "@/types/types";
 
-const recordings: SavedRecording[] = [
+const initialRecordings: SavedRecording[] = [
   {
     id: "demo-1",
     song_id: "demo-song",
@@ -30,12 +31,25 @@ const recordings: SavedRecording[] = [
     song_id: "demo-song",
     name: "Autumn Leaves",
     artist: "Cannonball Adderley",
+    album: "Somethin' Else",
     user_data: { user_id: "demo-user", recording_id: "demo-2" },
+    youtube_items: [],
+  },
+  {
+    id: "demo-3",
+    song_id: "demo-song",
+    name: "Live at the Village Vanguard",
+    kind: "video_capture",
+    user_data: { user_id: "demo-user", recording_id: "demo-3" },
     youtube_items: [],
   },
 ];
 
 export default function RecordingsSectionDemoPage() {
+  // Held in state so the drag handles actually reorder here, without a
+  // database behind them.
+  const [recordings, setRecordings] = useState(initialRecordings);
+
   return (
     <div className="max-w-xl">
       <RecordingsSection
@@ -43,6 +57,10 @@ export default function RecordingsSectionDemoPage() {
         songTitle="Autumn Leaves"
         recordings={recordings}
         onRecordingsChanged={() => {}}
+        onReorder={async (reordered) => {
+          setRecordings(reordered);
+          return true;
+        }}
       />
     </div>
   );

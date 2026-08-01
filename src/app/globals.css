@@ -175,8 +175,8 @@
   --layer-browse-list: 10;
   --layer-browse-detail: 20;
   --layer-recording-detail: 30;
-  --layer-player: 40;
   --layer-modal: 50;
+  --layer-player: 60;
 }
 
 @layer base {

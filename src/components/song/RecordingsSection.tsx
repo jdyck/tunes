@@ -3,22 +3,155 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+// 24/outline rather than the app's usual 20/solid: these four glyphs sit in a
+// row and have to balance against each other, which only holds if they share a
+// viewBox and stroke weight. A solid play triangle next to a stroked chevron
+// is a weight mismatch no amount of sizing fixes.
 import {
-  ChevronRightIcon,
+  ArrowRightIcon,
+  Bars3Icon,
   PlayIcon,
-  PlusCircleIcon,
-} from "@heroicons/react/20/solid";
+} from "@heroicons/react/24/outline";
+// The one deliberate break from the outline set: the row that is actually
+// playing fills in. Same 24 viewBox, so it swaps in at the same size.
+import {
+  PlayIcon as PlayingIcon,
+  PlusIcon,
+} from "@heroicons/react/24/solid";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type Modifier,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import AddRecordingModal from "@/components/recording/AddRecordingModal";
 import RecordingListRow from "@/components/recording/RecordingListRow";
 import { SavedRecording } from "@/types/types";
 
+// A row can only move up and down the list, so drop the horizontal drift dnd-kit
+// would otherwise apply. Cheaper than pulling in @dnd-kit/modifiers for one line.
+const verticalOnly: Modifier = ({ transform }) => ({ ...transform, x: 0 });
+
+function SortableRecordingRow({
+  recording,
+  songId,
+  songTitle,
+  isSelected,
+  isReorderable,
+}: {
+  recording: SavedRecording;
+  songId: string;
+  songTitle: string;
+  isSelected: boolean;
+  isReorderable: boolean;
+}) {
+  const { play, nowPlayingVideoId, isPlaying } = usePlayer();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: recording.id, disabled: !isReorderable });
+  const youtubeItem = recording.youtube_items[0];
+  // Paused deliberately drops back to the resting state: the icon reports
+  // what the player is doing, not which row was last clicked.
+  const isNowPlaying =
+    isPlaying && Boolean(youtubeItem) && youtubeItem.video_id === nowPlayingVideoId;
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex items-stretch border-b hover:border-transparent hover:bg-merino-200 active:bg-merino-300 [&:has(+_li:hover)]:border-transparent ${
+        isDragging
+          ? "relative z-10 border-transparent bg-merino-200 shadow-md"
+          : isSelected
+            ? "border-transparent bg-merino-300"
+            : "border-border-default"
+      }`}
+    >
+      <Link
+        href={`/song/${songId}/recording/${recording.id}`}
+        aria-current={isSelected ? "page" : undefined}
+        className="flex flex-1 min-w-0"
+      >
+        <RecordingListRow recording={recording} />
+      </Link>
+      {youtubeItem && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            play({
+              name: recording.name,
+              songTitle,
+              artist: recording.artist,
+              kind: recording.kind,
+              youtubeVideoId: youtubeItem.video_id,
+            });
+          }}
+          aria-label={isNowPlaying ? "Now playing" : "Play recording"}
+          className={`p-3 shrink-0 self-center ${
+            isNowPlaying
+              ? "text-mojo-600"
+              : "text-ink-700 hover:text-mojo-600"
+          }`}
+        >
+          {isNowPlaying ? (
+            <PlayingIcon className="w-6 h-6" />
+          ) : (
+            <PlayIcon className="w-6 h-6" />
+          )}
+        </button>
+      )}
+      <Link
+        href={`/song/${songId}/recording/${recording.id}`}
+        aria-label="Open recording details"
+        className="p-3 text-ink-700 hover:text-mojo-600 shrink-0 self-center"
+      >
+        <ArrowRightIcon className="w-6 h-6" />
+      </Link>
+      {isReorderable && (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          aria-label={`Reorder ${recording.artist || recording.name}`}
+          // touch-none keeps a drag on the handle from scrolling the pane
+          // instead; the rest of the row still scrolls normally.
+          className={`touch-none p-3 text-ink-700 hover:text-mojo-600 shrink-0 self-center ${
+            isDragging ? "cursor-grabbing" : "cursor-grab"
+          }`}
+        >
+          <Bars3Icon className="w-6 h-6" />
+        </button>
+      )}
+    </li>
+  );
+}
+
 export default function RecordingsSection({
   songId,
   songTitle,
   recordings,
   onRecordingsChanged,
+  onReorder,
 }: {
   songId: string;
   songTitle: string;
@@ -28,13 +161,33 @@ export default function RecordingsSection({
     | null
     | void
     | Promise<SavedRecording[] | null | void>;
+  onReorder: (reordered: SavedRecording[]) => Promise<boolean>;
 }) {
-  const { play } = usePlayer();
   const { recordingId } = useParams<{ recordingId?: string | string[] }>();
   const [showAddRecording, setShowAddRecording] = useState(false);
   const selectedRecordingId = Array.isArray(recordingId)
     ? recordingId[0]
     : recordingId;
+  // Nothing to arrange with a single recording, so the handles stay hidden
+  // until ordering can actually mean something.
+  const isReorderable = recordings.length > 1;
+
+  const sensors = useSensors(
+    // A few pixels of travel before a drag starts, so a tap on the handle can
+    // still be a plain click (and a focus target for the keyboard sensor).
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = recordings.findIndex((r) => r.id === active.id);
+    const to = recordings.findIndex((r) => r.id === over.id);
+    if (from === -1 || to === -1) return;
+    void onReorder(arrayMove(recordings, from, to));
+  };
 
   return (
     <>
@@ -52,65 +205,37 @@ export default function RecordingsSection({
         <button
           onClick={() => setShowAddRecording(true)}
           aria-label="Add recording"
-          className="block p-2"
+          className={`border-[2] border-mojo-600 text-mojo-600 p-2 py-1.75 rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
         >
-          <PlusCircleIcon
-            className="h-6 w-6 text-green-600"
-            title="Add Recording"
-          />
+          <PlusIcon className="h-5 w-5" />
+          <span>Add</span>
         </button>
       </div>
       {recordings.length > 0 ? (
-        <ul>
-          {recordings.map((recording) => {
-            const youtubeItem = recording.youtube_items[0];
-            const isSelected = recording.id === selectedRecordingId;
-            return (
-              <li
-                key={recording.id}
-                className={`flex items-stretch border-b hover:border-transparent hover:bg-merino-200 active:bg-merino-300 [&:has(+_li:hover)]:border-transparent ${
-                  isSelected
-                    ? "border-transparent bg-merino-300"
-                    : "border-border-default"
-                }`}
-              >
-                <Link
-                  href={`/song/${songId}/recording/${recording.id}`}
-                  aria-current={isSelected ? "page" : undefined}
-                  className="flex flex-1 min-w-0"
-                >
-                  <RecordingListRow recording={recording} />
-                </Link>
-                {youtubeItem && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      play({
-                        name: recording.name,
-                        songTitle,
-                        artist: recording.artist,
-                        kind: recording.kind,
-                        youtubeVideoId: youtubeItem.video_id,
-                      });
-                    }}
-                    aria-label="Play recording"
-                    className="p-3 text-green-800 hover:text-green-900 shrink-0 self-center"
-                  >
-                    <PlayIcon className="w-6 h-6" />
-                  </button>
-                )}
-                <Link
-                  href={`/song/${songId}/recording/${recording.id}`}
-                  aria-label="Open recording details"
-                  className="p-3 text-ink-700 hover:text-ink-900 shrink-0 self-center"
-                >
-                  <ChevronRightIcon className="w-6 h-6" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[verticalOnly]}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={recordings.map((recording) => recording.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <ul>
+              {recordings.map((recording) => (
+                <SortableRecordingRow
+                  key={recording.id}
+                  recording={recording}
+                  songId={songId}
+                  songTitle={songTitle}
+                  isSelected={recording.id === selectedRecordingId}
+                  isReorderable={isReorderable}
+                />
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
       ) : (
         <p>No recordings found for this song.</p>
       )}
