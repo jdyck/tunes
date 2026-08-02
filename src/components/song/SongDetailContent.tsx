@@ -413,7 +413,7 @@ export default function SongDetailContent({ id }: { id: string }) {
               )}
             </div>
           </div>
-          <div className="grow-0 w-40">
+          <div className="grow-0 w-40 self-start">
             {firstRecording ? (
               <RecordingThumbnail
                 src={songArtwork.src}
