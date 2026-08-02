@@ -1,4 +1,3 @@
-import type { SavedRecording } from "../types/types.ts";
 import {
   coverArtUrl,
   releaseGroupCoverArtUrl,
@@ -10,6 +9,16 @@ export interface RecordingArtwork {
   fallbackSrc: string | null;
 }
 
+// The three things artwork is actually derived from, rather than a whole
+// `SavedRecording`. A full Recording satisfies this structurally, and so does
+// the much smaller row the Songs list fetches, which carries these fields and
+// nothing else.
+export interface RecordingArtworkSource {
+  musicbrainz_release_id?: string | null;
+  release_groups?: { musicbrainz_release_group_id: string } | null;
+  youtube_items: { video_id: string }[];
+}
+
 // Resolves the image chain for a Recording: Release Group cover first, then the
 // retained representative edition's art (ADR-0008), then the YouTube thumbnail
 // for recordings no release context covers at all.
@@ -19,7 +28,7 @@ export interface RecordingArtwork {
 // chain has to survive a failed *load*, which only the browser can detect.
 // `src` is what we believe is best; `fallbackSrc` is what to try when it fails.
 export const recordingArtwork = (
-  recording: SavedRecording
+  recording: RecordingArtworkSource
 ): RecordingArtwork => {
   const coverArt =
     releaseGroupCoverArtUrl(

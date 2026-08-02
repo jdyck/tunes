@@ -21,20 +21,20 @@ export const mapSongUserDataRow = (
   return { ...song, user_data: userData };
 };
 
-export const songWithUserDataSelect = `
+const songUserDataFields = `
   user_id,
   song_id,
   notes,
   display_title,
   favorite,
   tags,
-  created_at,
-  songs!inner(
+  created_at
+`;
+
+const sharedSongFields = `
     id,
     name,
     year,
-    wikipedia_extract,
-    wikipedia_url,
     musicbrainz_work_id,
     is_discoverable,
     first_discoverable_at,
@@ -45,5 +45,30 @@ export const songWithUserDataSelect = `
       sort_order,
       artists(id, name, kind, musicbrainz_artist_id)
     )
+`;
+
+// The Songs list fetches a User's whole library in one query -- it has no
+// pagination, because search, sorting, and the tag facet counts are all
+// computed across every Song. That makes per-row weight matter: it takes only
+// the fields the rows actually draw. `wikipedia_extract` in particular is a
+// paragraph of prose per Song that only the detail pane ever shows.
+export const songListSelect = `
+  ${songUserDataFields},
+  songs!inner(${sharedSongFields})
+`;
+
+// Detail additionally needs the Wikipedia background it renders and the Work
+// dates it writes back. The dates are not optional here: `useSongDetail.save`
+// always sends `work_date_start`/`work_date_end` among the shared fields, so a
+// select that omits them loads null and saves null over whatever the
+// MusicBrainz sync stored.
+export const songWithUserDataSelect = `
+  ${songUserDataFields},
+  songs!inner(
+    ${sharedSongFields},
+    wikipedia_extract,
+    wikipedia_url,
+    work_date_start,
+    work_date_end
   )
 `;
