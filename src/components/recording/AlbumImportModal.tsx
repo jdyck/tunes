@@ -215,7 +215,7 @@ export default function AlbumImportModal({
       <p className="mb-3 text-sm text-ink-600">
         Only tracks matching Songs already in your repertoire can be imported.
       </p>
-      {error && <p className="mb-3 text-sm text-mojo-600">{error}</p>}
+      {error && <p className="mb-3 text-sm text-vermillion-600">{error}</p>}
       {!album && (
         <div className="mb-4 flex gap-2">
           <input
@@ -228,7 +228,7 @@ export default function AlbumImportModal({
               }
             }}
             placeholder="Album and artist"
-            className="min-w-0 flex-1 rounded-md border border-line-200 p-2"
+            className="min-w-0 flex-1 rounded-md border border-paper-600 p-2"
           />
           <PrimaryButton onClick={searchAlbums} disabled={loading || !query.trim()}>
             Search
@@ -237,14 +237,14 @@ export default function AlbumImportModal({
       )}
 
       {albums.length > 0 && (
-        <ul className="mb-4 divide-y divide-line-200 rounded-md border border-line-200">
+        <ul className="mb-4 divide-y divide-paper-600 rounded-md border border-paper-600">
           {albums.map((result) => (
             <li key={result.albumId}>
               <button
                 type="button"
                 data-album-id={result.albumId}
                 onClick={() => chooseAlbum(result)}
-                className="flex w-full items-center gap-3 p-3 text-left hover:bg-old-lace-100"
+                className="flex w-full items-center gap-3 p-3 text-left hover:bg-paper-100"
               >
                 <RecordingThumbnail src={result.thumbnail} className="h-12 w-12 rounded" />
                 <span className="min-w-0">
@@ -269,14 +269,14 @@ export default function AlbumImportModal({
             </div>
           </div>
           <p className="mb-2 text-sm font-semibold">Choose the matching MusicBrainz release</p>
-          <ul className="mb-4 max-h-72 overflow-y-auto divide-y divide-line-200 rounded-md border border-line-200">
+          <ul className="mb-4 max-h-72 overflow-y-auto divide-y divide-paper-600 rounded-md border border-paper-600">
             {releases.map((release) => (
               <li key={release.releaseId}>
                 <button
                   type="button"
                   data-release-id={release.releaseId}
                   onClick={() => chooseRelease(release)}
-                  className="block w-full p-3 text-left hover:bg-old-lace-100"
+                  className="block w-full p-3 text-left hover:bg-paper-100"
                 >
                   <span className="block font-medium">{release.title}</span>
                   <span className="block text-xs text-ink-600">
@@ -293,7 +293,7 @@ export default function AlbumImportModal({
 
       {matches.length > 0 && (
         <>
-          <ul className="mb-4 max-h-80 overflow-y-auto divide-y divide-line-200 rounded-md border border-line-200">
+          <ul className="mb-4 max-h-80 overflow-y-auto divide-y divide-paper-600 rounded-md border border-paper-600">
             {matches.map((match) => (
               <li key={match.mediaTrack.videoId} className="flex gap-3 p-3">
                 <input
@@ -330,7 +330,7 @@ export default function AlbumImportModal({
         </>
       )}
       {loading && <p className="text-sm text-ink-600">Loading…</p>}
-      {!importing && progress && <p className="mt-3 text-sm text-teal-700">{progress}</p>}
+      {!importing && progress && <p className="mt-3 text-sm text-azure-900">{progress}</p>}
     </Modal>
   );
 }

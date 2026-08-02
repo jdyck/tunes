@@ -5,11 +5,11 @@ import { leagueGothic } from "@/lib/fonts";
 
 export default function BrowseSidebar() {
   return (
-    <aside className="flex flex-col lg:w-68 lg:shrink-0 lg:h-full bg-surface-app border-r border-line-100">
+    <aside className="flex flex-col lg:w-68 lg:shrink-0 lg:h-full bg-surface-app border-r border-paper-600">
       <div className="bg-azure-600 p-4 py-16 flex items-center justify-between -mt-15 lg:mt-0">
         <Link
           href="/"
-          className={` uppercase text-lg  items-center text-merino-100 ${leagueGothic.className}`}
+          className={` uppercase text-lg  items-center text-paper-100 ${leagueGothic.className}`}
         >
           <p className={`block text-shadow w-full text-6xl `}>Standards</p>
         </Link>

@@ -78,11 +78,11 @@ function SortableRecordingRow({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-stretch border-b hover:border-transparent hover:bg-merino-200 active:bg-merino-300 [&:has(+_li:hover)]:border-transparent ${
+      className={`flex items-stretch border-b hover:border-transparent hover:bg-paper-200 active:bg-paper-300 [&:has(+_li:hover)]:border-transparent ${
         isDragging
-          ? "relative z-10 border-transparent bg-merino-200 shadow-md"
+          ? "relative z-10 border-transparent bg-paper-200 shadow-md"
           : isSelected
-            ? "border-transparent bg-merino-300"
+            ? "border-transparent bg-paper-300"
             : "border-border-default"
       }`}
     >
@@ -109,8 +109,8 @@ function SortableRecordingRow({
           aria-label={isNowPlaying ? "Now playing" : "Play recording"}
           className={`p-3 shrink-0 self-center ${
             isNowPlaying
-              ? "text-mojo-600"
-              : "text-ink-700 hover:text-mojo-600"
+              ? "text-vermillion-600"
+              : "text-ink-700 hover:text-action"
           }`}
         >
           {isNowPlaying ? (
@@ -123,7 +123,7 @@ function SortableRecordingRow({
       <Link
         href={`/song/${songId}/recording/${recording.id}`}
         aria-label="Open recording details"
-        className="p-3 text-ink-700 hover:text-mojo-600 shrink-0 self-center"
+        className="p-3 text-ink-700 hover:text-action shrink-0 self-center"
       >
         <ArrowRightIcon className="w-6 h-6" />
       </Link>
@@ -135,7 +135,7 @@ function SortableRecordingRow({
           aria-label={`Reorder ${recording.artist || recording.name}`}
           // touch-none keeps a drag on the handle from scrolling the pane
           // instead; the rest of the row still scrolls normally.
-          className={`touch-none p-3 text-ink-700 hover:text-mojo-600 shrink-0 self-center ${
+          className={`touch-none p-3 text-ink-700 hover:text-action shrink-0 self-center ${
             isDragging ? "cursor-grabbing" : "cursor-grab"
           }`}
         >
@@ -193,11 +193,11 @@ export default function RecordingsSection({
     <>
       <div className="flex justify-between items-center mb-2 max-w-xl">
         <div className="flex items-center gap-2">
-          <h3 className={`text-mojo-700 text-2xl tracking-wide uppercase  ${leagueGothic.className}`}>
+          <h3 className={`text-vermillion-700 text-2xl tracking-wide uppercase  ${leagueGothic.className}`}>
             Recordings
           </h3>
           <span
-            className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
+            className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-vermillion-700 text-white text-xs ${robotoCondensed.className}`}
           >
             {recordings.length}
           </span>
@@ -205,7 +205,7 @@ export default function RecordingsSection({
         <button
           onClick={() => setShowAddRecording(true)}
           aria-label="Add recording"
-          className={`border-[2] border-mojo-600 text-mojo-600 p-2 py-1.75 rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
+          className={`border-[2] border-vermillion-600 text-vermillion-600 p-2 py-1.75 rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
         >
           <PlusIcon className="h-5 w-5" />
           <span>Add</span>

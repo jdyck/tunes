@@ -26,7 +26,7 @@ export default function FormFieldDemoPage() {
           onChange={(e) => setName(e.target.value)}
           className="block mb-2"
           labelClassName="block text-sm mb-1"
-          inputClassName="block w-full p-2 rounded-md border border-line-200"
+          inputClassName="block w-full p-2 rounded-md border border-paper-600"
           autoFocus
         />
       </div>

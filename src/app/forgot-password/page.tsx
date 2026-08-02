@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
         </p>
         <Link
           href="/login"
-          className="text-green-800 underline text-sm mt-4 inline-block"
+          className="text-azure-600 underline text-sm mt-4 inline-block"
         >
           Back to login
         </Link>
@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
         <button
           type="submit"
           disabled={sending}
-          className="bg-slate-800 text-white uppercase text-xs p-1.5 rounded flex items-center justify-center gap-2 disabled:opacity-70"
+          className="bg-action hover:bg-action-hover text-text-on-accent uppercase text-xs p-1.5 rounded flex items-center justify-center gap-2 disabled:opacity-70"
         >
           {sending ? (
             <>
@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
       {error && <FormStatusMessage className="mt-3">{error}</FormStatusMessage>}
       <Link
         href="/login"
-        className="text-green-800 underline text-xs mt-4 inline-block"
+        className="text-azure-600 underline text-xs mt-4 inline-block"
       >
         Back to login
       </Link>

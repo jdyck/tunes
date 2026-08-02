@@ -2,7 +2,7 @@ import PaneHeader from "@/components/layout/PaneHeader";
 
 export default function PaneHeaderDemoPage() {
   return (
-    <div className="max-w-md border border-line-200">
+    <div className="max-w-md border border-paper-600">
       <PaneHeader
         backHref="/dev/components/folders/layout"
         backLabel="Back"

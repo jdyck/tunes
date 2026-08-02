@@ -18,7 +18,7 @@ export default function AddRecordingMatchSuggestion({
   onCancel: () => void;
 }) {
   return (
-    <div className="p-3 rounded-md border border-line-200 flex gap-3">
+    <div className="p-3 rounded-md border border-paper-600 flex gap-3">
       <RecordingThumbnail
         src={coverArtUrl(match.releaseIdHint)}
         alt=""
@@ -49,7 +49,7 @@ export default function AddRecordingMatchSuggestion({
           <button
             type="button"
             onClick={onConfirm}
-            className="flex items-center gap-1 text-sm text-teal-700"
+            className="flex items-center gap-1 text-sm text-azure-900"
           >
             <CheckCircleIcon className="h-5 w-5" />
             Use this match

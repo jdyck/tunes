@@ -202,13 +202,13 @@ export default function GlobalPlayer({
     <PlayerContext.Provider value={playerValue}>
       {children}
 
-      <div className="fixed bottom-0 inset-x-0 z-[var(--layer-player)] border-t border-line-100 bg-surface-app pb-[env(safe-area-inset-bottom)] lg:inset-x-auto lg:left-0 lg:w-64 lg:border-r">
+      <div className="fixed bottom-0 inset-x-0 z-[var(--layer-player)] border-t border-paper-600 bg-surface-app pb-[env(safe-area-inset-bottom)] lg:inset-x-auto lg:left-0 lg:w-64 lg:border-r">
         {recording ? (
           <div className="max-w-3xl mx-auto px-4 py-2 flex items-center gap-3">
             <button
               onClick={togglePlayPause}
               aria-label={isPlaying ? "Pause" : "Play"}
-              className="text-green-800 shrink-0"
+              className="text-action hover:text-action-hover shrink-0"
             >
               {isPlaying ? (
                 <PauseIcon className="w-8 h-8" />

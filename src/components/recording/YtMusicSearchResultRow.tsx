@@ -42,7 +42,7 @@ export default function YtMusicSearchResultRow({
       <div className="flex items-center gap-2">
         <RecordingThumbnail
           src={result.thumbnail}
-          className="w-[60px] h-[45px] rounded border border-line-200 shrink-0"
+          className="w-[60px] h-[45px] rounded border border-paper-600 shrink-0"
         />
         <div className="flex-1 min-w-0">
           <p className="truncate">{result.title}</p>
@@ -75,7 +75,7 @@ export default function YtMusicSearchResultRow({
             onChange={(event) =>
               onKindChange(event.target.value as RecordingKind)
             }
-            className="ml-2 rounded border border-line-200 bg-transparent disabled:opacity-60"
+            className="ml-2 rounded border border-paper-600 bg-transparent disabled:opacity-60"
           >
             <option value="video_capture">Video capture</option>
             <option value="released">Released recording</option>
@@ -83,7 +83,7 @@ export default function YtMusicSearchResultRow({
         </label>
       )}
       {actionError && (
-        <p className="ml-[68px] mt-1 text-xs text-mojo-600" role="alert">
+        <p className="ml-[68px] mt-1 text-xs text-vermillion-600" role="alert">
           {actionError}
         </p>
       )}

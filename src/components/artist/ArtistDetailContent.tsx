@@ -111,7 +111,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
               <MusicBrainzLink
                 type="artist"
                 id={artist.musicbrainz_artist_id}
-                className="mt-2 block text-xs text-teal-700 underline"
+                className="mt-2 block text-xs text-azure-600 underline"
               />
             )}
           </div>
@@ -127,7 +127,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                   href={canonicalArtist.image_source_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 block text-right text-xs text-teal-700 underline"
+                  className="mt-1 block text-right text-xs text-azure-600 underline"
                 >
                   Image source
                   {canonicalArtist.image_license
@@ -142,21 +142,21 @@ export default function ArtistDetailContent({ id }: { id: string }) {
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
         {artistError && (
-          <p className="mb-3 text-sm text-mojo-600">{artistError}</p>
+          <p className="mb-3 text-sm text-vermillion-600">{artistError}</p>
         )}
         {recordingsError && (
-          <p className="mb-3 text-sm text-mojo-600">{recordingsError}</p>
+          <p className="mb-3 text-sm text-vermillion-600">{recordingsError}</p>
         )}
         {artistSongs.length > 0 && (
           <section className="mb-8">
             <div className="flex items-center gap-2 mb-2 max-w-xl">
               <h3
-                className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
+                className={`text-vermillion-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
               >
                 Songs
               </h3>
               <span
-                className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
+                className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-vermillion-700 text-white text-xs ${robotoCondensed.className}`}
               >
                 {artistSongs.length}
               </span>
@@ -170,7 +170,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                 >
                   <Link
                     href={`/song/${song.id}`}
-                    className={`flex items-center justify-between gap-2 border-b border-border-default p-4 pl-0 hover:bg-old-lace-100 hover:border-transparent hover:rounded-lg active:bg-old-lace-100 ${robotoCondensed.className}`}
+                    className={`flex items-center justify-between gap-2 border-b border-border-default p-4 pl-0 hover:bg-paper-100 hover:border-transparent hover:rounded-lg active:bg-paper-100 ${robotoCondensed.className}`}
                   >
                     <span className="min-w-0">
                       <span
@@ -200,12 +200,12 @@ export default function ArtistDetailContent({ id }: { id: string }) {
           <section>
             <div className="flex items-center gap-2 mb-2 max-w-xl">
               <h3
-                className={`text-mojo-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
+                className={`text-vermillion-700 text-2xl tracking-wide uppercase ${leagueGothic.className}`}
               >
                 Recordings
               </h3>
               <span
-                className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-mojo-700 text-white text-xs ${robotoCondensed.className}`}
+                className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-vermillion-700 text-white text-xs ${robotoCondensed.className}`}
               >
                 {recordings.length}
               </span>
@@ -219,7 +219,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                 return (
                   <li
                     key={recording.id}
-                    className="flex items-stretch border-b border-border-default hover:border-transparent hover:bg-merino-200 active:bg-merino-300 [&:has(+_li:hover)]:border-transparent"
+                    className="flex items-stretch border-b border-border-default hover:border-transparent hover:bg-paper-200 active:bg-paper-300 [&:has(+_li:hover)]:border-transparent"
                   >
                     <Link
                       href={`/song/${recording.song_id}/recording/${recording.id}`}
@@ -246,7 +246,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                           });
                         }}
                         aria-label="Play recording"
-                        className="p-3 text-green-800 hover:text-green-900 shrink-0 self-center"
+                        className="p-3 text-ink-700 hover:text-action shrink-0 self-center"
                       >
                         <PlayIcon className="w-6 h-6" />
                       </button>

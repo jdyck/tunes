@@ -1,7 +1,7 @@
 export default function SyncFromMusicBrainzButton({
   syncing,
   onClick,
-  className = "text-xs text-teal-700 underline disabled:opacity-70",
+  className = "text-xs text-azure-600 underline disabled:opacity-70",
 }: {
   syncing: boolean;
   onClick: () => void;

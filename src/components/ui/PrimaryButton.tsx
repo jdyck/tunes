@@ -6,7 +6,7 @@ export default function PrimaryButton({
   return (
     <button
       type={type}
-      className={`bg-slate-700 text-white rounded-lg ${className}`}
+      className={`bg-action hover:bg-action-hover text-text-on-accent rounded-lg ${className}`}
       {...props}
     />
   );

@@ -54,7 +54,7 @@ export default function TokenInventoryPanel() {
   const drift = tokens.filter((t) => !t.inTheme);
 
   return (
-    <div className="mt-8 space-y-5 border-t border-line-100 pt-4">
+    <div className="mt-8 space-y-5 border-t border-paper-600 pt-4">
       <section>
         <h2 className="text-xs uppercase tracking-wide text-ink-600 mb-2">
           Color tokens in source
@@ -67,12 +67,12 @@ export default function TokenInventoryPanel() {
               <li
                 key={t.class}
                 className={`flex items-center gap-1.5 rounded border px-1.5 py-0.5 text-xs font-mono ${
-                  t.inTheme ? "border-line-100 text-ink-600" : "border-mojo-600 text-mojo-600"
+                  t.inTheme ? "border-paper-600 text-ink-600" : "border-vermillion-600 text-vermillion-600"
                 }`}
                 title={t.inTheme ? "@theme token" : "raw Tailwind palette (drift)"}
               >
                 <span
-                  className="inline-block h-3 w-3 rounded-sm border border-line-100"
+                  className="inline-block h-3 w-3 rounded-sm border border-paper-600"
                   style={{
                     backgroundColor: `var(--color-${t.class.replace(/^.*?(?:bg|text|border|ring|fill|stroke|outline|decoration|divide|accent|caret|from|via|to)-/, "").replace("/", "-")}, transparent)`,
                   }}
@@ -84,7 +84,7 @@ export default function TokenInventoryPanel() {
           </ul>
         )}
         {drift.length > 0 && (
-          <p className="mt-2 text-xs text-mojo-600">
+          <p className="mt-2 text-xs text-vermillion-600">
             {drift.length} class{drift.length === 1 ? "" : "es"} outside the
             @theme palette — see docs/direction/styling-cleanup.md.
           </p>
@@ -106,14 +106,14 @@ export default function TokenInventoryPanel() {
                     href={getComponentGalleryHref(
                       getRegistryEntry(component.slug),
                     )}
-                    className="inline-flex rounded border border-line-100 px-1.5 py-0.5 font-mono text-xs text-azure-700 hover:bg-old-lace-100"
+                    className="inline-flex rounded border border-paper-600 px-1.5 py-0.5 font-mono text-xs text-azure-700 hover:bg-paper-100"
                     title={component.path}
                   >
                     {component.name}
                   </Link>
                 ) : (
                   <span
-                    className="inline-flex rounded border border-line-100 px-1.5 py-0.5 font-mono text-xs text-ink-600"
+                    className="inline-flex rounded border border-paper-600 px-1.5 py-0.5 font-mono text-xs text-ink-600"
                     title={`${component.path} (not in component library)`}
                   >
                     {component.name}

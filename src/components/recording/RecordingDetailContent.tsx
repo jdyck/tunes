@@ -441,7 +441,7 @@ export default function RecordingDetailContent({
                 youtubeVideoId: videoId,
               })
             }
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-800 text-white font-bold rounded-md hover:bg-green-900"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-action text-text-on-accent font-bold rounded-md hover:bg-action-hover"
           >
             <PlayIcon className="w-5 h-5" />
             Play
@@ -449,7 +449,7 @@ export default function RecordingDetailContent({
           <button
             type="button"
             onClick={() => setShowYouTubeMediaInfo(true)}
-            className="w-full rounded-md border border-line-200 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-old-lace-100"
+            className="w-full rounded-md border border-paper-600 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-paper-100"
           >
             YouTube media info
           </button>
@@ -578,7 +578,7 @@ export default function RecordingDetailContent({
               <SyncFromMusicBrainzButton
                 syncing={syncingFromMusicBrainz}
                 onClick={handleUpdateFromMusicBrainz}
-                className="text-xs text-teal-700 underline disabled:opacity-70 mr-3"
+                className="text-xs text-azure-600 underline disabled:opacity-70 mr-3"
               />
               <LinkButton variant="muted" onClick={handleChangeMatch}>
                 Change match
@@ -586,7 +586,7 @@ export default function RecordingDetailContent({
               <button
                 type="button"
                 onClick={handleRemoveMusicBrainzMatch}
-                className="ml-3 text-xs text-mojo-600 underline"
+                className="ml-3 text-xs text-vermillion-600 underline"
               >
                 Remove match
               </button>

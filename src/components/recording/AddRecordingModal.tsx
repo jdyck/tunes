@@ -415,7 +415,7 @@ export default function AddRecordingModal({
   return (
     <Modal title="Add a Recording" onClose={onClose}>
       {errorMessage && (
-        <p className="text-mojo-600 mb-2" role="alert">
+        <p className="text-vermillion-600 mb-2" role="alert">
           {errorMessage}
         </p>
       )}
@@ -431,8 +431,8 @@ export default function AddRecordingModal({
               onClick={() => handleSelectPlatform(platform.id)}
               className={`px-3 py-1 rounded-full text-sm border ${
                 activePlatform === platform.id
-                  ? "bg-slate-700 text-white border-slate-700"
-                  : "bg-transparent text-ink-600 border-line-200"
+                  ? "bg-azure-700 text-white border-azure-700"
+                  : "bg-transparent text-ink-600 border-paper-600"
               }`}
             >
               {platform.label}
@@ -451,7 +451,7 @@ export default function AddRecordingModal({
               handleSearch();
             }
           }}
-          inputClassName="block w-full p-2 rounded-md border border-line-200 mb-2"
+          inputClassName="block w-full p-2 rounded-md border border-paper-600 mb-2"
         />
         <PrimaryButton
           onClick={handleSearch}
@@ -461,7 +461,7 @@ export default function AddRecordingModal({
           {search.searching ? "Searching..." : "Search"}
         </PrimaryButton>
         {search.error && (
-          <p className="text-sm text-amber-700 mb-4">
+          <p className="text-sm text-vermillion-700 mb-4">
             {activePlatform === "ytmusic"
               ? "YouTube Music search isn't working right now. Try the YouTube tab instead."
               : search.error}
@@ -539,20 +539,20 @@ export default function AddRecordingModal({
         </>
       )}
 
-      <div className="mt-6 pt-4 border-t border-line-200">
+      <div className="mt-6 pt-4 border-t border-paper-600">
         <FormField
           label="Or add a YouTube URL"
           value={manualUrl}
           onChange={(event) => setManualUrl(event.target.value)}
           placeholder="https://www.youtube.com/watch?v=..."
-          inputClassName="block w-full p-2 rounded-md border border-line-200 my-2"
+          inputClassName="block w-full p-2 rounded-md border border-paper-600 my-2"
         />
         <label className="block text-sm mb-3">
           Recording kind
           <select
             value={manualKind}
             onChange={(event) => setManualKind(event.target.value as RecordingKind)}
-            className="block mt-1 p-2 rounded-md border border-line-200"
+            className="block mt-1 p-2 rounded-md border border-paper-600"
           >
             <option value="video_capture">Video capture</option>
             <option value="released">Released recording</option>
@@ -574,7 +574,7 @@ export default function AddRecordingModal({
                 : "Add URL"}
         </PrimaryButton>
         {manualSuccess && (
-          <p className="mt-2 text-sm text-green-800" role="status">
+          <p className="mt-2 text-sm text-azure-700" role="status">
             {manualSuccess}
           </p>
         )}

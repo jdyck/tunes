@@ -42,19 +42,19 @@ export default function TagChipInput({
       <label className="block text-xs text-ink-600" htmlFor="song-tags">
         {label}
       </label>
-      <div className="relative mt-1 rounded-md border border-line-200 bg-surface-app p-2">
+      <div className="relative mt-1 rounded-md border border-paper-600 bg-surface-app p-2">
         <div className="flex flex-wrap gap-2">
           {value.map((tag) => (
             <span
               key={tagKey(tag)}
-              className="inline-flex items-center gap-1 rounded-full bg-old-lace-200 px-2.5 py-1 text-sm text-ink-900"
+              className="inline-flex items-center gap-1 rounded-full bg-paper-200 px-2.5 py-1 text-sm text-ink-900"
             >
               {tag}
               <button
                 type="button"
                 onClick={() => onChange(value.filter((item) => tagKey(item) !== tagKey(tag)))}
                 aria-label={`Remove ${tag} tag`}
-                className="rounded-full p-0.5 hover:bg-merino-200"
+                className="rounded-full p-0.5 hover:bg-paper-200"
               >
                 <XMarkIcon className="h-3.5 w-3.5" />
               </button>
@@ -109,7 +109,7 @@ export default function TagChipInput({
           <div
             id={suggestionsId}
             role="listbox"
-            className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-line-200 bg-surface-app py-1 shadow-md"
+            className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-paper-600 bg-surface-app py-1 shadow-md"
           >
             {availableSuggestions.map((tag, index) => (
               <button
@@ -120,8 +120,8 @@ export default function TagChipInput({
                 aria-selected={index === activeSuggestion}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => commit(tag)}
-                className={`block w-full px-3 py-2 text-left text-sm hover:bg-old-lace-100 ${
-                  index === activeSuggestion ? "bg-old-lace-100" : ""
+                className={`block w-full px-3 py-2 text-left text-sm hover:bg-paper-100 ${
+                  index === activeSuggestion ? "bg-paper-100" : ""
                 }`}
               >
                 {tag}

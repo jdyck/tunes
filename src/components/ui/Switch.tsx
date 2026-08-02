@@ -30,7 +30,7 @@ export default function Switch({
       />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-merino-100 shadow-sm transition-transform duration-med ease-standard peer-checked:translate-x-5 peer-disabled:opacity-70"
+        className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-paper-100 shadow-sm transition-transform duration-med ease-standard peer-checked:translate-x-5 peer-disabled:opacity-70"
       />
     </span>
   );

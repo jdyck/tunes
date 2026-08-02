@@ -212,7 +212,7 @@ export default function ArtistsListPane() {
                 type="button"
                 onClick={() => setListState((state) => ({ ...state, search: "" }))}
                 aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-ink-600 hover:bg-merino-200 hover:text-ink-900"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-ink-600 hover:bg-paper-200 hover:text-ink-900"
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
@@ -237,7 +237,7 @@ export default function ArtistsListPane() {
             <button
               type="button"
               onClick={() => setShowSortMenu((open) => !open)}
-              className="px-2 py-1 rounded-sm font-semibold text-ink-800 hover:bg-merino-200"
+              className="px-2 py-1 rounded-sm font-semibold text-ink-800 hover:bg-paper-200"
               aria-haspopup="menu"
               aria-expanded={showSortMenu}
             >
@@ -251,7 +251,7 @@ export default function ArtistsListPane() {
                   sortDirection: state.sortDirection === "asc" ? "desc" : "asc",
                 }))
               }
-              className="p-1 rounded-sm text-ink-800 hover:bg-merino-200"
+              className="p-1 rounded-sm text-ink-800 hover:bg-paper-200"
               aria-label={`Sort ${
                 sortDirection === "asc" ? "descending" : "ascending"
               }`}
@@ -265,7 +265,7 @@ export default function ArtistsListPane() {
             {showSortMenu && (
               <div
                 role="menu"
-                className="absolute right-0 top-full z-20 mt-1 min-w-24 rounded-md border border-line-200 bg-surface-app py-1 shadow-md"
+                className="absolute right-0 top-full z-20 mt-1 min-w-24 rounded-md border border-paper-600 bg-surface-app py-1 shadow-md"
               >
                 {(["name", "songs", "recordings"] as SortKey[]).map((key) => (
                   <button
@@ -276,7 +276,7 @@ export default function ArtistsListPane() {
                       setListState((state) => ({ ...state, sortKey: key }));
                       setShowSortMenu(false);
                     }}
-                    className={`block w-full px-3 py-1.5 text-left hover:bg-old-lace-100 ${
+                    className={`block w-full px-3 py-1.5 text-left hover:bg-paper-100 ${
                       sortKey === key ? "font-semibold text-ink-900" : ""
                     }`}
                   >
@@ -293,7 +293,7 @@ export default function ArtistsListPane() {
         {loading ? (
           <ArtistsListSkeleton />
         ) : error ? (
-          <p className="text-mojo-600">{error}</p>
+          <p className="text-vermillion-600">{error}</p>
         ) : visibleArtists.length > 0 ? (
           <ul>
             {visibleArtists.map((artist) => {
@@ -305,13 +305,13 @@ export default function ArtistsListPane() {
                 >
                   <Link
                     href={`/artist/${artist.id}`}
-                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-old-lace-100 hover:border-transparent hover:rounded-lg active:bg-old-lace-100 ${
-                      isActive ? "bg-old-lace-100" : ""
+                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-paper-100 hover:border-transparent hover:rounded-lg active:bg-paper-100 ${
+                      isActive ? "bg-paper-100" : ""
                     }`}
                   >
                     <ArtistRow artist={artist} />
                     {isActive && (
-                      <div className="w-2 h-full absolute bg-mojo-700 shrink-0" />
+                      <div className="w-2 h-full absolute bg-vermillion-700 shrink-0" />
                     )}
                   </Link>
                 </li>

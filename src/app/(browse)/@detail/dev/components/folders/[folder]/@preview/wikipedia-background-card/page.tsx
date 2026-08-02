@@ -17,7 +17,7 @@ export default function WikipediaBackgroundCardDemoPage() {
           <button
             type="button"
             onClick={() => setRemoved(false)}
-            className="text-xs text-teal-700 underline"
+            className="text-xs text-azure-600 underline"
           >
             Restore
           </button>
@@ -35,7 +35,7 @@ export default function WikipediaBackgroundCardDemoPage() {
         <WikipediaBackgroundCard
           extract={extract}
           url="https://en.wikipedia.org/wiki/Autumn_Leaves_(song)"
-          className="p-3 rounded-md border border-line-200"
+          className="p-3 rounded-md border border-paper-600"
         />
       </div>
     </div>

@@ -17,9 +17,9 @@ export default function SaveStatusButton({
       className={className}
     >
       {isSaved ? (
-        <BoltIcon className="h-5 w-5 text-green-600" />
+        <BoltIcon className="h-5 w-5 text-azure-600" />
       ) : (
-        <BoltSlashIcon className="h-5 w-5 text-mojo-600" />
+        <BoltSlashIcon className="h-5 w-5 text-vermillion-600" />
       )}
     </button>
   );

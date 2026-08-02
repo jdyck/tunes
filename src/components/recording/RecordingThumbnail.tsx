@@ -29,7 +29,7 @@ export default function RecordingThumbnail({
   if (!activeSrc || failedFallback) {
     return (
       <div
-        className={`flex items-center justify-center bg-merino-200 ${className}`}
+        className={`flex items-center justify-center bg-paper-200 ${className}`}
       >
         {/* Sized as a fraction of the box rather than a fixed 20px, so the
             note stays proportional whether it's a list row or the much larger
