@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
@@ -31,9 +31,18 @@ import {
   SongFilters,
 } from "@/utils/songFilters";
 import { collectTags, hasTag, tagKey } from "@/utils/songTags";
+import { useSongArtwork } from "@/hooks/useSongArtwork";
+import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
+import type { RecordingArtwork } from "@/utils/recordingArtwork";
 
 type SortKey = "title" | "writers" | "date" | "added";
 type SortDirection = "asc" | "desc";
+
+// How many rows are added each time the list grows. The whole library is
+// already in memory -- search, sorting, and the tag facet counts all need it --
+// so this windows the *rendering* only, which is what keeps a large library
+// from mounting hundreds of rows and firing a cover-art request for each.
+const songsPerPage = 50;
 
 interface SongsListState extends SongFilters {
   search: string;
@@ -98,7 +107,11 @@ export default function SongsListPane() {
   const [showAddSong, setShowAddSong] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(songsPerPage);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const userId = user?.id;
+  const artworkBySong = useSongArtwork(userId);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -179,6 +192,40 @@ export default function SongsListPane() {
       return sortDirection === "asc" ? comparison : -comparison;
     });
   }, [filters, searchMatchedSongs, sortDirection, sortKey]);
+
+  const renderedSongs = visibleSongs.slice(0, visibleCount);
+  const hasMoreSongs = visibleCount < visibleSongs.length;
+
+  // Searching, sorting, or filtering produces a different list, so the window
+  // starts over rather than stranding the User partway down the previous one.
+  useEffect(() => {
+    setVisibleCount(songsPerPage);
+  }, [listState]);
+
+  useEffect(() => {
+    if (!hasMoreSongs) return;
+    const sentinel = loadMoreRef.current;
+    const scrollContainer = scrollRef.current;
+    if (!sentinel || !scrollContainer) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount((count) => count + songsPerPage);
+        }
+      },
+      // Grow before the sentinel is actually reached, so the list extends
+      // during the scroll instead of after it stops.
+      { root: scrollContainer, rootMargin: "400px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+    // Re-creating the observer on `visibleCount` is deliberate: an observer
+    // reports intersection *changes*, so on a viewport tall enough that the
+    // sentinel stays in view after a page is added, only a fresh observer
+    // reports it again and lets the window keep growing.
+  }, [hasMoreSongs, visibleCount]);
 
   const allTags = useMemo(
     () => collectTags(songs.map((song) => song.user_data.tags)),
@@ -325,32 +372,40 @@ export default function SongsListPane() {
 
       </PaneHeader>
 
-      <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-12">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto overscroll-none p-4 pb-12"
+      >
         {loading ? (
           <SongsListSkeleton />
         ) : error ? (
           <p className="text-vermillion-600">{error}</p>
         ) : visibleSongs.length > 0 ? (
-          <ul>
-            {visibleSongs.map((song) => {
-              const isActive = pathname.startsWith(`/song/${song.id}`);
-              return (
-                <li key={song.id} className="[&:has(+_li:hover)>a]:border-transparent">
-                  <Link
-                    href={`/song/${song.id}`}
-                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-paper-100 hover:border-transparent hover:rounded-lg active:bg-paper-100 ${
-                      isActive ? "bg-paper-100" : ""
-                    }`}
-                  >
-                    <SongRow song={song} />
-                    {isActive && (
-                      <div className="w-2 h-full absolute bg-vermillion-700 shrink-0" />
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <ul>
+              {renderedSongs.map((song) => {
+                const isActive = pathname.startsWith(`/song/${song.id}`);
+                return (
+                  <li key={song.id} className="[&:has(+_li:hover)>a]:border-transparent">
+                    <Link
+                      href={`/song/${song.id}`}
+                      className={`relative flex items-center gap-3 border-b border-border-default h-20 p-6 pl-0 hover:bg-paper-100 hover:border-transparent hover:rounded-lg active:bg-paper-100 ${
+                        isActive ? "bg-paper-100" : ""
+                      }`}
+                    >
+                      <SongRow song={song} artwork={artworkBySong.get(song.id)} />
+                      {isActive && (
+                        <div className="w-2 h-full absolute bg-vermillion-700 shrink-0" />
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+            {hasMoreSongs && (
+              <div ref={loadMoreRef} aria-hidden="true" className="h-1" />
+            )}
+          </>
         ) : songs.length > 0 ? (
           <p>No songs match “{search}”.</p>
         ) : (
@@ -469,8 +524,9 @@ function SongsListSkeleton() {
       <ul aria-hidden="true">
         {Array.from({ length: 5 }, (_, index) => (
           <li key={index}>
-            <div className="flex h-20 items-center gap-2 border-b border-border-default p-6 pl-0">
-              <div className="min-w-0 flex-1 animate-pulse pl-6">
+            <div className="flex h-20 items-center gap-3 border-b border-border-default p-6 pl-0">
+              <div className="ml-6 h-14 w-14 shrink-0 animate-pulse rounded-sm bg-surface-sunken" />
+              <div className="min-w-0 flex-1 animate-pulse">
                 <div className="flex items-start justify-between gap-2">
                   <div className="h-5 w-2/3 rounded-sm bg-surface-sunken" />
                   <div className="h-4 w-10 shrink-0 rounded-sm bg-surface-sunken" />
@@ -485,33 +541,52 @@ function SongsListSkeleton() {
   );
 }
 
-function SongRow({ song }: { song: SongWithUserData }) {
+function SongRow({
+  song,
+  artwork,
+}: {
+  song: SongWithUserData;
+  artwork?: RecordingArtwork;
+}) {
   const credit = formatWriterCredit(song.song_artist_credits ?? []);
   const title = effectiveSongTitle(song, song.user_data);
   return (
-    <div className={`pl-6 flex-1 min-w-0 ${robotoCondensed.className}`}>
-      <div className="flex justify-between items-start gap-2 tracking-wider">
-        <div className="flex min-w-0 items-center gap-1">
-          <span className={`${leagueGothic.className} min-w-0 truncate uppercase text-xl`}>
-            {title}
-          </span>
-          {song.user_data.favorite && (
-            <>
-              <StarIcon
-                className="h-4 w-4 shrink-0 text-vermillion-600"
-                aria-hidden="true"
-              />
-              <span className="sr-only">Favorite</span>
-            </>
+    <>
+      {/* A Song has no artwork of its own (ADR-0007); this is its
+          representative Recording's cover, the same one the detail header
+          borrows. Kept decorative -- the title beside it already names the row. */}
+      <div className="ml-6 h-14 w-14 shrink-0 overflow-hidden rounded-sm">
+        <RecordingThumbnail
+          src={artwork?.src}
+          fallbackSrc={artwork?.fallbackSrc}
+          alt=""
+          className="h-full w-full"
+        />
+      </div>
+      <div className={`flex-1 min-w-0 ${robotoCondensed.className}`}>
+        <div className="flex justify-between items-start gap-2 tracking-wider">
+          <div className="flex min-w-0 items-center gap-1">
+            <span className={`${leagueGothic.className} min-w-0 truncate uppercase text-xl`}>
+              {title}
+            </span>
+            {song.user_data.favorite && (
+              <>
+                <StarIcon
+                  className="h-4 w-4 shrink-0 text-vermillion-600"
+                  aria-hidden="true"
+                />
+                <span className="sr-only">Favorite</span>
+              </>
+            )}
+          </div>
+          {song.year && (
+            <span className="text-sm text-ink-900 shrink-0">{song.year}</span>
           )}
         </div>
-        {song.year && (
-          <span className="text-sm text-ink-900 shrink-0">{song.year}</span>
+        {credit && (
+          <div className="text-sm tracking-wide text-ink-600 truncate">{credit}</div>
         )}
       </div>
-      {credit && (
-        <div className="text-sm tracking-wide text-ink-600 truncate">{credit}</div>
-      )}
-    </div>
+    </>
   );
 }

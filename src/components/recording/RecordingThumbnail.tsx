@@ -43,6 +43,9 @@ export default function RecordingThumbnail({
     <img
       src={activeSrc}
       alt={alt}
+      // Lists can mount many of these at once, and cover art comes from a
+      // third party that is slow to 404 -- only ask for the ones on screen.
+      loading="lazy"
       className={`object-cover ${className}`}
       onError={() => {
         if (!failedPrimary && fallbackSrc) setFailedPrimary(true);

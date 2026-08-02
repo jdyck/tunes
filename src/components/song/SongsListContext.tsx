@@ -4,10 +4,7 @@ import { createContext, useCallback, useContext, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { SongWithUserData } from "@/types/types";
 import { WriterInput } from "@/lib/songWriters";
-import {
-  mapSongUserDataRow,
-  songWithUserDataSelect,
-} from "@/lib/songs";
+import { mapSongUserDataRow, songListSelect } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
 
 type SongPatch = Partial<Omit<SongWithUserData, "song_artist_credits" | "user_data">> & {
@@ -40,7 +37,7 @@ export function SongsListProvider({
     setError(null);
     const { data, error } = await supabase
       .from("song_user_data")
-      .select(songWithUserDataSelect)
+      .select(songListSelect)
       .eq("user_id", userId);
 
     if (error) {
