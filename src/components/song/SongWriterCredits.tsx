@@ -37,7 +37,7 @@ function WriterLink({ writer }: { writer: WriterInput }) {
   const name = writer.creditedAs.trim();
 
   return writer.artistId ? (
-    <Link href={`/artist/${writer.artistId}`} className="hover:text-azure-500">
+    <Link href={`/artist/${writer.artistId}`} className="hover:text-azure-600">
       {name}
     </Link>
   ) : (

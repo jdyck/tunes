@@ -34,8 +34,8 @@ export default function ComponentsListPane() {
               <li key={folder}>
                 <Link
                   href={`/dev/components/folders/${folder}`}
-                  className={`relative flex items-center border-b border-border-default h-14 p-6 pl-0 hover:bg-merino-200 hover:border-b-0 hover:rounded-lg active:bg-cream-300 ${
-                    isActive ? "bg-merino-200" : ""
+                  className={`relative flex items-center border-b border-border-default h-14 p-6 pl-0 hover:bg-paper-200 hover:border-b-0 hover:rounded-lg active:bg-cream-300 ${
+                    isActive ? "bg-paper-200" : ""
                   }`}
                 >
                   <span
@@ -44,7 +44,7 @@ export default function ComponentsListPane() {
                     {folder}
                   </span>
                   {isActive && (
-                    <div className="w-2 h-full absolute bg-mojo-500 shrink-0" />
+                    <div className="w-2 h-full absolute bg-vermillion-500 shrink-0" />
                   )}
                 </Link>
               </li>

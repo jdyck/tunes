@@ -1,7 +1,7 @@
 export default function MusicBrainzLink({
   type,
   id,
-  className = "block text-xs text-teal-700 underline mb-1",
+  className = "block text-xs text-azure-600 underline mb-1",
 }: {
   type: "artist" | "recording" | "work";
   id: string;

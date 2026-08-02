@@ -30,7 +30,7 @@ const recording: SavedRecording = {
 
 export default function RecordingListRowDemoPage() {
   return (
-    <div className="max-w-md border border-line-100 rounded-lg overflow-hidden">
+    <div className="max-w-md border border-paper-600 rounded-lg overflow-hidden">
       <RecordingListRow recording={recording} />
     </div>
   );

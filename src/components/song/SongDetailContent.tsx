@@ -406,7 +406,7 @@ export default function SongDetailContent({ id }: { id: string }) {
                   type="button"
                   onClick={() => setShowWritersEditor(true)}
                   aria-label="Edit writers"
-                  className="shrink-0 rounded-sm p-1 text-azure-600 hover:bg-merino-200 hover:text-azure-500"
+                  className="shrink-0 rounded-sm p-1 text-azure-600 hover:bg-paper-200 hover:text-azure-500"
                 >
                   <PencilIcon className="h-5 w-5" />
                 </button>
@@ -435,7 +435,7 @@ export default function SongDetailContent({ id }: { id: string }) {
                   if (!saved) setIsSaved(false);
                 });
               }}
-              className="mt-2 flex w-36 justify-center rounded-sm p-1 text-mojo-600 hover:bg-merino-200"
+              className="mt-2 flex w-36 justify-center rounded-sm p-1 text-vermillion-600 hover:bg-paper-200"
             >
               {favorite ? (
                 <SolidStarIcon className="h-7 w-7" />
@@ -449,7 +449,7 @@ export default function SongDetailContent({ id }: { id: string }) {
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
         {(error || recordingsError) && (
-          <p className="mb-3 text-sm text-mojo-600">
+          <p className="mb-3 text-sm text-vermillion-600">
             {error || recordingsError}
           </p>
         )}
@@ -472,7 +472,7 @@ export default function SongDetailContent({ id }: { id: string }) {
           }}
         >
           {isAdmin && (
-            <label className="mb-5 flex items-start gap-3 rounded-md border border-line-200 p-3">
+            <label className="mb-5 flex items-start gap-3 rounded-md border border-paper-600 p-3">
               <Switch
                 checked={song.is_discoverable}
                 disabled={!isSaved}
@@ -578,7 +578,7 @@ export default function SongDetailContent({ id }: { id: string }) {
                         : handleOpenBackgroundSearch
                     }
                     disabled={lookingUpBackground}
-                    className="text-sm text-teal-700 underline disabled:opacity-70"
+                    className="text-sm text-azure-600 underline disabled:opacity-70"
                   >
                     {lookingUpBackground ? "Looking up..." : "Look up background"}
                   </button>
@@ -604,7 +604,7 @@ export default function SongDetailContent({ id }: { id: string }) {
           type="button"
           onClick={handleRemove}
           disabled={removing}
-          className="mt-4 w-full rounded-md bg-mojo-600 px-4 py-2 font-bold text-white hover:bg-mojo-700 disabled:opacity-60"
+          className="mt-4 w-full rounded-md bg-vermillion-600 px-4 py-2 font-bold text-white hover:bg-vermillion-700 disabled:opacity-60"
         >
           {removing ? "Checking..." : "Remove Song"}
         </button>

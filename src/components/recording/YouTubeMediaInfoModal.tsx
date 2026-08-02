@@ -22,7 +22,7 @@ const formatTimestamp = (value: string | null | undefined): string => {
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-3 border-b border-line-100 py-2 last:border-b-0">
+    <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-3 border-b border-paper-600 py-2 last:border-b-0">
       <dt className="text-xs font-semibold uppercase tracking-wide text-ink-600">
         {label}
       </dt>
@@ -49,7 +49,7 @@ export default function YouTubeMediaInfoModal({
         {items.map((item, index) => (
           <section
             key={item.video_id}
-            className="rounded-md border border-line-200 p-3"
+            className="rounded-md border border-paper-600 p-3"
           >
             {items.length > 1 && (
               <h3 className="mb-2 font-semibold">Media {index + 1}</h3>
@@ -86,7 +86,7 @@ export default function YouTubeMediaInfoModal({
                     href={`https://www.youtube.com/watch?v=${item.video_id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-teal-700 underline"
+                    className="text-azure-900 underline"
                   >
                     {item.video_id}
                   </a>
@@ -100,7 +100,7 @@ export default function YouTubeMediaInfoModal({
                       href={`https://music.youtube.com/channel/${item.ytmusic_artist_id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-teal-700 underline"
+                      className="text-azure-900 underline"
                     >
                       {item.ytmusic_artist_name || item.ytmusic_artist_id}
                     </a>
@@ -117,7 +117,7 @@ export default function YouTubeMediaInfoModal({
                       href={`https://music.youtube.com/browse/${item.ytmusic_album_id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-teal-700 underline"
+                      className="text-azure-900 underline"
                     >
                       {item.ytmusic_album_name || item.ytmusic_album_id}
                     </a>

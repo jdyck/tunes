@@ -34,7 +34,7 @@ export default function SongWritersEditor({
       {value.map((row, index) => (
         <div key={index} className="flex items-center gap-2 mb-2">
           <input
-            className="flex-1 min-w-0 p-2 rounded-md border border-line-200"
+            className="flex-1 min-w-0 p-2 rounded-md border border-paper-600"
             type="text"
             placeholder="Name"
             value={row.creditedAs}
@@ -49,7 +49,7 @@ export default function SongWritersEditor({
             }
           />
           <select
-            className="p-2 rounded-md border border-line-200"
+            className="p-2 rounded-md border border-paper-600"
             value={row.role}
             onChange={(e) =>
               updateRow(index, {
@@ -76,7 +76,7 @@ export default function SongWritersEditor({
       <button
         type="button"
         onClick={addRow}
-        className="text-sm text-teal-700 underline"
+        className="text-sm text-azure-600 underline"
       >
         + Add writer
       </button>

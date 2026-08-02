@@ -37,8 +37,8 @@ export default function SongWorkResultsList({
                 })()}
               </p>
             </div>
-            <button type="button" onClick={() => onSelect(result)} title="Use this match">
-              <PlusCircleIcon className="h-6 w-6 text-green-600" />
+            <button type="button" onClick={() => onSelect(result)} title="Use this match" className="text-ink-700 hover:text-action">
+              <PlusCircleIcon className="h-6 w-6" />
             </button>
           </div>
         </li>

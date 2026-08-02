@@ -34,11 +34,11 @@ export default function RecordingResultToggleButton({
       className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full disabled:cursor-wait"
     >
       {pending ? (
-        <Spinner className="h-7 w-7 text-green-700" />
+        <Spinner className="h-7 w-7 text-azure-700" />
       ) : saved ? (
-        <CheckCircleIcon className="h-8 w-8 text-green-700" />
+        <CheckCircleIcon className="h-8 w-8 text-azure-700" />
       ) : (
-        <PlusCircleIcon className="h-8 w-8 text-green-600" />
+        <PlusCircleIcon className="h-8 w-8 text-ink-700 hover:text-action" />
       )}
     </button>
   );

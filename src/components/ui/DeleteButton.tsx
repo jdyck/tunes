@@ -3,7 +3,7 @@ export default function DeleteButton({
   confirmMessage,
   onDelete,
   actionLabel,
-  className = "mt-4 w-full px-4 py-2 bg-mojo-600 text-white font-bold rounded-md hover:bg-mojo-700",
+  className = "mt-4 w-full px-4 py-2 bg-vermillion-600 text-white font-bold rounded-md hover:bg-vermillion-700",
 }: {
   label: string;
   confirmMessage: string;

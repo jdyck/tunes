@@ -1,5 +1,5 @@
 const variantClasses = {
-  primary: "text-xs text-teal-700 underline disabled:opacity-70",
+  primary: "text-xs text-azure-600 underline disabled:opacity-70",
   muted: "text-xs text-ink-600 underline",
 } as const;
 

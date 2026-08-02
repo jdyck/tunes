@@ -79,7 +79,7 @@ export default function AccountPage() {
         <button
           type="submit"
           disabled={saving}
-          className="bg-slate-800 text-white uppercase text-xs p-1.5 rounded disabled:opacity-50"
+          className="bg-action hover:bg-action-hover text-text-on-accent uppercase text-xs p-1.5 rounded disabled:opacity-50"
         >
           {saving ? "Saving..." : "Update password"}
         </button>

@@ -219,10 +219,10 @@ export default function SongsListPane() {
           <button
             onClick={() => setShowAddSong(true)}
             aria-label="Add song"
-            className={`border-[2] border-mojo-600 text-mojo-600 p-2 py-1.75 rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
+            className={`border-[2] border-vermillion-600 text-vermillion-600 p-2 py-1.75 rounded-sm tracking-widest uppercase flex font-medium items-center gap-1 ${robotoCondensed.className}`}
           >
             <PlusIcon className="h-5 w-5 " />
-            <span>Add Song</span>
+            <span>Add</span>
           </button>
         </div>
         <div className="flex gap-2 pb-2">
@@ -233,7 +233,7 @@ export default function SongsListPane() {
                 type="button"
                 onClick={() => setListState((state) => ({ ...state, search: "" }))}
                 aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-ink-600 hover:bg-merino-200 hover:text-ink-900"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-ink-600 hover:bg-paper-200 hover:text-ink-900"
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
@@ -242,16 +242,16 @@ export default function SongsListPane() {
               type="text"
               value={search}
               onChange={(e) => setListState((state) => ({ ...state, search: e.target.value }))}
-              placeholder="Search songs"
+              placeholder="Search songs, composers, lyricists..."
               className="w-full pl-9 pr-9 py-2 rounded-sm border-[1.5] border-ink-400 bg-surface-app"
             />
           </div>
           <button
             type="button"
             onClick={() => setShowFilterModal(true)}
-            className={`inline-flex shrink-0 items-center gap-1 rounded-sm border-[1.5] px-2.5 py-2 font-semibold ${
+            className={`inline-flex shrink-0 items-center gap-1 rounded-sm border-[1.5]  border-ink-400 px-2.5 py-2 font-semibold ${
               hasActiveFilters
-                ? "border-azure-600 bg-old-lace-100 text-azure-700"
+                ? "border-azure-600 text-azure-600"
                 : "border-ink-400 text-ink-800"
             }`}
             aria-label={`Filter songs${
@@ -269,12 +269,12 @@ export default function SongsListPane() {
 
 
         <div className="pb-4 text-sm text-ink-600 flex items-center justify-between gap-3 px-4 ">
-          <span className={`text-azure-600/90 font-bold uppercase ${leagueGothic.className} text-base tracking-widest`}>{visibleSongs.length} Songs</span>
+          <span className={`text-azure-600 font-bold uppercase ${leagueGothic.className} text-base tracking-widest`}>{visibleSongs.length} Songs</span>
           <div className="relative flex items-center">
             <button
               type="button"
               onClick={() => setShowSortMenu((open) => !open)}
-              className="px-2 py-1 rounded-sm font-semibold text-ink-800 hover:bg-merino-200"
+              className="px-2 py-1 rounded-sm font-semibold text-ink-800 hover:bg-paper-200"
               aria-haspopup="menu"
               aria-expanded={showSortMenu}
             >
@@ -288,7 +288,7 @@ export default function SongsListPane() {
                   sortDirection: state.sortDirection === "asc" ? "desc" : "asc",
                 }))
               }
-              className="p-1 rounded-sm text-ink-800 hover:bg-merino-200"
+              className="p-1 rounded-sm text-ink-800 hover:bg-paper-200"
               aria-label={`Sort ${sortDirection === "asc" ? "descending" : "ascending"}`}
             >
               {sortDirection === "asc" ? (
@@ -300,7 +300,7 @@ export default function SongsListPane() {
             {showSortMenu && (
               <div
                 role="menu"
-                className="absolute right-0 top-full z-20 mt-1 min-w-24 rounded-md border border-line-200 bg-surface-app py-1 shadow-md"
+                className="absolute right-0 top-full z-20 mt-1 min-w-24 rounded-md border border-paper-600 bg-surface-app py-1 shadow-md"
               >
                 {(["title", "writers", "date", "added"] as SortKey[]).map((key) => (
                   <button
@@ -311,7 +311,7 @@ export default function SongsListPane() {
                       setListState((state) => ({ ...state, sortKey: key }));
                       setShowSortMenu(false);
                     }}
-                    className={`block w-full px-3 py-1.5 text-left hover:bg-old-lace-100 ${
+                    className={`block w-full px-3 py-1.5 text-left hover:bg-paper-100 ${
                       sortKey === key ? "font-semibold text-ink-900" : ""
                     }`}
                   >
@@ -329,7 +329,7 @@ export default function SongsListPane() {
         {loading ? (
           <SongsListSkeleton />
         ) : error ? (
-          <p className="text-mojo-600">{error}</p>
+          <p className="text-vermillion-600">{error}</p>
         ) : visibleSongs.length > 0 ? (
           <ul>
             {visibleSongs.map((song) => {
@@ -338,13 +338,13 @@ export default function SongsListPane() {
                 <li key={song.id} className="[&:has(+_li:hover)>a]:border-transparent">
                   <Link
                     href={`/song/${song.id}`}
-                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-old-lace-100 hover:border-transparent hover:rounded-lg active:bg-old-lace-100 ${
-                      isActive ? "bg-old-lace-100" : ""
+                    className={`relative flex items-center gap-2 border-b border-border-default h-20 p-6 pl-0 hover:bg-paper-100 hover:border-transparent hover:rounded-lg active:bg-paper-100 ${
+                      isActive ? "bg-paper-100" : ""
                     }`}
                   >
                     <SongRow song={song} />
                     {isActive && (
-                      <div className="w-2 h-full absolute bg-mojo-700 shrink-0" />
+                      <div className="w-2 h-full absolute bg-vermillion-700 shrink-0" />
                     )}
                   </Link>
                 </li>
@@ -373,7 +373,7 @@ export default function SongsListPane() {
         <Modal title="Filter songs" onClose={() => setShowFilterModal(false)}>
           <div className="space-y-5">
             {(favoriteOnly || favoriteCount > 0) && (
-              <label className="flex items-center justify-between gap-3 rounded-md border border-line-200 p-3">
+              <label className="flex items-center justify-between gap-3 rounded-md border border-paper-600 p-3">
                 <span>
                   <span className="block font-semibold">Favorites only</span>
                   <span className="block text-sm text-ink-600">
@@ -397,7 +397,7 @@ export default function SongsListPane() {
                   <button
                     type="button"
                     onClick={() => setListState((state) => ({ ...state, includedTags: [] }))}
-                    className="text-sm font-semibold text-azure-700 hover:underline"
+                    className="text-sm font-semibold text-azure-600 hover:underline"
                   >
                     Clear tag filters
                   </button>
@@ -420,7 +420,7 @@ export default function SongsListPane() {
                     className={`rounded-full border px-3 py-1.5 text-sm ${
                       selected
                         ? "border-azure-600 bg-azure-600 text-white"
-                        : "border-line-200 hover:bg-old-lace-100"
+                        : "border-paper-600 hover:bg-paper-100"
                     }`}
                   >
                     {tag} <span aria-label={`${count} Songs`}>({count})</span>
@@ -434,7 +434,7 @@ export default function SongsListPane() {
 
             {!includedTags.some((tag) => hasTag([tag], "Holiday")) &&
               (excludeHoliday || excludeHolidayCount > 0) && (
-              <label className="flex items-center gap-3 border-t border-line-100 pt-4">
+              <label className="flex items-center gap-3 border-t border-paper-600 pt-4">
                 <input
                   type="checkbox"
                   checked={excludeHoliday}
@@ -498,7 +498,7 @@ function SongRow({ song }: { song: SongWithUserData }) {
           {song.user_data.favorite && (
             <>
               <StarIcon
-                className="h-4 w-4 shrink-0 text-mojo-600"
+                className="h-4 w-4 shrink-0 text-vermillion-600"
                 aria-hidden="true"
               />
               <span className="sr-only">Favorite</span>

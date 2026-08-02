@@ -8,7 +8,7 @@ export default function AuthLayoutShell({
   return (
     <div className="flex flex-col items-center justify-center min-h-full bg-azure-600">
       <div>
-        <h1 className={`text-merino-100 text-7xl uppercase ${leagueGothic.className}`}>Standards</h1>
+        <h1 className={`text-paper-100 text-7xl uppercase ${leagueGothic.className}`}>Standards</h1>
       </div>
       <div className="bg-surface-app rounded-lg p-8 w-full max-w-sm m-4">
         {children}

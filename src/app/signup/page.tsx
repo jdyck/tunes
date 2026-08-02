@@ -51,7 +51,7 @@ export default function SignupPage() {
         </p>
         <Link
           href="/login"
-          className="text-green-800 underline text-sm mt-4 inline-block"
+          className="text-azure-600 underline text-sm mt-4 inline-block"
         >
           Back to login
         </Link>
@@ -80,7 +80,7 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={signingUp}
-          className="bg-slate-800 text-white uppercase text-xs p-1.5 rounded flex items-center justify-center gap-2 disabled:opacity-70"
+          className="bg-action hover:bg-action-hover text-text-on-accent uppercase text-xs p-1.5 rounded flex items-center justify-center gap-2 disabled:opacity-70"
         >
           {signingUp ? (
             <>
@@ -92,7 +92,7 @@ export default function SignupPage() {
         </button>
       </form>
       {error && <FormStatusMessage>{error}</FormStatusMessage>}
-      <Link href="/login" className="text-green-800 underline text-xs">
+      <Link href="/login" className="text-azure-600 underline text-xs">
         Already have an account? Log in
       </Link>
     </div>

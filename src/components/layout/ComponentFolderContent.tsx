@@ -22,7 +22,7 @@ export default function ComponentFolderContent({ folder }: { folder: string }) {
           <li key={component.slug}>
             <Link
               href={getComponentGalleryHref(component)}
-              className="flex h-14 items-center border-b border-border-default px-6 hover:rounded-lg hover:border-b-0 hover:bg-merino-200 active:bg-cream-300"
+              className="flex h-14 items-center border-b border-border-default px-6 hover:rounded-lg hover:border-b-0 hover:bg-paper-200 active:bg-cream-300"
             >
               <span
                 className={`truncate text-xl uppercase ${leagueGothic.className}`}

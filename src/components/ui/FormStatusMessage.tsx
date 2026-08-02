@@ -1,6 +1,6 @@
 const typeClasses = {
-  error: "text-mojo-600",
-  success: "text-green-700",
+  error: "text-vermillion-600",
+  success: "text-azure-600",
 } as const;
 
 export default function FormStatusMessage({

@@ -270,7 +270,7 @@ export default function AddSongModal({
 
     return (
       <Modal title="Add a Song" onClose={onClose}>
-        {errorMessage && <p className="text-mojo-600 mb-2">{errorMessage}</p>}
+        {errorMessage && <p className="text-vermillion-600 mb-2">{errorMessage}</p>}
 
         <h3 className="font-semibold">{previewResult.title}</h3>
         {previewResult.disambiguation && (
@@ -297,7 +297,7 @@ export default function AddSongModal({
               <WikipediaBackgroundCard
                 extract={previewBackground.extract}
                 url={previewBackground.url}
-                className="p-3 rounded-md border border-line-200 mb-4"
+                className="p-3 rounded-md border border-paper-600 mb-4"
               />
             ) : (
               <p className="text-sm text-ink-600 mb-4">
@@ -310,7 +310,7 @@ export default function AddSongModal({
         <MusicBrainzLink
           type="work"
           id={previewResult.workId}
-          className="block text-xs text-teal-700 underline mb-4"
+          className="block text-xs text-azure-900 underline mb-4"
         />
 
         <div className="flex gap-2">
@@ -318,7 +318,7 @@ export default function AddSongModal({
             type="button"
             onClick={handleCancelPreview}
             disabled={saving}
-            className="flex-1 border border-line-200 p-3 rounded-lg disabled:opacity-70"
+            className="flex-1 border border-paper-600 p-3 rounded-lg disabled:opacity-70"
           >
             Cancel
           </button>
@@ -336,7 +336,7 @@ export default function AddSongModal({
 
   return (
     <Modal title="Add a Song" onClose={onClose}>
-      {errorMessage && <p className="text-mojo-600 mb-2">{errorMessage}</p>}
+      {errorMessage && <p className="text-vermillion-600 mb-2">{errorMessage}</p>}
       <FormField
         label="Name"
         value={name}
@@ -350,7 +350,7 @@ export default function AddSongModal({
         autoFocus
         className="block mb-2"
         labelClassName="block text-sm mb-1"
-        inputClassName="block w-full p-2 rounded-md border border-line-200"
+        inputClassName="block w-full p-2 rounded-md border border-paper-600"
       />
       <PrimaryButton
         onClick={handleSearch}
@@ -360,9 +360,9 @@ export default function AddSongModal({
         {searching ? "Looking up..." : "Search"}
       </PrimaryButton>
 
-      {searchError && <p className="text-mojo-600 mb-3">{searchError}</p>}
+      {searchError && <p className="text-vermillion-600 mb-3">{searchError}</p>}
       {discoveryError && (
-        <p className="text-mojo-600 mb-3">{discoveryError}</p>
+        <p className="text-vermillion-600 mb-3">{discoveryError}</p>
       )}
 
       {hasSearched && !searching && (
@@ -370,7 +370,7 @@ export default function AddSongModal({
           {discoverableSongs.length > 0 && (
             <div className="mb-5">
               <h3 className="font-semibold mb-2">Already in Standards</h3>
-              <ul className="divide-y divide-line-200 rounded-md border border-line-200">
+              <ul className="divide-y divide-paper-600 rounded-md border border-paper-600">
                 {discoverableSongs.map((song) => (
                   <li
                     key={song.id}
@@ -386,7 +386,7 @@ export default function AddSongModal({
                       type="button"
                       onClick={() => addExistingSong(song.id)}
                       disabled={saving}
-                      className="shrink-0 text-sm text-teal-700 underline disabled:opacity-60"
+                      className="shrink-0 text-sm text-azure-900 underline disabled:opacity-60"
                     >
                       Add this Song
                     </button>
@@ -406,7 +406,7 @@ export default function AddSongModal({
             <button
               type="button"
               onClick={() => setManualMode(true)}
-              className="text-sm text-teal-700 underline mb-4"
+              className="text-sm text-azure-900 underline mb-4"
             >
               Can&apos;t find it? Add manually
             </button>
@@ -424,7 +424,7 @@ export default function AddSongModal({
             onChange={(e) => setManualYear(e.target.value)}
             className="block mb-4"
             labelClassName="block text-sm mb-1"
-            inputClassName="block w-full p-2 rounded-md border border-line-200"
+            inputClassName="block w-full p-2 rounded-md border border-paper-600"
           />
 
           <PrimaryButton

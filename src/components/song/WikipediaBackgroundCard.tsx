@@ -4,7 +4,7 @@ export default function WikipediaBackgroundCard({
   extract,
   url,
   onRemove,
-  className = "p-3 rounded-md border border-line-200",
+  className = "p-3 rounded-md border border-paper-600",
 }: {
   extract: string;
   url: string | null;
@@ -31,7 +31,7 @@ export default function WikipediaBackgroundCard({
           href={url}
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-teal-700 underline"
+          className="text-xs text-azure-600 underline"
         >
           via Wikipedia, CC BY-SA
         </a>
