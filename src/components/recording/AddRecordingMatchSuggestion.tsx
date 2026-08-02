@@ -49,7 +49,7 @@ export default function AddRecordingMatchSuggestion({
           <button
             type="button"
             onClick={onConfirm}
-            className="flex items-center gap-1 text-sm text-azure-900"
+            className="flex items-center gap-1 text-sm text-azure-600"
           >
             <CheckCircleIcon className="h-5 w-5" />
             Use this match
