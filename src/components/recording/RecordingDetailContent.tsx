@@ -9,7 +9,6 @@ import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
 import type {
   RecordingCandidate,
-  RecordingPerformer,
   ResolvedRecordingMatch,
 } from "@/lib/musicbrainz";
 import {
@@ -28,7 +27,6 @@ import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
 import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton";
 import DeleteButton from "@/components/ui/DeleteButton";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
-import { useFieldChange } from "@/hooks/useFieldChange";
 import { useSavedRecording } from "@/hooks/useSavedRecording";
 import { RecordingKind } from "@/types/types";
 import {
@@ -36,18 +34,30 @@ import {
   songWithUserDataSelect,
 } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
-import { decodeHtmlEntities } from "@/utils/htmlEntities";
 import {
-  performerCreditsToDraft,
-  performersToSavePayload,
-} from "@/utils/recordingPerformers";
+  recordingDraftDidSave,
+  recordingDraftIsDirty,
+  recordingDraftToPayload,
+  recordingToEditorState,
+  type RecordingDraft,
+  type RecordingEditorState,
+} from "@/utils/recordingDraft";
 import { useSavedRecordingsRefresh } from "@/components/recording/SavedRecordingsRefreshContext";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 
-const usableYouTubeAlbumName = (value: string | null | undefined) => {
-  const albumName = value?.trim();
-  return albumName && albumName.toLowerCase() !== "unknown" ? albumName : "";
-};
+type RecordingDraftTextField =
+  | "name"
+  | "notes"
+  | "artist"
+  | "album"
+  | "year"
+  | "recordingDateStart"
+  | "recordingDateEnd"
+  | "recordingLocation"
+  | "duration"
+  | "key"
+  | "tempo"
+  | "tags";
 
 export default function RecordingDetailContent({
   id,
@@ -70,35 +80,10 @@ export default function RecordingDetailContent({
 
   const [songTitle, setSongTitle] = useState<string | null>(null);
   const [songWorkId, setSongWorkId] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [kind, setKind] = useState<RecordingKind>("video_capture");
-  const [notes, setNotes] = useState("");
-  const [artist, setArtist] = useState("");
-  const [album, setAlbum] = useState("");
-  const [year, setYear] = useState("");
-  const [recordingDateStart, setRecordingDateStart] = useState("");
-  const [recordingDateEnd, setRecordingDateEnd] = useState("");
-  const [recordingLocation, setRecordingLocation] = useState("");
-  const [duration, setDuration] = useState("");
-  const [key, setKey] = useState("");
-  const [tempo, setTempo] = useState("");
-  const [tags, setTags] = useState("");
+  const [editorState, setEditorState] =
+    useState<RecordingEditorState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [videoId, setVideoId] = useState<string | null>(null);
   const [showYouTubeMediaInfo, setShowYouTubeMediaInfo] = useState(false);
-  const [isSaved, setIsSaved] = useState(true);
-
-  const [musicbrainzRecordingId, setMusicbrainzRecordingId] = useState<
-    string | null
-  >(null);
-  const [musicbrainzReleaseId, setMusicbrainzReleaseId] = useState<
-    string | null
-  >(null);
-  const [releaseGroup, setReleaseGroup] = useState<{
-    title: string;
-    musicbrainzReleaseGroupId: string;
-  } | null>(null);
-  const [performers, setPerformers] = useState<RecordingPerformer[]>([]);
   const [matchStatus, setMatchStatus] = useState<
     "idle" | "searching" | "suggested" | "dismissed" | "no-results"
   >("idle");
@@ -115,58 +100,42 @@ export default function RecordingDetailContent({
   const [syncingFromMusicBrainz, setSyncingFromMusicBrainz] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
+  const draft = editorState?.draft;
+  const name = draft?.name ?? "";
+  const kind = draft?.kind ?? "video_capture";
+  const notes = draft?.notes ?? "";
+  const artist = draft?.artist ?? "";
+  const album = draft?.album ?? "";
+  const year = draft?.year ?? "";
+  const recordingDateStart = draft?.recordingDateStart ?? "";
+  const recordingDateEnd = draft?.recordingDateEnd ?? "";
+  const recordingLocation = draft?.recordingLocation ?? "";
+  const duration = draft?.duration ?? "";
+  const key = draft?.key ?? "";
+  const tempo = draft?.tempo ?? "";
+  const tags = draft?.tags ?? "";
+  const musicbrainzRecordingId = draft?.musicbrainzRecordingId ?? null;
+  const musicbrainzReleaseId = draft?.musicbrainzReleaseId ?? null;
+  const releaseGroup = draft?.releaseGroup ?? null;
+  const videoId = recording?.youtube_items[0]?.video_id ?? null;
+  const isSaved = editorState ? !recordingDraftIsDirty(editorState) : true;
+
+  const patchDraft = (patch: Partial<RecordingDraft>) => {
+    setEditorState((current) =>
+      current
+        ? { ...current, draft: { ...current.draft, ...patch } }
+        : current
+    );
+  };
+
+  const handleDraftTextChange = (field: RecordingDraftTextField) =>
+    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      patchDraft({ [field]: event.target.value });
+    };
+
   useEffect(() => {
     if (!recording) return;
-    const storedName = recording.name || "";
-    const storedArtist = recording.artist || "";
-    const storedAlbum = recording.release_groups?.title || recording.album || "";
-    const displayedAlbum =
-      storedAlbum ||
-      recording.youtube_items
-        .map((item) => usableYouTubeAlbumName(item.ytmusic_album_name))
-        .find(Boolean) ||
-      "";
-    const decodedName = decodeHtmlEntities(storedName);
-    const decodedArtist = decodeHtmlEntities(storedArtist);
-    const decodedAlbum = decodeHtmlEntities(displayedAlbum);
-
-    setName(decodedName);
-    setKind(recording.kind || "video_capture");
-    setNotes(recording.user_data.notes || "");
-    setArtist(decodedArtist);
-    setAlbum(decodedAlbum);
-    setYear(recording.year || "");
-    setRecordingDateStart(recording.recording_date_start || "");
-    setRecordingDateEnd(recording.recording_date_end || "");
-    setRecordingLocation(recording.recording_location || "");
-    setDuration(recording.duration || "");
-    setKey(recording.user_data.key || "");
-    setTempo(
-      recording.user_data.tempo != null
-        ? String(recording.user_data.tempo)
-        : ""
-    );
-    setTags((recording.user_data.tags || []).join(", "));
-    setVideoId(recording.youtube_items[0]?.video_id ?? null);
-    setMusicbrainzRecordingId(recording.musicbrainz_recording_id || null);
-    setMusicbrainzReleaseId(recording.musicbrainz_release_id || null);
-    setReleaseGroup(
-      recording.release_groups
-        ? {
-            title: recording.release_groups.title,
-            musicbrainzReleaseGroupId:
-              recording.release_groups.musicbrainz_release_group_id,
-          }
-        : null
-    );
-    setPerformers(
-      performerCreditsToDraft(recording.recording_artist_credits ?? [])
-    );
-    setIsSaved(
-      decodedName === storedName &&
-        decodedArtist === storedArtist &&
-        decodedAlbum === storedAlbum
-    );
+    setEditorState(recordingToEditorState(recording));
   }, [recording]);
 
   useEffect(() => {
@@ -235,41 +204,14 @@ export default function RecordingDetailContent({
   }, [loading, songTitle, artist, duration, album, year, songWorkId, musicbrainzRecordingId]);
 
   const handleSave = async () => {
-    if (!id || !recording) return;
+    if (!id || !recording || !draft) return;
+
+    const payload = recordingDraftToPayload(recording, draft);
 
     const { error } = await supabase.rpc("update_saved_recording", {
       p_recording_id: id,
-      p_shared: {
-        name,
-        kind,
-        artist: artist || null,
-        album: album || null,
-        year: year || null,
-        duration: duration || null,
-        musicbrainz_recording_id: musicbrainzRecordingId,
-        musicbrainz_release_id: musicbrainzReleaseId,
-        recording_date_start: recordingDateStart || null,
-        recording_date_end: recordingDateEnd || null,
-        recording_location: recordingLocation || null,
-        release_group: releaseGroup
-          ? {
-              title: releaseGroup.title,
-              musicbrainz_release_group_id:
-                releaseGroup.musicbrainzReleaseGroupId,
-            }
-          : null,
-        performers: performersToSavePayload(performers),
-      },
-      p_private: {
-        key: key || null,
-        tempo: tempo || null,
-        notes: notes || null,
-        rating: recording.user_data.rating ?? null,
-        sort_order: recording.user_data.sort_order ?? null,
-        tags: tags
-          ? tags.split(",").map((tag) => tag.trim()).filter(Boolean)
-          : [],
-      },
+      p_shared: payload.shared,
+      p_private: payload.private,
     });
 
     if (error) {
@@ -277,7 +219,9 @@ export default function RecordingDetailContent({
       setError(`Error saving data: ${error.message}`);
     } else {
       setError(null);
-      setIsSaved(true);
+      setEditorState((current) =>
+        current ? recordingDraftDidSave(current, draft) : current
+      );
     }
   };
 
@@ -287,21 +231,22 @@ export default function RecordingDetailContent({
   // on confirm is the point of this feature. Used by both the auto-suggest
   // confirm button and picking a result from manual search.
   const applyResolvedMatch = (match: ResolvedRecordingMatch) => {
-    setMusicbrainzRecordingId(match.recordingId);
-    setMusicbrainzReleaseId(match.representativeReleaseId);
-    if (match.artistCredit) setArtist(match.artistCredit);
-    if (match.releaseGroup) setAlbum(match.releaseGroup.title);
-    setReleaseGroup(match.releaseGroup);
-    setRecordingDateStart(match.recordingDateStart || "");
-    setRecordingDateEnd(match.recordingDateEnd || "");
-    setRecordingLocation(match.recordingLocation || "");
-    setPerformers(match.performers);
-    if (match.duration) setDuration(match.duration);
+    patchDraft({
+      musicbrainzRecordingId: match.recordingId,
+      musicbrainzReleaseId: match.representativeReleaseId,
+      ...(match.artistCredit ? { artist: match.artistCredit } : {}),
+      ...(match.releaseGroup ? { album: match.releaseGroup.title } : {}),
+      releaseGroup: match.releaseGroup,
+      recordingDateStart: match.recordingDateStart || "",
+      recordingDateEnd: match.recordingDateEnd || "",
+      recordingLocation: match.recordingLocation || "",
+      performers: match.performers,
+      ...(match.duration ? { duration: match.duration } : {}),
+    });
     setSuggestedMatch(null);
     setShowManualSearch(false);
     setManualResults([]);
     setMatchError(null);
-    setIsSaved(false);
   };
 
   const applyMatch = async (candidate: RecordingCandidate) => {
@@ -384,17 +329,18 @@ export default function RecordingDetailContent({
   };
 
   const handleRemoveMusicBrainzMatch = () => {
-    setMusicbrainzRecordingId(null);
-    setMusicbrainzReleaseId(null);
-    setReleaseGroup(null);
-    setPerformers([]);
+    patchDraft({
+      musicbrainzRecordingId: null,
+      musicbrainzReleaseId: null,
+      releaseGroup: null,
+      performers: [],
+    });
     setSuggestedMatch(null);
     setShowManualSearch(false);
     setManualResults([]);
     setMatchStatus("dismissed");
     setMatchError(null);
     setSyncError(null);
-    setIsSaved(false);
   };
 
   const handleDelete = async () => {
@@ -414,8 +360,6 @@ export default function RecordingDetailContent({
     }
   };
 
-  const handleFieldChange = useFieldChange(setIsSaved);
-
   if (loading) return <RecordingDetailSkeleton backHref={backHref} />;
   if (error || loadError)
     return (
@@ -423,6 +367,7 @@ export default function RecordingDetailContent({
     );
   if (!recording)
     return <AsyncStateMessage>No recording found.</AsyncStateMessage>;
+  if (!draft) return <RecordingDetailSkeleton backHref={backHref} />;
 
   return (
     <div className="w-full h-full flex flex-col bg-surface-app">
@@ -477,22 +422,25 @@ export default function RecordingDetailContent({
           )}
           <input
             value={name}
-            onChange={handleFieldChange(setName)}
+            onChange={handleDraftTextChange("name")}
             className="font-bold text-2xl bg-transparent pb-2 w-full"
           />
           <SaveStatusButton isSaved={isSaved} className="block relative ml-2" />
         </div>
 
         <div className="mb-4">
-          <FormField label="Artist" value={artist} onChange={handleFieldChange(setArtist)} />
+          <FormField
+            label="Artist"
+            value={artist}
+            onChange={handleDraftTextChange("artist")}
+          />
         </div>
         <label className="block mb-4">
           <span className="block text-xs text-ink-600">Recording kind</span>
           <select
             value={kind}
             onChange={(event) => {
-              setKind(event.target.value as RecordingKind);
-              setIsSaved(false);
+              patchDraft({ kind: event.target.value as RecordingKind });
             }}
             className="block w-full p-1.5 rounded-md"
           >
@@ -501,10 +449,18 @@ export default function RecordingDetailContent({
           </select>
         </label>
         <div className="mb-4">
-          <FormField label="Album" value={album} onChange={handleFieldChange(setAlbum)} />
+          <FormField
+            label="Album"
+            value={album}
+            onChange={handleDraftTextChange("album")}
+          />
         </div>
         <div className="mb-4">
-          <FormField label="Year" value={year} onChange={handleFieldChange(setYear)} />
+          <FormField
+            label="Year"
+            value={year}
+            onChange={handleDraftTextChange("year")}
+          />
         </div>
         <div className="mb-4">
           <FormField
@@ -523,12 +479,16 @@ export default function RecordingDetailContent({
           <FormField
             label="Recording location"
             value={recordingLocation}
-            onChange={handleFieldChange(setRecordingLocation)}
+            onChange={handleDraftTextChange("recordingLocation")}
             placeholder="Unknown"
           />
         </div>
         <div className="mb-4">
-          <FormField label="Duration" value={duration} onChange={handleFieldChange(setDuration)} />
+          <FormField
+            label="Duration"
+            value={duration}
+            onChange={handleDraftTextChange("duration")}
+          />
         </div>
         <div className="mb-4">
           {showManualSearch ? (
@@ -615,28 +575,32 @@ export default function RecordingDetailContent({
         </div>
 
         <div className="mb-4">
-          <FormField label="Key" value={key} onChange={handleFieldChange(setKey)} />
+          <FormField
+            label="Key"
+            value={key}
+            onChange={handleDraftTextChange("key")}
+          />
         </div>
         <div className="mb-4">
           <FormField
             label="Tempo (BPM)"
             type="number"
             value={tempo}
-            onChange={handleFieldChange(setTempo)}
+            onChange={handleDraftTextChange("tempo")}
           />
         </div>
         <div className="mb-4">
           <FormField
             label="Tags (comma separated)"
             value={tags}
-            onChange={handleFieldChange(setTags)}
+            onChange={handleDraftTextChange("tags")}
           />
         </div>
 
         <NotesField
           label="Notes"
           value={notes}
-          onChange={handleFieldChange(setNotes)}
+          onChange={handleDraftTextChange("notes")}
           rows={10}
           placeholder="Add notes here"
         />
