@@ -128,11 +128,6 @@ Two dependencies run through this file:
 
 - The auth form input + submit button extraction was blocked on this mapping.
   **It is now unblocked.**
-- `SaveStatusButton`'s lightning bolts now read azure (saved) / vermillion
-  (unsaved) rather than green/vermillion, so they are at least explainable by
-  the rule. This is a holding position: the component is still scheduled for
-  deletion in `component-extraction.md`, and that deletion remains the real fix.
-
 Native controls have no styling story at all: 5 raw `<select>`, 4 raw
 `type="checkbox"`, and exactly one `focus-visible` treatment in the entire app
 (`Switch.tsx`). Every native control ships with browser default appearance.

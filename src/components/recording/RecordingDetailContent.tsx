@@ -20,28 +20,21 @@ import {
 import RecordingMatchSuggestion from "@/components/recording/RecordingMatchSuggestion";
 import RecordingMatchResultsList from "@/components/recording/RecordingMatchResultsList";
 import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
-import SaveStatusButton from "@/components/ui/SaveStatusButton";
+import SaveAction from "@/components/ui/SaveAction";
 import FormField from "@/components/ui/FormField";
 import NotesField from "@/components/ui/NotesField";
 import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
 import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton";
 import DeleteButton from "@/components/ui/DeleteButton";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
-import { useSavedRecording } from "@/hooks/useSavedRecording";
+import { useRecordingDetail } from "@/hooks/useRecordingDetail";
 import { RecordingKind } from "@/types/types";
 import {
   mapSongUserDataRow,
   songWithUserDataSelect,
 } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
-import {
-  recordingDraftDidSave,
-  recordingDraftIsDirty,
-  recordingDraftToPayload,
-  recordingToEditorState,
-  type RecordingDraft,
-  type RecordingEditorState,
-} from "@/utils/recordingDraft";
+import type { RecordingDraft } from "@/utils/recordingDraft";
 import { useSavedRecordingsRefresh } from "@/components/recording/SavedRecordingsRefreshContext";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 
@@ -74,14 +67,17 @@ export default function RecordingDetailContent({
     useSavedRecordingsRefresh();
   const {
     recording,
+    draft,
     loading,
-    error: loadError,
-  } = useSavedRecording(id);
+    loadError,
+    saveError,
+    saveStatus,
+    patchDraft,
+    save,
+  } = useRecordingDetail(id);
 
   const [songTitle, setSongTitle] = useState<string | null>(null);
   const [songWorkId, setSongWorkId] = useState<string | null>(null);
-  const [editorState, setEditorState] =
-    useState<RecordingEditorState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showYouTubeMediaInfo, setShowYouTubeMediaInfo] = useState(false);
   const [matchStatus, setMatchStatus] = useState<
@@ -100,7 +96,6 @@ export default function RecordingDetailContent({
   const [syncingFromMusicBrainz, setSyncingFromMusicBrainz] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
-  const draft = editorState?.draft;
   const name = draft?.name ?? "";
   const kind = draft?.kind ?? "video_capture";
   const notes = draft?.notes ?? "";
@@ -118,25 +113,10 @@ export default function RecordingDetailContent({
   const musicbrainzReleaseId = draft?.musicbrainzReleaseId ?? null;
   const releaseGroup = draft?.releaseGroup ?? null;
   const videoId = recording?.youtube_items[0]?.video_id ?? null;
-  const isSaved = editorState ? !recordingDraftIsDirty(editorState) : true;
-
-  const patchDraft = (patch: Partial<RecordingDraft>) => {
-    setEditorState((current) =>
-      current
-        ? { ...current, draft: { ...current.draft, ...patch } }
-        : current
-    );
-  };
-
   const handleDraftTextChange = (field: RecordingDraftTextField) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       patchDraft({ [field]: event.target.value });
     };
-
-  useEffect(() => {
-    if (!recording) return;
-    setEditorState(recordingToEditorState(recording));
-  }, [recording]);
 
   useEffect(() => {
     const fetchSongTitle = async () => {
@@ -202,28 +182,6 @@ export default function RecordingDetailContent({
     // cleanup above) the instant it flips to "searching".
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, songTitle, artist, duration, album, year, songWorkId, musicbrainzRecordingId]);
-
-  const handleSave = async () => {
-    if (!id || !recording || !draft) return;
-
-    const payload = recordingDraftToPayload(recording, draft);
-
-    const { error } = await supabase.rpc("update_saved_recording", {
-      p_recording_id: id,
-      p_shared: payload.shared,
-      p_private: payload.private,
-    });
-
-    if (error) {
-      console.error("Error saving data:", error.message);
-      setError(`Error saving data: ${error.message}`);
-    } else {
-      setError(null);
-      setEditorState((current) =>
-        current ? recordingDraftDidSave(current, draft) : current
-      );
-    }
-  };
 
   // Links a chosen MusicBrainz Recording and autofills the fields it knows
   // about -- unlike the Song/Work flow, which only links the ID and leaves
@@ -361,9 +319,9 @@ export default function RecordingDetailContent({
   };
 
   if (loading) return <RecordingDetailSkeleton backHref={backHref} />;
-  if (error || loadError)
+  if (loadError && !recording)
     return (
-      <AsyncStateMessage variant="error">{error || loadError}</AsyncStateMessage>
+      <AsyncStateMessage variant="error">{loadError}</AsyncStateMessage>
     );
   if (!recording)
     return <AsyncStateMessage>No recording found.</AsyncStateMessage>;
@@ -376,6 +334,11 @@ export default function RecordingDetailContent({
       </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+      {error && (
+        <p className="mb-3 text-sm text-vermillion-600">
+          {error}
+        </p>
+      )}
       {videoId && recording && (
         <div className="mb-6 space-y-2">
           <button
@@ -406,7 +369,7 @@ export default function RecordingDetailContent({
         className="w-full"
         onSubmit={(e) => {
           e.preventDefault();
-          handleSave();
+          void save();
         }}
       >
         <div className="flex justify-between items-center mb-4">
@@ -425,7 +388,11 @@ export default function RecordingDetailContent({
             onChange={handleDraftTextChange("name")}
             className="font-bold text-2xl bg-transparent pb-2 w-full"
           />
-          <SaveStatusButton isSaved={isSaved} className="block relative ml-2" />
+          <SaveAction
+            status={saveStatus}
+            error={saveError}
+            className="ml-2 shrink-0"
+          />
         </div>
 
         <div className="mb-4">

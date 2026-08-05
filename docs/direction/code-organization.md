@@ -14,10 +14,10 @@ standalone rename is not useful.
 
 ## Split Recording detail controller — later, opportunistic
 
-`RecordingDetailContent.tsx` still mixes data fetching, save/dirty tracking, and
-rendering. Its persisted editor fields now live in one typed draft, with pure
-load/save mapping in `src/utils/recordingDraft.ts`; the remaining Song-context
-loading, mutations, MusicBrainz workflow, deletion, and transient state still
-belong in a hook in `src/hooks/` (for example, `useRecordingDetail`). Extract
-that orchestration when next doing substantial work in this file. Song detail
-already uses `useSongDetail` for its fetch/save orchestration.
+`useRecordingDetail` now owns Recording loading plus its typed draft and
+revision-safe save lifecycle. `RecordingDetailContent.tsx` still owns
+Song-context loading, MusicBrainz matching, deletion, and their transient
+states. Move those remaining effectful workflows into the existing hook when
+substantive work next touches them; do not turn the hook into a bag of purely
+presentational toggles. Song detail already uses `useSongDetail` for its
+fetch/save orchestration.

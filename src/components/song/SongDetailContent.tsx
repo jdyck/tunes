@@ -9,7 +9,7 @@ import RecordingsSection from "@/components/song/RecordingsSection";
 import SongWriterCredits from "@/components/song/SongWriterCredits";
 import SongWritersEditor from "@/components/song/SongWritersEditor";
 import SongWorkResultsList from "@/components/song/SongWorkResultsList";
-import SaveStatusButton from "@/components/ui/SaveStatusButton";
+import SaveAction from "@/components/ui/SaveAction";
 import FormField from "@/components/ui/FormField";
 import Switch from "@/components/ui/Switch";
 import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
@@ -41,6 +41,7 @@ import { StarIcon as OutlineStarIcon } from "@heroicons/react/24/outline";
 import TagChipInput from "@/components/ui/TagChipInput";
 import { collectTags } from "@/utils/songTags";
 import { useSongDetail } from "@/hooks/useSongDetail";
+import { useSaveLifecycle } from "@/hooks/useSaveLifecycle";
 
 const normalizeTitleText = (value: string) =>
   value.replace(/\u00a0/g, " ").replace(/\s*\n\s*/g, " ");
@@ -122,13 +123,15 @@ export default function SongDetailContent({ id }: { id: string }) {
   const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const [syncingFromMusicBrainz, setSyncingFromMusicBrainz] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(true);
   const [showWritersEditor, setShowWritersEditor] = useState(false);
   const [removing, setRemoving] = useState(false);
   const titleRef = useRef<HTMLDivElement | null>(null);
+  const hydratedSongIdRef = useRef<string | null>(null);
+  const saveLifecycle = useSaveLifecycle();
 
   useEffect(() => {
-    if (!song) return;
+    if (!song || song.id !== id || hydratedSongIdRef.current === id) return;
+    hydratedSongIdRef.current = id;
     setShowWritersEditor(false);
     setNotes(song.user_data.notes || "");
     setFavorite(song.user_data.favorite);
@@ -142,7 +145,8 @@ export default function SongDetailContent({ id }: { id: string }) {
     setWikipediaUrl(song.wikipedia_url || null);
     setMusicbrainzWorkId(song.musicbrainz_work_id || null);
     setWriters(loadedWriters);
-  }, [loadedWriters, song]);
+    saveLifecycle.reset();
+  }, [id, loadedWriters, saveLifecycle.reset, song]);
 
   useLayoutEffect(() => {
     const titleElement = titleRef.current;
@@ -164,25 +168,43 @@ export default function SongDetailContent({ id }: { id: string }) {
   }, [loading]);
 
   const handleSave = async () => {
-    const result = await save({
-      title,
-      sharedTitle,
-      notes,
-      favorite,
-      tags,
-      year,
-      wikipediaExtract,
-      wikipediaUrl,
-      musicbrainzWorkId,
-      workDateStart,
-      workDateEnd,
-      writers,
-    });
-    if (result) {
-      setWriters(result.writers);
-      setSharedTitle(result.song.name);
-      setTitle(effectiveSongTitle(result.song, result.song.user_data));
-      setIsSaved(true);
+    const saveRevision = saveLifecycle.beginSave();
+    if (saveRevision === null) return;
+
+    try {
+      const result = await save({
+        title,
+        sharedTitle,
+        notes,
+        favorite,
+        tags,
+        year,
+        wikipediaExtract,
+        wikipediaUrl,
+        musicbrainzWorkId,
+        workDateStart,
+        workDateEnd,
+        writers,
+      });
+      if (result) {
+        const savedCurrentRevision = saveLifecycle.saveSucceeded(saveRevision);
+        if (savedCurrentRevision) {
+          setWriters(result.writers);
+          setSharedTitle(result.song.name);
+          setTitle(effectiveSongTitle(result.song, result.song.user_data));
+        }
+      } else {
+        saveLifecycle.saveFailed(
+          saveRevision,
+          "Changes weren't saved. Try again."
+        );
+      }
+    } catch (saveError) {
+      console.error("Error saving Song:", saveError);
+      saveLifecycle.saveFailed(
+        saveRevision,
+        "Changes weren't saved. Try again."
+      );
     }
   };
 
@@ -214,7 +236,7 @@ export default function SongDetailContent({ id }: { id: string }) {
     if (work.year) setYear(work.year);
     setWorkDateStart(work.workDateStart);
     setWorkDateEnd(work.workDateEnd);
-    setIsSaved(false);
+    saveLifecycle.markDirty();
   };
 
   const handleOpenBackgroundSearch = async () => {
@@ -246,7 +268,7 @@ export default function SongDetailContent({ id }: { id: string }) {
 
     setWikipediaExtract(background.extract);
     setWikipediaUrl(background.url);
-    setIsSaved(false);
+    saveLifecycle.markDirty();
   };
 
   const handleSelectBackgroundWork = async (result: SongWorkSearchResult) => {
@@ -256,7 +278,7 @@ export default function SongDetailContent({ id }: { id: string }) {
     setMusicbrainzWorkId(result.workId);
     setWikipediaExtract(null);
     setWikipediaUrl(null);
-    setIsSaved(false);
+    saveLifecycle.markDirty();
 
     setLookingUpBackground(true);
     const background = await fetchWorkBackground(result.workId);
@@ -274,7 +296,7 @@ export default function SongDetailContent({ id }: { id: string }) {
   const handleRemoveBackground = () => {
     setWikipediaExtract(null);
     setWikipediaUrl(null);
-    setIsSaved(false);
+    saveLifecycle.markDirty();
   };
 
   const handleRemove = async () => {
@@ -342,11 +364,11 @@ export default function SongDetailContent({ id }: { id: string }) {
     await setDiscoverability(nextValue);
   };
 
-  const handleFieldChange = useFieldChange(setIsSaved);
+  const handleFieldChange = useFieldChange(saveLifecycle.markDirty);
 
   const handleTitleInput = (e: React.FormEvent<HTMLDivElement>) => {
     setTitle(normalizeTitleText(e.currentTarget.textContent ?? ""));
-    setIsSaved(false);
+    saveLifecycle.markDirty();
   };
 
   if (loading || recordingsLoading) return <SongDetailSkeleton />;
@@ -432,7 +454,7 @@ export default function SongDetailContent({ id }: { id: string }) {
                 const nextFavorite = !favorite;
                 setFavorite(nextFavorite);
                 void saveFavorite(nextFavorite).then((saved) => {
-                  if (!saved) setIsSaved(false);
+                  if (!saved) saveLifecycle.markDirty();
                 });
               }}
               className="mt-2 flex w-36 justify-center rounded-sm p-1 text-vermillion-600 hover:bg-paper-200"
@@ -462,20 +484,27 @@ export default function SongDetailContent({ id }: { id: string }) {
           }
           onReorder={reorderRecordings}
         />
-        <SaveStatusButton isSaved={isSaved} className="block relative shrink-0 mt-1" onClick={handleSave} />
+        <SaveAction
+          status={saveLifecycle.status}
+          error={saveLifecycle.error}
+          onSave={() => void handleSave()}
+          className="mt-1"
+        />
 
         <form
           className="w-full"
           onSubmit={(e) => {
             e.preventDefault();
-            handleSave();
+            void handleSave();
           }}
         >
           {isAdmin && (
             <label className="mb-5 flex items-start gap-3 rounded-md border border-paper-600 p-3">
               <Switch
                 checked={song.is_discoverable}
-                disabled={!isSaved}
+                disabled={
+                  saveLifecycle.isDirty || saveLifecycle.status === "saving"
+                }
                 onChange={handleDiscoverabilityChange}
                 className="mt-1"
               />
@@ -484,7 +513,8 @@ export default function SongDetailContent({ id }: { id: string }) {
                 <span className="block text-sm text-ink-600">
                   Other Standards users can find and add this Song. Your notes
                   and display title remain private.
-                  {!isSaved && " Save other changes before changing visibility."}
+                  {saveLifecycle.isDirty &&
+                    " Save other changes before changing visibility."}
                 </span>
               </span>
             </label>
@@ -542,7 +572,7 @@ export default function SongDetailContent({ id }: { id: string }) {
             onChange={(nextTags) => {
               setTags(nextTags);
               void saveTags(nextTags).then((saved) => {
-                if (!saved) setIsSaved(false);
+                if (!saved) saveLifecycle.markDirty();
               });
             }}
           />
@@ -615,7 +645,7 @@ export default function SongDetailContent({ id }: { id: string }) {
             value={writers}
             onChange={(next) => {
               setWriters(next);
-              setIsSaved(false);
+              saveLifecycle.markDirty();
             }}
           />
         </Modal>
