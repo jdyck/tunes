@@ -12,7 +12,7 @@ The current deployment/privacy phase is maintained in [docs/project-stage.md](do
 
 ```
 src/app/             Next.js App Router (route = folder path)
-  (browse)/            main app shell: songs list + parallel panes (ADR-0005)
+  (browse)/            main app shell: persistent list + parallel detail panes (ADR-0010)
     @detail/song/[id]/           a Song's detail pane
       @recording/recording/[recordingId]/   nested Recording pane
     @detail/dev/components/      dev-only component gallery (one page per registry entry)
