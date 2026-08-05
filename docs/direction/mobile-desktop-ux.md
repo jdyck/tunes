@@ -11,9 +11,9 @@ Two different techniques apply depending on what's actually changing between bre
 - **Same content, different position/density/visibility** → pure CSS (Tailwind breakpoints: `hidden md:block`, grid/flex reflow). This covers: how much Recording metadata is visible at once, where the top header/account menu and the persistent player bar sit, nav shape, hover-vs-tap affordances. No JS branching, no duplicated markup — just reflow the same component tree. Left unspecified in this doc since it's low-risk and cheap to change later; decide the specifics when actually building each screen.
 - **Same content, different navigation/interaction model** → needs real routing logic. This applies to exactly one relationship in the app (see below): everything else is the CSS case.
 
-## The master-detail chain: list → song detail → recording detail
+## The master-detail chain: list → Song detail → Recording detail
 
-Desktop has room to show the song list, the active song's detail, and the active recording's detail as up to three panes side by side, updating in place as you click through. Mobile can only show one screen at a time and must navigate full-screen (list → tap song → song detail → tap recording → recording detail, back button to return). See [ADR-0005](../adr/0005-responsive-layout-parallel-intercepting-routes.md) for why this is implemented with Next.js parallel + intercepting routes rather than client-side viewport checks.
+Desktop has room to show the Song list, the active Song's detail, and the active Recording's detail as up to three panes side by side, updating in place as you click through. Mobile visually presents one screen at a time (list → tap Song → Song detail → tap Recording → Recording detail, back returns one screen at a time) while the shared layout may retain covered panes in the mounted tree.
 
 ```
 Desktop (wide enough for 3 panes):
@@ -27,18 +27,13 @@ Screen 1: List --tap--> Screen 2: Song detail --tap--> Screen 3: Recording detai
 (back button returns one screen at a time)
 ```
 
-Add-song/add-recording forms are expected to follow the same overlay idea: a modal on desktop, a bottom sheet (slide-up panel) on mobile, likely via the same intercepting-route technique. Not yet built — scoped for a later pass once the browsing experience above is proven out.
+The implemented architecture is documented in [ADR-0010](../adr/0010-responsive-browse-layout-hybrid-parallel-routes.md): the browse layout renders one persistent list, with parallel Song/Artist and nested Recording detail slots. CSS changes the presentation across breakpoints while stable URLs drive the active detail. Pathname gates intentionally hide stale parallel-slot content retained by soft navigation.
 
-## Build order
-
-1. **Prototype the 3-pane structure first, rough and unstyled.** This is the highest-rework-risk piece — if the side-by-side interaction doesn't feel right, it's the most expensive thing to unwind. Get it structurally on screen before spending time on any visual treatment.
-2. Once the panes exist, decide the breakpoint tiers (see open question below) by actually looking at it at different widths.
-3. Layer in the CSS-only reflow work (chrome placement, density, nav shape) per screen as it's touched.
-4. Add-song/add-recording modal/bottom-sheet treatment, once browsing is solid.
+Add Song and Add Recording currently use local modal state. Whether they should become route-backed desktop modals and mobile bottom sheets is a separate future decision.
 
 ## Open questions
 
-- **Breakpoint tiers**: is there an intermediate tablet/narrow-laptop tier showing 2 panes (list + one active detail, which itself drills between song/recording), or does it jump straight from 1 pane to 3? Deferred until the 3-pane prototype exists to look at.
+- **Breakpoint tiers**: the current layout progresses from one mobile pane to a desktop list/detail composition, overlays Recording detail at narrower desktop widths, and reaches three side-by-side panes at the widest tier. Exact widths and whether the middle tier should instead show two non-overlapping panes remain open visual/interaction questions.
 - **Chrome placement specifics**: exact shape of header/nav and player-bar positioning on desktop (e.g. whether nav becomes a sidebar) — pure CSS, low risk, decide per-screen when building it.
 - **PWA/safe-area**: the app has `display: standalone` in [manifest.json](../../public/manifest.json) for mobile home-screen install, with `viewport-fit=cover` and `apple-mobile-web-app-status-bar-style: black-translucent` in [layout.tsx](../../src/app/layout.tsx) — the latter is what actually lets the page extend under the notch/Dynamic Island/home indicator; `default`/`black` reserve an opaque status bar strip that content can't render behind, regardless of `viewport-fit`. `html`/`body` now carry the app's own merino background rather than a black fallback. The fixed panes (songs list, song detail, recording detail, dev-components) each pad themselves with `env(safe-area-inset-top)` / `env(safe-area-inset-bottom)`, since `position: fixed` elements ignore an ancestor's padding — a global padding-top on the root wrapper only reaches normal-flow content. `overscroll-behavior: none` is applied at the root and on every independently-scrolling pane to kill iOS's rubber-band bounce/pull-to-refresh. Two non-obvious things if you touch this again:
   - `html::after`/`::before` pseudo-elements don't get the same safe-area extension WebKit gives real elements, even `position: fixed` ones — the paper-grain overlay had to move from `html::after` to a real `<div className="paper-grain">` (rendered in `layout.tsx`, styled in `globals.css`) to reach behind the notch.

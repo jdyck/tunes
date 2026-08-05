@@ -110,9 +110,9 @@ export const componentRegistry = [
     path: "src/components/song/RecordingsSection.tsx",
   },
   {
-    slug: "save-status-button",
-    name: "SaveStatusButton",
-    path: "src/components/ui/SaveStatusButton.tsx",
+    slug: "save-action",
+    name: "SaveAction",
+    path: "src/components/ui/SaveAction.tsx",
   },
   {
     slug: "song-work-results-list",

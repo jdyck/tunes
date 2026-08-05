@@ -18,19 +18,6 @@ The problem: existing shared components don't match. `PrimaryButton` is `bg-slat
 
 The mapping this was waiting on now exists in [styling-cleanup.md](styling-cleanup.md): the submit button is a filled-vermillion primary, and `PrimaryButton` absorbs the busy state rather than a parallel `SubmitButton` appearing. Extraction and recoloring of these pages land together, in the same pass as step 3 of that file's migration.
 
-## Save feedback — replace the persistent status icon
-
-`SaveStatusButton` currently stays visible at all times as an icon that changes between saved and unsaved. Replace that pattern across detail editors:
-
-- When edits are dirty, show a clear Save button.
-- After a successful save, replace it with a success message such as “Saved”.
-- Hide that success message after five seconds; no saved/clean-state icon should remain by default.
-- Warn before route navigation or another action would discard dirty edits.
-
-Keep the dirty/save state shared and consistent between Song and Recording detail views. The eventual component API should represent the distinct dirty, saving/error (if applicable), and recently-saved states rather than reducing them to a boolean `isSaved` icon toggle.
-
-When `SaveStatusButton` is removed, delete its `componentRegistry.ts` entry and its dev-gallery demo page (`src/app/(browse)/@detail/dev/components/folders/[folder]/@preview/save-status-button/`) in the same change, and register/demo the replacement component instead.
-
 ## InlineSearchForm — deliberately deferred
 
 The label + input + checkbox + search/cancel button cluster in `RecordingDetailContent.tsx` (MusicBrainz search) resembles search UI in `AddSongModal`/`AddRecordingModal`, but the modals differ enough that a shared abstraction now would be speculative. Wait for a third use. Don't build this without being asked.
