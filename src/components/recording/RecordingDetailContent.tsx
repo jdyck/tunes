@@ -37,6 +37,10 @@ import {
 } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import { decodeHtmlEntities } from "@/utils/htmlEntities";
+import {
+  performerCreditsToDraft,
+  performersToSavePayload,
+} from "@/utils/recordingPerformers";
 import { useSavedRecordingsRefresh } from "@/components/recording/SavedRecordingsRefreshContext";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 
@@ -155,6 +159,9 @@ export default function RecordingDetailContent({
           }
         : null
     );
+    setPerformers(
+      performerCreditsToDraft(recording.recording_artist_credits ?? [])
+    );
     setIsSaved(
       decodedName === storedName &&
         decodedArtist === storedArtist &&
@@ -251,12 +258,7 @@ export default function RecordingDetailContent({
                 releaseGroup.musicbrainzReleaseGroupId,
             }
           : null,
-        performers: performers.map((performer) => ({
-          name: performer.name,
-          credited_as: performer.creditedAs,
-          kind: performer.kind,
-          musicbrainz_artist_id: performer.musicbrainzArtistId,
-        })),
+        performers: performersToSavePayload(performers),
       },
       p_private: {
         key: key || null,

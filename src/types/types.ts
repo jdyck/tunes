@@ -110,6 +110,7 @@ export interface Recording {
   recording_location?: string | null;
   release_group_id?: string | null;
   release_groups?: ReleaseGroup | null;
+  recording_artist_credits?: RecordingArtistCredit[];
 }
 
 export interface ReleaseGroup {

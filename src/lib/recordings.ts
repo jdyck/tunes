@@ -1,5 +1,7 @@
 import type {
+  Artist,
   Recording,
+  RecordingArtistCredit,
   RecordingYouTubeItem,
   SavedRecording,
   UserRecordingData,
@@ -19,8 +21,14 @@ interface RecordingAssociationRow {
   youtube_items: YouTubeItem | YouTubeItem[] | null;
 }
 
+interface RecordingArtistCreditRow
+  extends Omit<RecordingArtistCredit, "artists"> {
+  artists: Artist | Artist[] | null;
+}
+
 interface SavedRecordingRow extends UserRecordingData {
-  recordings: (Recording & {
+  recordings: (Omit<Recording, "recording_artist_credits"> & {
+    recording_artist_credits?: RecordingArtistCreditRow[] | null;
     recording_youtube_items?: RecordingAssociationRow[] | null;
   }) | null;
 }
@@ -46,7 +54,21 @@ export const mapSavedRecordingRow = (
 ): SavedRecording | null => {
   if (!row.recordings) return null;
 
-  const { recording_youtube_items, ...recording } = row.recordings;
+  const {
+    recording_artist_credits,
+    recording_youtube_items,
+    ...recording
+  } = row.recordings;
+  const recordingArtistCredits = (recording_artist_credits ?? [])
+    .map((credit): RecordingArtistCredit => ({
+      ...credit,
+      artists: unwrapOne(credit.artists),
+    }))
+    .sort(
+      (a, b) =>
+        (a.sort_order ?? Number.MAX_SAFE_INTEGER) -
+        (b.sort_order ?? Number.MAX_SAFE_INTEGER)
+    );
   const youtubeItems = (recording_youtube_items ?? [])
     .map((association): RecordingYouTubeItem | null => {
       const item = unwrapOne(association.youtube_items);
@@ -59,6 +81,7 @@ export const mapSavedRecordingRow = (
 
   return {
     ...recording,
+    recording_artist_credits: recordingArtistCredits,
     user_data: {
       user_id: row.user_id,
       recording_id: row.recording_id,
@@ -85,6 +108,14 @@ export const savedRecordingSelect = `
   recordings!inner(
     *,
     release_groups(id, title, musicbrainz_release_group_id),
+    recording_artist_credits(
+      recording_id,
+      artist_id,
+      role,
+      credited_as,
+      sort_order,
+      artists(id, name, kind, musicbrainz_artist_id)
+    ),
     recording_youtube_items(
       created_at,
       youtube_items(*)

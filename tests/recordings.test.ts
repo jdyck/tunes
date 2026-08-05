@@ -4,6 +4,10 @@ import {
   mapSavedRecordingRow,
   mapSongArtworkRows,
 } from "../src/lib/recordings.ts";
+import {
+  performerCreditsToDraft,
+  performersToSavePayload,
+} from "../src/utils/recordingPerformers.ts";
 
 test("maps preferred key and tempo from private Recording data", () => {
   const savedRecording = mapSavedRecordingRow({
@@ -24,6 +28,68 @@ test("maps preferred key and tempo from private Recording data", () => {
   assert.equal(savedRecording?.user_data.tempo, "96");
   assert.equal("key" in (savedRecording ?? {}), false);
   assert.equal("tempo" in (savedRecording ?? {}), false);
+});
+
+test("preserves loaded performer credits through the Recording save payload", () => {
+  const savedRecording = mapSavedRecordingRow({
+    user_id: "user-1",
+    recording_id: "recording-1",
+    recordings: {
+      id: "recording-1",
+      song_id: "song-1",
+      name: "But Beautiful",
+      recording_artist_credits: [
+        {
+          recording_id: "recording-1",
+          artist_id: "artist-2",
+          role: "performer",
+          credited_as: "Cole, Nat King",
+          sort_order: 1,
+          artists: {
+            id: "artist-2",
+            name: "Nat King Cole",
+            kind: "person",
+            musicbrainz_artist_id: "artist-mbid-2",
+          },
+        },
+        {
+          recording_id: "recording-1",
+          artist_id: "artist-1",
+          role: "performer",
+          credited_as: "Oscar Moore",
+          sort_order: 0,
+          artists: [
+            {
+              id: "artist-1",
+              name: "Oscar Moore",
+              kind: "person",
+              musicbrainz_artist_id: "artist-mbid-1",
+            },
+          ],
+        },
+      ],
+    },
+  });
+
+  assert.ok(savedRecording);
+  const draft = performerCreditsToDraft(
+    savedRecording.recording_artist_credits ?? []
+  );
+
+  assert.deepEqual(performersToSavePayload(draft), [
+    {
+      name: "Oscar Moore",
+      credited_as: "Oscar Moore",
+      kind: "person",
+      musicbrainz_artist_id: "artist-mbid-1",
+    },
+    {
+      name: "Nat King Cole",
+      credited_as: "Cole, Nat King",
+      kind: "person",
+      musicbrainz_artist_id: "artist-mbid-2",
+    },
+  ]);
 });
 
 const artworkRow = (

@@ -27,7 +27,14 @@ const artistRecordingSelect = `
   recordings!inner(
     *,
     release_groups(id, title, musicbrainz_release_group_id),
-    recording_artist_credits!inner(artist_id, artists(id, name, kind, musicbrainz_artist_id)),
+    recording_artist_credits!inner(
+      recording_id,
+      artist_id,
+      role,
+      credited_as,
+      sort_order,
+      artists(id, name, kind, musicbrainz_artist_id)
+    ),
     recording_youtube_items(
       created_at,
       youtube_items(*)
