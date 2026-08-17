@@ -1,5 +1,6 @@
 import type { RecordingPerformer } from "../lib/musicbrainz.ts";
 import { decodeHtmlEntities } from "./htmlEntities.ts";
+import { normalizeMusicBrainzArtistKind } from "./musicbrainzArtistCredits.ts";
 
 export interface MusicBrainzPerformerRelation {
   type: string;
@@ -37,7 +38,7 @@ export const musicBrainzRecordingPerformers = (
       creditedAs: decodeHtmlEntities(
         relation["target-credit"] || relation.artist.name
       ),
-      kind: relation.artist.type?.toLowerCase() ?? null,
+      kind: normalizeMusicBrainzArtistKind(relation.artist.type),
     });
   }
 

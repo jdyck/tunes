@@ -1,7 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import {
   extractYouTubeID,
   YouTubeSearchResult,
@@ -23,7 +25,6 @@ import {
   deriveInitialSavedVideoState,
   markRecordingRemoved,
   markVideoSaved,
-  reconcileSavedVideoState,
 } from "@/utils/addRecordingSavedState";
 
 interface PlatformSearchState {
@@ -59,19 +60,15 @@ export default function AddRecordingModal({
   songTitle,
   savedRecordings,
   onClose,
-  onChanged,
 }: {
   songId: string;
   songTitle: string;
   savedRecordings: SavedRecording[];
   onClose: () => void;
-  onChanged: () =>
-    | SavedRecording[]
-    | null
-    | void
-    | Promise<SavedRecording[] | null | void>;
 }) {
   const { play } = usePlayer();
+  const saveYouTubeRecording = useMutation(api.recordings.saveYoutube);
+  const unsaveRecording = useMutation(api.recordings.unsave);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [manualSuccess, setManualSuccess] = useState<string | null>(null);
   const [initialSavedState] = useState(() =>
@@ -80,7 +77,6 @@ export default function AddRecordingModal({
   const [savedByVideoId, setSavedByVideoId] = useState(
     initialSavedState.savedByVideoId
   );
-  const sessionRecordingIds = useRef(new Set<string>());
   const [pendingByVideoId, setPendingByVideoId] = useState<
     Record<string, Exclude<RecordingResultPendingState, null>>
   >({});
@@ -200,14 +196,6 @@ export default function AddRecordingModal({
     }
   };
 
-  const refreshSavedRecordings = async () => {
-    try {
-      return await onChanged();
-    } catch {
-      return null;
-    }
-  };
-
   const saveResult = async (
     result: YouTubeSearchResult,
     kind: RecordingKind
@@ -234,23 +222,21 @@ export default function AddRecordingModal({
         }
       }
 
-      const { data, error } = await supabase.rpc("save_youtube_recording", {
-        p_song_id: songId,
-        p_video_id: selected.videoId,
-        p_title: selected.title,
-        p_channel_name: selected.channelTitle,
-        p_search_category: selected.searchCategory,
-        p_discovery_source: selected.discoverySource,
-        p_recording_kind: kind,
-        p_ytmusic_artist_id: selected.artistId ?? null,
-        p_ytmusic_artist_name: selected.artistName ?? null,
-        p_ytmusic_album_id: selected.albumId ?? null,
-        p_ytmusic_album_name: selected.albumName ?? null,
-        p_duration_seconds: selected.durationSeconds ?? null,
-        p_metadata_fetched_at: selected.metadataFetchedAt ?? null,
+      const data = await saveYouTubeRecording({
+        songId: songId as Id<"songs">,
+        videoId: selected.videoId,
+        title: selected.title,
+        channelName: selected.channelTitle || null,
+        searchCategory: selected.searchCategory,
+        discoverySource: selected.discoverySource,
+        recordingKind: kind,
+        ytmusicArtistId: selected.artistId ?? null,
+        ytmusicArtistName: selected.artistName ?? null,
+        ytmusicAlbumId: selected.albumId ?? null,
+        ytmusicAlbumName: selected.albumName ?? null,
+        durationSeconds: selected.durationSeconds ?? null,
+        metadataFetchedAt: selected.metadataFetchedAt ?? null,
       });
-
-      if (error) throw error;
       if (typeof data !== "string") {
         throw new Error("The save did not return a Recording ID.");
       }
@@ -258,16 +244,6 @@ export default function AddRecordingModal({
       setSavedByVideoId((previous) =>
         markVideoSaved(previous, videoId, data)
       );
-      sessionRecordingIds.current.add(data);
-      const refreshed = await refreshSavedRecordings();
-      if (Array.isArray(refreshed)) {
-        const reconciled = reconcileSavedVideoState(
-          refreshed,
-          sessionRecordingIds.current
-        );
-        setDuplicateVideoIds(new Set(reconciled.duplicateVideoIds));
-        setSavedByVideoId(reconciled.savedByVideoId);
-      }
       return true;
     } catch (error) {
       setActionErrors((previous) => ({
@@ -317,25 +293,13 @@ export default function AddRecordingModal({
     setActionErrors((previous) => ({ ...previous, [videoId]: "" }));
 
     try {
-      const { error } = await supabase
-        .from("user_recording_data")
-        .delete()
-        .eq("recording_id", saved.recordingId);
-
-      if (error) throw error;
+      await unsaveRecording({
+        recordingId: saved.recordingId as Id<"recordings">,
+      });
 
       setSavedByVideoId((previous) =>
         markRecordingRemoved(previous, saved.recordingId)
       );
-      const refreshed = await refreshSavedRecordings();
-      if (Array.isArray(refreshed)) {
-        const reconciled = reconcileSavedVideoState(
-          refreshed,
-          sessionRecordingIds.current
-        );
-        setDuplicateVideoIds(new Set(reconciled.duplicateVideoIds));
-        setSavedByVideoId(reconciled.savedByVideoId);
-      }
       return true;
     } catch (error) {
       setActionErrors((previous) => ({

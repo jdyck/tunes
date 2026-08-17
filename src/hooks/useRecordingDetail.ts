@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { useSavedRecording } from "@/hooks/useSavedRecording";
 import { useSaveLifecycle } from "@/hooks/useSaveLifecycle";
-import { supabase } from "@/lib/supabaseClient";
 import {
   recordingDraftDidSave,
   recordingDraftIsDirty,
@@ -19,6 +21,8 @@ export function useRecordingDetail(id: string) {
   const [editorState, setEditorState] =
     useState<RecordingEditorState | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const hydratedRecordingIdRef = useRef<string | null>(null);
+  const updateRecording = useMutation(api.recordings.update);
   const {
     status: saveStatus,
     isDirty,
@@ -30,7 +34,8 @@ export function useRecordingDetail(id: string) {
   } = useSaveLifecycle();
 
   useEffect(() => {
-    if (!recording) return;
+    if (!recording || hydratedRecordingIdRef.current === recording.id) return;
+    hydratedRecordingIdRef.current = recording.id;
     const nextEditorState = recordingToEditorState(recording);
     setEditorState(nextEditorState);
     setSaveError(null);
@@ -58,12 +63,11 @@ export function useRecordingDetail(id: string) {
 
     try {
       const payload = recordingDraftToPayload(recording, draft);
-      const { error } = await supabase.rpc("update_saved_recording", {
-        p_recording_id: id,
-        p_shared: payload.shared,
-        p_private: payload.private,
+      await updateRecording({
+        recordingId: id as Id<"recordings">,
+        shared: payload.shared,
+        privateData: payload.private,
       });
-      if (error) throw error;
 
       setSaveError(null);
       setEditorState((current) =>
@@ -76,7 +80,15 @@ export function useRecordingDetail(id: string) {
       setSaveError(message);
       saveFailed(saveRevision, message);
     }
-  }, [beginSave, editorState, id, recording, saveFailed, saveSucceeded]);
+  }, [
+    beginSave,
+    editorState,
+    id,
+    recording,
+    saveFailed,
+    saveSucceeded,
+    updateRecording,
+  ]);
 
   return {
     recording,

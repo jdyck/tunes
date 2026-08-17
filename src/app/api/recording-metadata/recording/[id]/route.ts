@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchRecordingMatch } from "@/lib/musicbrainz";
+import { auth } from "@clerk/nextjs/server";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await auth.protect();
   const { id } = await params;
 
   try {

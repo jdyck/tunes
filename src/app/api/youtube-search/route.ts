@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchYtMusic } from "@/lib/ytmusic";
 import { searchYouTubeVideos } from "@/lib/youtube";
+import { auth } from "@clerk/nextjs/server";
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
 export async function GET(request: NextRequest) {
+  await auth.protect();
   const query = request.nextUrl.searchParams.get("q")?.trim();
   const source = request.nextUrl.searchParams.get("source");
   const pageToken =

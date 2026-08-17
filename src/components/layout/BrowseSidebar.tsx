@@ -23,15 +23,6 @@ export default function BrowseSidebar() {
         <NavLink href="/artists" icon="/artists.svg">
           Artists
         </NavLink>
-        {/*<NavLink href="/recordings" icon="/record.svg">*/}
-        {/*  Recordings*/}
-        {/*</NavLink>*/}
-        <NavLink href="/tags" icon="/tags.svg">
-          Tags
-        </NavLink>
-        <NavLink href="/lists" icon="/lists.svg">
-          Lists
-        </NavLink>
         {process.env.NODE_ENV === "development" && (
           <NavLink href="/dev/components" icon="/folder.svg">
             Components

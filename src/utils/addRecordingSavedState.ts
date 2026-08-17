@@ -51,15 +51,6 @@ export const markVideoSaved = (
   [videoId]: { recordingId, existedAtOpen: false },
 });
 
-export const markVideoRemoved = (
-  state: Record<string, SavedVideoState>,
-  videoId: string
-): Record<string, SavedVideoState> => {
-  const next = { ...state };
-  delete next[videoId];
-  return next;
-};
-
 export const markRecordingRemoved = (
   state: Record<string, SavedVideoState>,
   recordingId: string
@@ -69,25 +60,3 @@ export const markRecordingRemoved = (
       ([, saved]) => saved.recordingId !== recordingId
     )
   );
-
-export const reconcileSavedVideoState = (
-  recordings: SavedRecording[],
-  sessionRecordingIds: ReadonlySet<string>
-): InitialSavedVideoState => {
-  const refreshed = deriveInitialSavedVideoState(recordings);
-
-  return {
-    ...refreshed,
-    savedByVideoId: Object.fromEntries(
-      Object.entries(refreshed.savedByVideoId).map(([videoId, saved]) => {
-        return [
-          videoId,
-          {
-            ...saved,
-            existedAtOpen: !sessionRecordingIds.has(saved.recordingId),
-          },
-        ];
-      })
-    ),
-  };
-};

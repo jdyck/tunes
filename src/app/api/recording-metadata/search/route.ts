@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchRecordingMatches } from "@/lib/musicbrainz";
+import { auth } from "@clerk/nextjs/server";
 
 export async function GET(request: NextRequest) {
+  await auth.protect();
   const title = request.nextUrl.searchParams.get("title")?.trim();
   const artist = request.nextUrl.searchParams.get("artist")?.trim() || null;
   const duration = request.nextUrl.searchParams.get("duration")?.trim() || null;

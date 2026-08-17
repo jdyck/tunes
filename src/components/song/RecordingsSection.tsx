@@ -150,17 +150,11 @@ export default function RecordingsSection({
   songId,
   songTitle,
   recordings,
-  onRecordingsChanged,
   onReorder,
 }: {
   songId: string;
   songTitle: string;
   recordings: SavedRecording[];
-  onRecordingsChanged: () =>
-    | SavedRecording[]
-    | null
-    | void
-    | Promise<SavedRecording[] | null | void>;
   onReorder: (reordered: SavedRecording[]) => Promise<boolean>;
 }) {
   const { recordingId } = useParams<{ recordingId?: string | string[] }>();
@@ -246,7 +240,6 @@ export default function RecordingsSection({
           songTitle={songTitle}
           savedRecordings={recordings}
           onClose={() => setShowAddRecording(false)}
-          onChanged={onRecordingsChanged}
         />
       )}
     </>

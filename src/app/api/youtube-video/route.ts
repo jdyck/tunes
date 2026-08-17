@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractYouTubeID, fetchYouTubeVideoData } from "@/lib/youtube";
+import { auth } from "@clerk/nextjs/server";
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
 export async function GET(request: NextRequest) {
+  await auth.protect();
   const videoId = extractYouTubeID(
     request.nextUrl.searchParams.get("videoId")
   );

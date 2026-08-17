@@ -50,13 +50,13 @@ A Song has no artwork of its own ([ADR-0007](../adr/0007-original-dates-and-albu
 so each row borrows its representative Recording's cover — the same Recording
 the Song detail header uses.
 
-This is a **second query** (`useSongArtwork` / `songArtworkSelect`), not an
-embed on the Songs fetch, for two reasons. The representative Recording is the
-one highest in the User's own `sort_order`, which lives on
-`user_recording_data`; PostgREST cannot order a nested embed by a grandchild's
-column, so the query has to start from `user_recording_data` the way
-`useSavedRecordings` does. And running it separately means the rows render as
-soon as the Songs query lands, with images filling in after.
+This is a **second reactive query** (`useSongArtwork` /
+`recordings.listArtworkMine`), not part of the Songs result. The backend starts
+from the current User's saved-Recording relationships, selects the first
+Recording in that User's order for each Song, and returns only the Release
+Group, representative release, and YouTube IDs needed to derive an image. That
+keeps the main Song rows small and lets them render as soon as the Songs query
+lands, with images filling in afterward.
 
 Artwork failure is deliberately not surfaced in the pane's error state — the
 list is fully usable without it, and rows fall back to the placeholder.

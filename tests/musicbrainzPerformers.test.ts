@@ -50,3 +50,14 @@ test("keeps only performer-role relations and decodes credited-as", () => {
     },
   ]);
 });
+
+test("drops unsupported MusicBrainz artist kinds", () => {
+  const performers = musicBrainzRecordingPerformers([
+    {
+      type: "performer",
+      artist: { id: "artist-5", name: "Unknown act", type: "Ensemble" },
+    },
+  ]);
+
+  assert.equal(performers[0]?.kind, null);
+});

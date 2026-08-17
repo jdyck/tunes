@@ -7,17 +7,6 @@ Candidates for new shared components. Ground rules:
 - One component per PR/commit-series; touch call sites in the same change so the old markup is actually deleted.
 - Treat empty states as part of a component's design, not a separate afterthought. When a component's filled-state layout or visual language changes, update its empty state (and loading state where relevant) in the same work so they stay coherent.
 
-## Auth form input + submit button — **unblocked**
-
-All four auth-ish pages (`login`, `signup`, `forgot-password`, `account`) hand-roll:
-
-- text inputs: `className="p-2 border border-border-default rounded"` (~9 occurrences)
-- a submit button: `bg-azure-600 text-white uppercase text-lg p-1.5 rounded flex items-center justify-center gap-2 disabled:opacity-70` with a `<Spinner /> + "Logging in"`-style busy state
-
-The problem: existing shared components don't match. `PrimaryButton` is `bg-slate-700 rounded-lg` (different color, no busy state); `FormField` has a different input style (`p-1.5 rounded-md`, no border). Both colors are off-system — slate and azure are neither of the two accents.
-
-The mapping this was waiting on now exists in [styling-cleanup.md](styling-cleanup.md): the submit button is a filled-vermillion primary, and `PrimaryButton` absorbs the busy state rather than a parallel `SubmitButton` appearing. Extraction and recoloring of these pages land together, in the same pass as step 3 of that file's migration.
-
 ## InlineSearchForm — deliberately deferred
 
 The label + input + checkbox + search/cancel button cluster in `RecordingDetailContent.tsx` (MusicBrainz search) resembles search UI in `AddSongModal`/`AddRecordingModal`, but the modals differ enough that a shared abstraction now would be speculative. Wait for a third use. Don't build this without being asked.

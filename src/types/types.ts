@@ -1,9 +1,5 @@
 // src/types/types.ts
 
-import { User as SupabaseUser } from "@supabase/supabase-js";
-
-export interface User extends SupabaseUser {}
-
 export interface Song {
   id: string;
   name: string;

@@ -3,9 +3,7 @@ import assert from "node:assert/strict";
 import {
   deriveInitialSavedVideoState,
   markRecordingRemoved,
-  markVideoRemoved,
   markVideoSaved,
-  reconcileSavedVideoState,
 } from "../src/utils/addRecordingSavedState.ts";
 import type { SavedRecording } from "../src/types/types.ts";
 
@@ -63,7 +61,6 @@ test("a successful session add is removable without pre-existing confirmation", 
     recordingId: "recording-1",
     existedAtOpen: false,
   });
-  assert.deepEqual(markVideoRemoved(saved, "video000001"), {});
 });
 
 test("state transitions do not mutate the previous map", () => {
@@ -75,11 +72,9 @@ test("state transitions do not mutate the previous map", () => {
   };
 
   const saved = markVideoSaved(previous, "video000002", "recording-2");
-  const removed = markVideoRemoved(saved, "video000001");
 
   assert.deepEqual(Object.keys(previous), ["video000001"]);
   assert.deepEqual(Object.keys(saved).sort(), ["video000001", "video000002"]);
-  assert.deepEqual(Object.keys(removed), ["video000002"]);
 });
 
 test("removing a Recording clears every associated video check", () => {
@@ -92,14 +87,4 @@ test("removing a Recording clears every associated video check", () => {
     Object.keys(markRecordingRemoved(previous, "recording-1")),
     ["video000003"]
   );
-});
-
-test("refresh adds all videos for a session-created Recording without confirmation", () => {
-  const refreshed = reconcileSavedVideoState(
-    [savedRecording("recording-1", ["video000001", "video000002"])],
-    new Set(["recording-1"])
-  );
-
-  assert.equal(refreshed.savedByVideoId.video000001.existedAtOpen, false);
-  assert.equal(refreshed.savedByVideoId.video000002.existedAtOpen, false);
 });

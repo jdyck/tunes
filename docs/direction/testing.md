@@ -14,4 +14,17 @@ Artist-credit coverage includes provider identity, nullable kind,
 credited-as normalization, conflicting-identity protection, and stable local
 Artist reuse across refreshes and roles.
 
-**Future decision:** whether and when to add component, route, or browser testing. It does not block this focused suite.
+The Clerk/Convex backend privacy boundary uses fast authorization-contract
+coverage with Vitest and `convex-test`. Exercise anonymous, owner, other-User,
+and Site Admin access as applicable for every public query and mutation. These
+tests complement rather than replace the focused pure contracts above and run
+through `npm test`.
+
+Mocked identities cannot prove the real Clerk-to-Convex token seam. The adoption
+verification therefore included a manual smoke with two real Clerk Development
+Users: the second User discovered and added the owner's shared Song without
+seeing the owner's favorite, notes, Recordings, or Site Admin controls. Repeat a
+small two-account smoke when authentication wiring or a private-data boundary
+changes, and before the project enters privacy-active use. Keep browser
+automation, hosted browser CI, broad component testing, and general browser
+coverage as separate decisions.

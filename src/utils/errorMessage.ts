@@ -1,6 +1,5 @@
-// Supabase/PostgREST rejections are plain objects, not Error instances, so
-// String(err) collapses them to "[object Object]". Pull the most useful text
-// out of whatever shape we were handed instead.
+// Backend and third-party rejections can be plain objects rather than Error
+// instances, so pull the most useful text out of whatever shape we receive.
 export const errorMessage = (value: unknown): string => {
   if (value instanceof Error) return value.message;
   if (typeof value === "string") return value;

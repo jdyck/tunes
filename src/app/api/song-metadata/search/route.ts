@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchSongWorks } from "@/lib/musicbrainz";
+import { auth } from "@clerk/nextjs/server";
 
 export async function GET(request: NextRequest) {
+  await auth.protect();
   const query = request.nextUrl.searchParams.get("q")?.trim();
 
   if (!query) {
