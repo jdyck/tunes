@@ -9,6 +9,7 @@
  */
 
 import type * as artists from "../artists.js";
+import type * as migration from "../migration.js";
 import type * as model_artists from "../model/artists.js";
 import type * as model_auth from "../model/auth.js";
 import type * as model_recordings from "../model/recordings.js";
@@ -25,6 +26,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   artists: typeof artists;
+  migration: typeof migration;
   "model/artists": typeof model_artists;
   "model/auth": typeof model_auth;
   "model/recordings": typeof model_recordings;

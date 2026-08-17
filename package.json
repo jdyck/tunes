@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "export:supabase": "node scripts/export-supabase.mjs",
+    "import:convex": "node scripts/import-supabase-to-convex.mjs",
     "test": "node scripts/run-tests.mjs",
     "test:pure": "node --experimental-strip-types --test tests/*.test.ts",
     "test:convex": "vitest run",

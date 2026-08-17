@@ -13,7 +13,8 @@ export default defineSchema({
   })
     .index("by_clerkTokenIdentifier", ["clerkTokenIdentifier"])
     .index("by_clerkSubject", ["clerkSubject"])
-    .index("by_legacySupabaseId", ["legacySupabaseId"]),
+    .index("by_legacySupabaseId", ["legacySupabaseId"])
+    .index("by_role", ["role"]),
 
   songs: defineTable({
     name: v.string(),
@@ -49,7 +50,8 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_songId", ["songId"])
     .index("by_userId_and_songId", ["userId", "songId"])
-    .index("by_userId_and_creationRequestId", ["userId", "creationRequestId"]),
+    .index("by_userId_and_creationRequestId", ["userId", "creationRequestId"])
+    .index("by_legacyUserId", ["legacyUserId"]),
 
   artists: defineTable({
     name: v.string(),
@@ -83,7 +85,8 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_artistId", ["artistId"])
-    .index("by_userId_and_artistId", ["userId", "artistId"]),
+    .index("by_userId_and_artistId", ["userId", "artistId"])
+    .index("by_legacyUserId", ["legacyUserId"]),
 
   songArtistCredits: defineTable({
     songId: v.id("songs"),
@@ -99,7 +102,8 @@ export default defineSchema({
   })
     .index("by_songId", ["songId"])
     .index("by_songId_and_sortOrder", ["songId", "sortOrder"])
-    .index("by_artistId", ["artistId"]),
+    .index("by_artistId", ["artistId"])
+    .index("by_legacySupabaseId", ["legacySupabaseId"]),
 
   releaseGroups: defineTable({
     title: v.string(),
@@ -151,7 +155,8 @@ export default defineSchema({
       "userId",
       "songId",
       "sortOrder",
-    ]),
+    ])
+    .index("by_legacyUserId", ["legacyUserId"]),
 
   youtubeItems: defineTable({
     videoId: v.string(),
@@ -172,13 +177,18 @@ export default defineSchema({
     ytmusicAlbumName: nullableString,
     durationSeconds: v.union(v.number(), v.null()),
     metadataFetchedAt: nullableString,
-  }).index("by_videoId", ["videoId"]),
+    legacySupabaseVideoId: v.optional(nullableString),
+  })
+    .index("by_videoId", ["videoId"])
+    .index("by_legacySupabaseVideoId", ["legacySupabaseVideoId"]),
 
   recordingYoutubeItems: defineTable({
     recordingId: v.id("recordings"),
     songId: v.id("songs"),
     youtubeItemId: v.id("youtubeItems"),
     createdAt: v.string(),
+    legacyRecordingId: v.optional(nullableString),
+    legacyYoutubeVideoId: v.optional(nullableString),
   })
     .index("by_recordingId_and_createdAt", ["recordingId", "createdAt"])
     .index("by_recordingId_and_youtubeItemId", [
@@ -186,7 +196,11 @@ export default defineSchema({
       "youtubeItemId",
     ])
     .index("by_songId_and_youtubeItemId", ["songId", "youtubeItemId"])
-    .index("by_youtubeItemId", ["youtubeItemId"]),
+    .index("by_youtubeItemId", ["youtubeItemId"])
+    .index("by_legacyRecordingId_and_legacyYoutubeVideoId", [
+      "legacyRecordingId",
+      "legacyYoutubeVideoId",
+    ]),
 
   recordingArtistCredits: defineTable({
     recordingId: v.id("recordings"),
@@ -198,5 +212,6 @@ export default defineSchema({
   })
     .index("by_recordingId", ["recordingId"])
     .index("by_recordingId_and_sortOrder", ["recordingId", "sortOrder"])
-    .index("by_artistId", ["artistId"]),
+    .index("by_artistId", ["artistId"])
+    .index("by_legacySupabaseId", ["legacySupabaseId"]),
 });

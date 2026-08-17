@@ -5,6 +5,21 @@ data. The existing Supabase project remains the source of truth for the owner's
 real repertoire until its data has been imported into Convex and verified.
 Do not delete or modify that project as cleanup work.
 
+## Current checkpoint
+
+The snapshot at `local/snapshots/supabase-20260817T043229Z` contains 3,758 rows
+across all 12 application tables. Its manifest checksums and source foreign
+references pass. The personal development deployment `glad-shark-997` imported
+all shared rows plus the Site Admin owner's 151 Song-private and 479
+Recording-private rows. Two private rows belonging to a legacy non-admin test
+identity remain preserved only in the snapshot.
+
+A complete second import inserted zero documents and passed the same expected
+counts, proving the import is restartable. The authenticated application showed
+152 Songs (151 imported plus the existing development fixture), opened an
+imported favorite Song with its three ordered Recordings, and reported no
+browser errors.
+
 ## Portable source snapshot
 
 Run this from the repository root while the Supabase project is not receiving
@@ -30,13 +45,33 @@ Supabase REST reads are not one cross-table transaction. Keep the application
 idle during the export, and take a fresh snapshot after freezing Supabase writes
 for the eventual production cutover.
 
+## Import procedure
+
+The idempotent, internal-only importer maps Supabase UUID relationships to native
+Convex document IDs in dependency order and verifies imported counts against the
+source manifest:
+
+  ```bash
+  npm run import:convex -- \
+    --snapshot local/snapshots/<snapshot-directory> \
+    --deployment <personal-dev-deployment>
+  ```
+
+- The importer binds the one legacy `site_admins` UUID to the one Convex Site
+  Admin User. It imports only that owner's private rows. Any other legacy User's
+  private rows remain preserved in the source snapshot and are reported rather
+  than silently reassigned.
+- Legacy Recording kinds that are absent use the application's established
+  `video_capture` fallback. Because legacy private Recording positions may be
+  absent, the importer deterministically normalizes each Song's owner-specific
+  ordering while preserving explicitly ordered rows ahead of unordered rows.
+- `user_recording_data` has no creation timestamp. Its imported `createdAt`
+  records the source snapshot time; ordering does not depend on this fallback.
+
 ## Remaining migration work
 
-- Build an idempotent, internal-only importer that maps Supabase UUIDs to native
-  Convex document IDs in dependency order.
-- Rehearse the import against the Convex development deployment and verify every
-  manifest count, ownership relationship, foreign reference, and Site Admin
-  assignment.
+- Complete the real second-Clerk-User Recording isolation smoke before making
+  the adoption decision.
 - Repeat the export from the unchanged Supabase source if rehearsal discovers a
   mapping problem.
 - Before production cutover, freeze Supabase writes, take a fresh snapshot,
