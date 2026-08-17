@@ -280,41 +280,6 @@ export interface ReleaseTracklistItem {
   trackPosition: number;
 }
 
-export interface MusicBrainzReleaseSearchResult {
-  releaseId: string;
-  title: string;
-  artistCredit: string;
-  date: string | null;
-  country: string | null;
-  releaseGroupId: string | null;
-}
-
-export const searchMusicBrainzReleases = async (
-  title: string,
-  artist?: string | null
-): Promise<MusicBrainzReleaseSearchResult[]> => {
-  let query = `release:"${escapeLuceneValue(title)}"`;
-  if (artist) query += ` AND artist:"${escapeLuceneValue(artist)}"`;
-  const url = new URL("https://musicbrainz.org/ws/2/release/");
-  url.searchParams.set("query", query);
-  url.searchParams.set("fmt", "json");
-  url.searchParams.set("limit", "15");
-  const data = await fetchMusicBrainzJson<{ releases?: (MusicBrainzRelease & {
-    country?: string;
-    "artist-credit"?: { name: string }[];
-  })[] }>(url);
-  return (data.releases ?? []).map((release) => ({
-    releaseId: release.id,
-    title: decodeHtmlEntities(release.title),
-    artistCredit: (release["artist-credit"] ?? [])
-      .map((credit) => decodeHtmlEntities(credit.name))
-      .join(" & "),
-    date: release.date ?? null,
-    country: release.country ?? null,
-    releaseGroupId: release["release-group"]?.id ?? null,
-  }));
-};
-
 export const fetchReleaseTracklist = async (
   releaseId: string
 ): Promise<ReleaseTracklistItem[] | null> => {

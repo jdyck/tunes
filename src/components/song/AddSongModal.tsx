@@ -28,8 +28,8 @@ const writersFromResult = (result: SongWorkSearchResult): WriterInput[] =>
 
 const toConvexWriters = (writers: WriterInput[]) =>
   writers.map((writer) => ({
-    // Existing IDs in this editor belong to the Supabase application and are
-    // not valid Convex IDs. Provider identity or canonical name handles reuse.
+    // This creation flow does not accept unvalidated client-side Artist IDs.
+    // Provider identity or canonical name handles reuse.
     artistId: null,
     canonicalName: writer.canonicalName ?? null,
     creditedAs: writer.creditedAs,

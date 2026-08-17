@@ -2,7 +2,8 @@
 
 A personal tool for tracking a musician's repertoire — songs, personal notes, and liked recordings — kept separate from casual listening playlists. Solo project, early stage.
 
-Built with Next.js (App Router), TypeScript, Tailwind CSS, and Supabase (auth + Postgres).
+Built with Next.js (App Router), TypeScript, Tailwind CSS, Clerk authentication,
+and Convex.
 
 ## Getting started
 
@@ -24,11 +25,14 @@ cloudflared tunnel --url http://localhost:3000
 
 Open the printed `https://*.trycloudflare.com` URL on your phone. The link is a random, unlisted subdomain — fine to use solo or share with a few trusted people, but kill the tunnel (`Ctrl-C`) when you're done rather than leaving it running.
 
-You'll need a `.env.local` with:
+Connect the repository to a Convex development deployment with `npx convex dev`,
+configure that deployment's `CLERK_JWT_ISSUER_DOMAIN`, and provide these local
+environment variables:
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_CONVEX_URL=
 YOUTUBE_API_KEY=
 ```
 

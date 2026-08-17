@@ -4,9 +4,14 @@ Instructions for AI coding agents working in this repo. Keep this file lean — 
 
 ## Project overview
 
-Standards (repo folder: `tunes`): a personal Next.js/Supabase app for tracking a solo musician's repertoire (Songs), private `song_user_data`, and saved Recordings with private `user_recording_data` — separate from casual playlists. Solo personal project, early stage, dormant between sessions. See [docs/domain-model.md](docs/domain-model.md) for why it exists and the domain vocabulary.
+Standards (repo folder: `tunes`): a personal Next.js app using Clerk and Convex
+to track a solo musician's repertoire (Songs), private Song data, and saved
+Recordings with private User data—separate from casual playlists. Solo personal
+project, early stage, dormant between sessions. See
+[docs/domain-model.md](docs/domain-model.md) for why it exists and the domain
+vocabulary.
 
-The current deployment/privacy phase is maintained in [docs/project-stage.md](docs/project-stage.md). Read it before schema, RLS, auth, or data-migration work. Its current-stage status controls whether temporary migration exposure is an accepted development tradeoff; it does not override the target private-data boundaries in the domain model and ADRs.
+The current deployment/privacy phase is maintained in [docs/project-stage.md](docs/project-stage.md). Read it before schema, authorization, auth, or data-migration work. Its current-stage status controls whether temporary migration exposure is an accepted development tradeoff; it does not override the target private-data boundaries in the domain model and ADRs.
 
 ## Repo layout
 
@@ -25,9 +30,11 @@ src/components/      shared React components, grouped by feature
   player/              GlobalPlayer + its gate
   song/, recording/    feature components; future features (playlists, lead sheets) get their own folder
 src/hooks/           shared React hooks
-src/lib/             effectful/stateful modules — anything that fetches, talks to supabase, or holds state (supabaseClient, fonts, metadata clients, componentRegistry)
+src/lib/             effectful/stateful modules — anything that fetches or holds state (fonts, metadata clients, componentRegistry)
 src/types/           shared TS types
 src/utils/           pure functions only
+convex/              schema, authenticated queries/mutations, and model helpers
+supabase/            legacy source schema retained only for data migration/audit
 docs/                domain model, ADRs, direction notes (issues + ideas by subject) — see docs/README.md
 ```
 
@@ -37,9 +44,13 @@ The folder scheme and lib/utils rule above are deliberate decisions (recorded in
 
 - Next.js 16 (App Router), React 19, TypeScript
 - Tailwind CSS
-- Supabase (`@supabase/supabase-js`) — auth + Postgres, client in `src/lib/supabaseClient.ts`; schema migrations in `supabase/migrations/` (applied with `npx supabase db push`)
+- Clerk — authentication and invite-only account access
+- Convex — application data, authorization, reactive queries, and atomic mutations; read `convex/_generated/ai/guidelines.md` before editing `convex/`
+- Supabase migrations and the live source project are retained for the pending
+  owner-data import and audit, not as an application runtime; follow
+  [docs/direction/backend-migration.md](docs/direction/backend-migration.md)
 - Persistent custom player for Recordings, backed by the YouTube IFrame API (`src/components/player/GlobalPlayer.tsx`, `src/lib/youtube.ts`) — see [docs/direction/music-player.md](docs/direction/music-player.md)
-- dnd-kit (`@dnd-kit/core`, `/sortable`, `/utilities`) — drag-to-reorder for a User's Recordings within a Song (`src/components/song/RecordingsSection.tsx`). Order is private state: `useSavedRecordings.reorder` writes `user_recording_data.sort_order` directly under owner RLS. Do **not** persist order through the `update_saved_recording` RPC — it rewrites shared `recordings` fields as a side effect, and position within a Song is private to the User.
+- dnd-kit (`@dnd-kit/core`, `/sortable`, `/utilities`) — drag-to-reorder for a User's Recordings within a Song (`src/components/song/RecordingsSection.tsx`). Order is private state: `useSavedRecordings.reorder` calls the owner-scoped `recordings.reorder` mutation; position within a Song must remain private to the User.
 
 ## Commands
 
@@ -50,8 +61,9 @@ npm test         # run the focused TypeScript test suite
 npm run start    # run production build
 ```
 
-The focused test suite covers pure normalization and MusicBrainz matching
-contracts; broader component/browser testing remains undecided. See
+The focused test suite covers pure normalization/MusicBrainz contracts and
+Convex authorization behavior; broader component/browser testing remains
+undecided. See
 [docs/direction/testing.md](docs/direction/testing.md).
 
 Login credentials for local dev are in `.env.local` (not checked in).
@@ -91,8 +103,8 @@ Git, back up valuable WIP and audits independently.
 
 ## Rules and guardrails
 
-- **Terminology and Song boundary**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). The rename and Song / `song_user_data` split are complete through code and DB: shared identity and metadata live on `public.songs`, while membership, notes, display title, and added time live in private `song_user_data`. Don't reintroduce "tune" or owner/private payload on `songs`.
-- **Canonical entity migrations are scoped work, not drive-bys**: shared `artists` include people and groups; Song credits live in `song_artist_credits`; private Artist state belongs in `artist_user_data`; Recording is provider-neutral; private Recording state belongs in `user_recording_data`; YouTube results belong in `youtube_items`; and `release_group_id` is the Recording's single normalized display/artwork context. Follow [ADR-0008](docs/adr/0008-provider-neutral-music-entities-and-user-data.md) and [canonical-entity-migrations.md](docs/direction/canonical-entity-migrations.md) rather than extending transitional Recording release fields as if they were final.
+- **Terminology and Song boundary**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). Shared identity and metadata live on `songs`, while membership, notes, display title, and added time live in private `songUserData`. Don't reintroduce "tune" or owner/private payload on `songs`.
+- **Canonical entity migrations are scoped work, not drive-bys**: shared `artists` include people and groups; Song credits live in `songArtistCredits`; private Artist state belongs in `artistUserData`; Recording is provider-neutral; private Recording state belongs in `userRecordingData`; YouTube results belong in `youtubeItems`; and `releaseGroupId` is the Recording's single normalized display/artwork context. Follow [ADR-0008](docs/adr/0008-provider-neutral-music-entities-and-user-data.md) and [canonical-entity-migrations.md](docs/direction/canonical-entity-migrations.md) rather than extending transitional Recording release fields as if they were final.
 - **Song creation is not admin-gated**: any user can create a new Song on no search match; don't add approval/moderation gates here ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)).
 - **Lead Sheets are private by default and publishing is admin-only**, never self-service or automatic — don't build a user-facing "publish" action ([ADR-0002](docs/adr/0002-lead-sheets-admin-gated-publishing.md)).
 - **One email = one account** across auth methods (password + Google) — don't treat them as separate identities ([ADR-0001](docs/adr/0001-unique-email-account-linking.md)).

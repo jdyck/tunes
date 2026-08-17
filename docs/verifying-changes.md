@@ -57,9 +57,9 @@ of this matrix:
 Test production builds when Next.js development and production navigation may
 differ.
 
-## Supabase, auth, and migrations
+## Backend, auth, and migrations
 
-Read [project-stage.md](project-stage.md) before schema, RLS, auth, or data
+Read [project-stage.md](project-stage.md) before schema, authorization, auth, or data
 migration work. Verification should match both the current operational stage
 and the target private-data boundary.
 
@@ -70,9 +70,15 @@ authority. For migrations, compare relevant row counts, ownership, nullability,
 relationships, and constraints before and after; never infer data preservation
 from a successful migration command alone.
 
-Do not apply a local or linked Supabase migration merely to verify unrelated
-application work. When a migration is in scope, state which environment was
-used and whether production verification remains.
+For Convex deployment-affecting commands, identify and state the exact personal
+development, preview, or production target before running them. When the
+pending Supabase-to-Convex owner-data migration is in scope, verify both the
+source snapshot and target deployment and state whether production verification
+remains.
+
+Create a source snapshot with `npm run export:supabase`. Confirm that the
+generated `manifest.json` lists every expected application table, its exact row
+count, and a checksum before using the snapshot as migration input.
 
 ## Documentation impact
 

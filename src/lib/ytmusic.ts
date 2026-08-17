@@ -82,14 +82,6 @@ export const searchYtMusic = async (
   return [...songResults, ...videoResults];
 };
 
-export interface YtMusicAlbumSummary {
-  albumId: string;
-  name: string;
-  artistName: string;
-  year: number | null;
-  thumbnail: string;
-}
-
 export interface YtMusicAlbumTrack {
   videoId: string;
   title: string;
@@ -98,43 +90,3 @@ export interface YtMusicAlbumTrack {
   durationSeconds: number | null;
   thumbnail: string;
 }
-
-export interface YtMusicAlbumDetail extends YtMusicAlbumSummary {
-  tracks: YtMusicAlbumTrack[];
-}
-
-export const searchYtMusicAlbums = async (
-  query: string
-): Promise<YtMusicAlbumSummary[]> => {
-  const client = await withTimeout(getClient(), SEARCH_TIMEOUT_MS);
-  const albums = await withTimeout(client.searchAlbums(query), SEARCH_TIMEOUT_MS);
-  return albums.slice(0, 10).map((album) => ({
-    albumId: album.albumId,
-    name: decodeHtmlEntities(album.name),
-    artistName: decodeHtmlEntities(album.artist.name),
-    year: album.year,
-    thumbnail: album.thumbnails[0]?.url ?? "",
-  }));
-};
-
-export const fetchYtMusicAlbum = async (
-  albumId: string
-): Promise<YtMusicAlbumDetail> => {
-  const client = await withTimeout(getClient(), SEARCH_TIMEOUT_MS);
-  const album = await withTimeout(client.getAlbum(albumId), SEARCH_TIMEOUT_MS);
-  return {
-    albumId: album.albumId,
-    name: decodeHtmlEntities(album.name),
-    artistName: decodeHtmlEntities(album.artist.name),
-    year: album.year,
-    thumbnail: album.thumbnails[0]?.url ?? "",
-    tracks: album.songs.map((song) => ({
-      videoId: song.videoId,
-      title: decodeHtmlEntities(song.name),
-      artistId: song.artist.artistId,
-      artistName: decodeHtmlEntities(song.artist.name),
-      durationSeconds: song.duration,
-      thumbnail: song.thumbnails[0]?.url ?? "",
-    })),
-  };
-};
