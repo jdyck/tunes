@@ -36,8 +36,9 @@ schema and functions plus
 `CLERK_JWT_ISSUER_DOMAIN=https://clerk.tunes-seven.vercel.app`. Its application
 tables are empty. Vercel Production has the matching live Clerk publishable and
 secret keys plus `NEXT_PUBLIC_CONVEX_URL` for that Convex deployment. The
-frontend has not yet been redeployed with these values; no owner data has been
-imported and Supabase remains the source of truth.
+production frontend is deployed at `https://tunes-seven.vercel.app`; its Clerk
+login renders and the `/__clerk` proxy resolves successfully. No owner data has
+been imported and Supabase remains the source of truth.
 
 ## Portable source snapshot
 
@@ -90,9 +91,9 @@ source manifest:
 ## Remaining migration work
 
 - Finish Clerk Production setup: add production Google OAuth credentials,
-  deploy the frontend, configure and verify the production app proxy, and create
-  the invited owner User. Ensure that User exists in Convex and promote it to
-  Site Admin before importing owner-scoped data.
+  confirm the working production app proxy in Clerk's setup flow, and create the
+  invited owner User. Ensure that User exists in Convex and promote it to Site
+  Admin before importing owner-scoped data.
 - Before production cutover, freeze Supabase writes, take a fresh snapshot,
   import it into Convex production, and verify normal workflows before entering
   new repertoire data.
