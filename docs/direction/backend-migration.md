@@ -20,6 +20,13 @@ counts, proving the import is restartable. The authenticated application showed
 imported favorite Song with its three ordered Recordings, and reported no
 browser errors.
 
+A second real Clerk Development User began with an empty repertoire, found the
+same imported discoverable Song, and added it. That User saw zero Recordings, an
+unset favorite, empty private notes, and no Site Admin discoverability control.
+Returning to the owner restored the favorite, all three ordered Recordings, and
+the Site Admin control. This completes the real two-User isolation smoke; the
+owner session is restored. Browser diagnostics contained no application errors.
+
 ## Portable source snapshot
 
 Run this from the repository root while the Supabase project is not receiving
@@ -70,10 +77,8 @@ source manifest:
 
 ## Remaining migration work
 
-- Complete the real second-Clerk-User Recording isolation smoke before making
-  the adoption decision.
-- Repeat the export from the unchanged Supabase source if rehearsal discovers a
-  mapping problem.
+- Make the explicit adopt-or-reject decision for this branch. Do not create or
+  mutate Clerk or Convex production until the replacement is adopted.
 - Before production cutover, freeze Supabase writes, take a fresh snapshot,
   import it into Convex production, and verify normal workflows before entering
   new repertoire data.
