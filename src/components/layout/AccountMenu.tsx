@@ -2,30 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { UserCircleIcon } from "@heroicons/react/24/outline";
-import { supabase } from "@/lib/supabaseClient";
-import { User } from "@supabase/supabase-js";
+import { useClerk, useUser } from "@clerk/nextjs";
 
 export default function AccountMenu() {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -39,16 +23,11 @@ export default function AccountMenu() {
   }, [open]);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error logging out:", error.message);
-      return;
-    }
     setOpen(false);
-    router.push("/");
+    await signOut({ redirectUrl: "/login" });
   };
 
-  if (!user) return null;
+  if (!isLoaded || !user) return null;
 
   return (
     <div ref={menuRef} className="relative">
@@ -68,7 +47,7 @@ export default function AccountMenu() {
           className="absolute right-0 mt-1 w-56 bg-surface-app rounded-lg shadow-lg py-2 text-sm z-10"
         >
           <p className="px-4 py-1 text-xs text-ink-600 truncate">
-            {user.email}
+            {user.primaryEmailAddress?.emailAddress}
           </p>
           <Link
             href="/account"
@@ -76,7 +55,7 @@ export default function AccountMenu() {
             onClick={() => setOpen(false)}
             className="block px-4 py-2 hover:bg-paper-200"
           >
-            Change password
+            Manage account
           </Link>
           <button
             role="menuitem"

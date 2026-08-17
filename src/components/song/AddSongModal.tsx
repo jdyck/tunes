@@ -1,11 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useConvex, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { Song } from "@/types/types";
 import { SongWorkSearchResult } from "@/lib/musicbrainz";
 import { WorkBackground } from "@/lib/wikipedia";
-import { WriterInput, saveSongWriters } from "@/lib/songWriters";
+import { WriterInput } from "@/lib/songWriters";
 import { writersFromMusicBrainz } from "@/utils/writerCredits";
 import { searchSongMetadata, fetchWorkPreview } from "@/lib/songMetadataClient";
 import Modal from "@/components/ui/Modal";
@@ -24,6 +26,18 @@ const creditedNames = (result: SongWorkSearchResult): string[] =>
 const writersFromResult = (result: SongWorkSearchResult): WriterInput[] =>
   writersFromMusicBrainz(result.artistCredits);
 
+const toConvexWriters = (writers: WriterInput[]) =>
+  writers.map((writer) => ({
+    // Existing IDs in this editor belong to the Supabase application and are
+    // not valid Convex IDs. Provider identity or canonical name handles reuse.
+    artistId: null,
+    canonicalName: writer.canonicalName ?? null,
+    creditedAs: writer.creditedAs,
+    role: writer.role,
+    artistKind: writer.artistKind ?? null,
+    musicbrainzArtistId: writer.musicbrainzArtistId ?? null,
+  }));
+
 export default function AddSongModal({
   onClose,
   onCreated,
@@ -31,6 +45,9 @@ export default function AddSongModal({
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
+  const convex = useConvex();
+  const createSongMutation = useMutation(api.songs.create);
+  const addDiscoverableSong = useMutation(api.songs.addDiscoverable);
   const [name, setName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -73,32 +90,7 @@ export default function AddSongModal({
     setSearching(true);
     const [metadataResult, discoverableResult] = await Promise.allSettled([
       searchSongMetadata(name),
-      (async () => {
-        const { data, error } = await supabase
-          .from("songs")
-          .select(
-            "id, name, year, wikipedia_extract, wikipedia_url, musicbrainz_work_id, is_discoverable, first_discoverable_at, song_artist_credits(artist_id, role, credited_as, sort_order, artists(id, name, kind, musicbrainz_artist_id))"
-          )
-          .eq("is_discoverable", true)
-          .ilike("name", `%${name.trim()}%`)
-          .limit(10);
-        if (error) throw error;
-
-        const matches = (data ?? []) as unknown as Song[];
-        if (matches.length === 0) return [];
-
-        const { data: memberships, error: membershipsError } = await supabase
-          .from("song_user_data")
-          .select("song_id")
-          .in(
-            "song_id",
-            matches.map((song) => song.id)
-          );
-        if (membershipsError) throw membershipsError;
-
-        const savedIds = new Set((memberships ?? []).map((row) => row.song_id));
-        return matches.filter((song) => !savedIds.has(song.id));
-      })(),
+      convex.query(api.songs.searchDiscoverable, { term: name.trim() }),
     ]);
 
     if (metadataResult.status === "fulfilled") {
@@ -109,7 +101,7 @@ export default function AddSongModal({
     }
 
     if (discoverableResult.status === "fulfilled") {
-      setDiscoverableSongs(discoverableResult.value);
+      setDiscoverableSongs(discoverableResult.value as Song[]);
     } else {
       setDiscoveryError("Couldn't search existing Songs. Try again later.");
       setDiscoverableSongs([]);
@@ -171,67 +163,48 @@ export default function AddSongModal({
 
     setSaving(true);
     createRequestId.current ??= crypto.randomUUID();
-    const { data, error } = await supabase.rpc("create_song_with_membership", {
-      p_song_id: createRequestId.current,
-      p_name: song.name,
-      p_year: parsedYear,
-      p_wikipedia_extract: song.wikipediaExtract,
-      p_wikipedia_url: song.wikipediaUrl,
-      p_musicbrainz_work_id: song.workId,
-    });
-
-    if (error) {
-      setSaving(false);
-      setErrorMessage("Failed to add song: " + error.message);
-      return;
-    }
-
-    if (song.workId) {
-      const { error: workDateError } = await supabase
-        .from("songs")
-        .update({
-          work_date_start: song.workDateStart,
-          work_date_end: song.workDateEnd,
-        })
-        .eq("id", data);
-      if (workDateError) {
-        setSaving(false);
-        setErrorMessage("Song was added, but saving its Work date failed: " + workDateError.message);
-        return;
-      }
-    }
-
     try {
-      await saveSongWriters(data, song.writers);
-    } catch (writersError) {
+      const songId = await createSongMutation({
+        requestId: createRequestId.current,
+        shared: {
+          name: song.name,
+          year: parsedYear,
+          wikipediaExtract: song.wikipediaExtract,
+          wikipediaUrl: song.wikipediaUrl,
+          musicbrainzWorkId: song.workId,
+          workDateStart: song.workDateStart,
+          workDateEnd: song.workDateEnd,
+        },
+        writers: toConvexWriters(song.writers),
+      });
+
+      setSaving(false);
+      onCreated(songId);
+    } catch (error) {
       setSaving(false);
       setErrorMessage(
-        "Song was added, but saving writers failed: " +
-          (writersError instanceof Error
-            ? writersError.message
-            : String(writersError))
+        "Failed to add Song: " +
+          (error instanceof Error ? error.message : String(error)),
       );
-      return;
     }
-
-    setSaving(false);
-    onCreated(data);
   };
 
   const addExistingSong = async (songId: string) => {
     setErrorMessage("");
     setSaving(true);
-    const { data, error } = await supabase.rpc("add_discoverable_song", {
-      p_song_id: songId,
-    });
-    setSaving(false);
-
-    if (error) {
-      setErrorMessage("Failed to add Song: " + error.message);
-      return;
+    try {
+      const addedSongId = await addDiscoverableSong({
+        songId: songId as Id<"songs">,
+      });
+      setSaving(false);
+      onCreated(addedSongId);
+    } catch (error) {
+      setSaving(false);
+      setErrorMessage(
+        "Failed to add Song: " +
+          (error instanceof Error ? error.message : String(error)),
+      );
     }
-
-    onCreated(data);
   };
 
   const handleConfirmPreview = () => {

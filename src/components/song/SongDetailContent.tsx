@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 import { leagueGothic } from "@/lib/fonts";
 import { useSongsList } from "@/components/song/SongsListContext";
-import RecordingsSection from "@/components/song/RecordingsSection";
 import SongWriterCredits from "@/components/song/SongWriterCredits";
 import SongWritersEditor from "@/components/song/SongWritersEditor";
 import SongWorkResultsList from "@/components/song/SongWorkResultsList";
@@ -28,9 +25,6 @@ import {
 } from "@/lib/songMetadataClient";
 import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
-import { useSavedRecordings } from "@/hooks/useSavedRecordings";
-import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
-import { recordingArtwork } from "@/utils/recordingArtwork";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import Modal from "@/components/ui/Modal";
 import {
@@ -78,28 +72,18 @@ const fitTitleFontSize = (element: HTMLElement) => {
 };
 
 export default function SongDetailContent({ id }: { id: string }) {
-  const router = useRouter();
-  const { songs, removeSong } = useSongsList();
+  const { songs } = useSongsList();
   const {
     song,
     writers: loadedWriters,
     loading,
     error,
     isAdmin,
-    setError,
     save,
     saveFavorite,
     saveTags,
     setDiscoverability,
   } = useSongDetail(id);
-  const {
-    recordings,
-    loading: recordingsLoading,
-    error: recordingsError,
-    refresh: refreshRecordings,
-    reorder: reorderRecordings,
-  } = useSavedRecordings(id);
-
   const [notes, setNotes] = useState("");
   const [favorite, setFavorite] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
@@ -124,7 +108,6 @@ export default function SongDetailContent({ id }: { id: string }) {
   const [syncingFromMusicBrainz, setSyncingFromMusicBrainz] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [showWritersEditor, setShowWritersEditor] = useState(false);
-  const [removing, setRemoving] = useState(false);
   const titleRef = useRef<HTMLDivElement | null>(null);
   const hydratedSongIdRef = useRef<string | null>(null);
   const saveLifecycle = useSaveLifecycle();
@@ -299,67 +282,6 @@ export default function SongDetailContent({ id }: { id: string }) {
     saveLifecycle.markDirty();
   };
 
-  const handleRemove = async () => {
-    if (!id) return;
-
-    setRemoving(true);
-    const { data: impactRows, error: impactError } = await supabase.rpc(
-      "song_removal_impact",
-      { p_song_id: id }
-    );
-
-    if (impactError) {
-      setRemoving(false);
-      setError(`Could not check removal impact: ${impactError.message}`);
-      return;
-    }
-
-    const impact = impactRows?.[0];
-    if (!impact) {
-      setRemoving(false);
-      setError("Could not determine how this Song should be removed.");
-      return;
-    }
-
-    if (impact.action === "blocked") {
-      setRemoving(false);
-      setError(impact.blocked_reason);
-      return;
-    }
-
-    const recordingCount = Number(impact.saved_recording_count || 0);
-    const privateRecordingCopy =
-      recordingCount === 0
-        ? ""
-        : `, plus your saved status and all private notes, ratings, tags, and ordering for ${recordingCount} ${
-            recordingCount === 1 ? "Recording" : "Recordings"
-          }`;
-    const sharedCopy =
-      impact.action === "delete_song"
-        ? " The never-shared Song record will also be deleted."
-        : " Shared Song and Recording information will remain.";
-    const confirmed = window.confirm(
-      `Remove this Song from your list? This permanently deletes your private notes, display title, favorite, and tags${privateRecordingCopy}.${sharedCopy} This cannot be undone.`
-    );
-    if (!confirmed) {
-      setRemoving(false);
-      return;
-    }
-
-    const { error } = await supabase.rpc("remove_song_from_library", {
-      p_song_id: id,
-    });
-
-    if (error) {
-      console.error("Error removing Song:", error.message);
-      setError(`Error removing Song: ${error.message}`);
-      setRemoving(false);
-    } else {
-      removeSong(id);
-      router.push("/songs");
-    }
-  };
-
   const handleDiscoverabilityChange = async (nextValue: boolean) => {
     await setDiscoverability(nextValue);
   };
@@ -371,22 +293,14 @@ export default function SongDetailContent({ id }: { id: string }) {
     saveLifecycle.markDirty();
   };
 
-  if (loading || recordingsLoading) return <SongDetailSkeleton />;
-  if ((error || recordingsError) && !song)
+  if (loading) return <SongDetailSkeleton />;
+  if (error && !song)
     return (
       <AsyncStateMessage variant="error">
-        {error || recordingsError}
+        {error}
       </AsyncStateMessage>
     );
   if (!song) return <AsyncStateMessage>No song found.</AsyncStateMessage>;
-
-  // A Song has no artwork of its own -- it's a composition, and cover art
-  // belongs to a release (ADR-0007). The header borrows the first Recording's
-  // image as display context, which is this User's own top-ordered one.
-  const firstRecording = recordings[0];
-  const songArtwork = firstRecording
-    ? recordingArtwork(firstRecording)
-    : { src: null, fallbackSrc: null };
 
   const canEditShared = isAdmin || !song.is_discoverable;
   const titleEditsPrivate =
@@ -436,16 +350,7 @@ export default function SongDetailContent({ id }: { id: string }) {
             </div>
           </div>
           <div className="grow-0 w-40 self-start">
-            {firstRecording ? (
-              <RecordingThumbnail
-                src={songArtwork.src}
-                fallbackSrc={songArtwork.fallbackSrc}
-                alt=""
-                className="aspect-square w-36"
-              />
-            ) : (
-              <div className="aspect-square bg-ink-500/10 w-36"></div>
-            )}
+            <div className="aspect-square bg-ink-500/10 w-36"></div>
             <button
               type="button"
               aria-pressed={favorite}
@@ -470,20 +375,15 @@ export default function SongDetailContent({ id }: { id: string }) {
       </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
-        {(error || recordingsError) && (
+        {error && (
           <p className="mb-3 text-sm text-vermillion-600">
-            {error || recordingsError}
+            {error}
           </p>
         )}
-        <RecordingsSection
-          songId={id}
-          songTitle={title}
-          recordings={recordings}
-          onRecordingsChanged={() =>
-            refreshRecordings({ showLoading: false })
-          }
-          onReorder={reorderRecordings}
-        />
+        <p className="mb-4 rounded-md border border-paper-600 p-3 text-sm text-ink-600">
+          Recordings are intentionally unavailable in this Clerk/Convex
+          evaluation slice.
+        </p>
         <SaveAction
           status={saveLifecycle.status}
           error={saveLifecycle.error}
@@ -630,14 +530,6 @@ export default function SongDetailContent({ id }: { id: string }) {
             )}
           </div>
         </form>
-        <button
-          type="button"
-          onClick={handleRemove}
-          disabled={removing}
-          className="mt-4 w-full rounded-md bg-vermillion-600 px-4 py-2 font-bold text-white hover:bg-vermillion-700 disabled:opacity-60"
-        >
-          {removing ? "Checking..." : "Remove Song"}
-        </button>
       </div>
       {showWritersEditor && canEditShared && (
         <Modal title="Edit writers" onClose={() => setShowWritersEditor(false)}>

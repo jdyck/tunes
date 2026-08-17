@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { fetchArtistImageMetadata } from "@/lib/artistImages";
+import { auth } from "@clerk/nextjs/server";
 
 const artistImageSelect =
   "id, musicbrainz_artist_id, wikidata_id, image_url, image_source_url, image_license, image_lookup_completed_at";
@@ -9,6 +10,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await auth.protect();
   const token = request.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createContext, useCallback, useContext, useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { SongWithUserData } from "@/types/types";
 import { WriterInput } from "@/lib/songWriters";
-import { mapSongUserDataRow, songListSelect } from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
 
 type SongPatch = Partial<Omit<SongWithUserData, "song_artist_credits" | "user_data">> & {
@@ -28,81 +28,33 @@ export function SongsListProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [songs, setSongs] = useState<SongWithUserData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const result = useQuery(api.songs.listMine);
+  const songs = useMemo(
+    () =>
+      ([...(result ?? [])] as SongWithUserData[]).sort((a, b) =>
+        effectiveSongTitle(a, a.user_data).localeCompare(
+          effectiveSongTitle(b, b.user_data),
+        ),
+      ),
+    [result],
+  );
+  const loading = result === undefined;
+  const error = null;
 
-  const fetchSongs = useCallback(async (userId: string) => {
-    setLoading(true);
-    setError(null);
-    const { data, error } = await supabase
-      .from("song_user_data")
-      .select(songListSelect)
-      .eq("user_id", userId);
-
-    if (error) {
-      console.error("Error fetching songs:", error.message);
-      setError(`Could not load Songs: ${error.message}`);
-    } else {
-      setSongs(
-        (data ?? [])
-          .map((row) => mapSongUserDataRow(row as never))
-          .filter((row): row is SongWithUserData => row !== null)
-          .sort((a, b) =>
-            effectiveSongTitle(a, a.user_data).localeCompare(
-              effectiveSongTitle(b, b.user_data)
-            )
-          )
-      );
-    }
-    setLoading(false);
-  }, []);
+  const fetchSongs = useCallback(async (_userId: string) => {}, []);
 
   const patchSong = useCallback(
     (
       id: string,
       patch: SongPatch
     ) => {
-      const { writers, user_data: userDataPatch, ...fields } = patch;
-      setSongs((prev) =>
-        prev.map((song) =>
-          song.id === id
-            ? {
-                ...song,
-                ...fields,
-                ...(userDataPatch
-                  ? { user_data: { ...song.user_data, ...userDataPatch } }
-                  : {}),
-                ...(writers
-                  ? {
-                      song_artist_credits: writers
-                        .filter((writer) => writer.creditedAs.trim())
-                        .map((w) => ({
-                          song_id: id,
-                          artist_id: w.artistId || "",
-                          role: w.role,
-                          credited_as: w.creditedAs,
-                          artists: {
-                            id: w.artistId || "",
-                            name: w.canonicalName || w.creditedAs,
-                            kind: w.artistKind || null,
-                            musicbrainz_artist_id:
-                              w.musicbrainzArtistId || null,
-                          },
-                        })),
-                    }
-                  : {}),
-              }
-            : song
-        )
-      );
+      void id;
+      void patch;
     },
     []
   );
 
-  const removeSong = useCallback((id: string) => {
-    setSongs((prev) => prev.filter((song) => song.id !== id));
-  }, []);
+  const removeSong = useCallback((id: string) => void id, []);
 
   return (
     <SongsListContext.Provider

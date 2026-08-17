@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { componentRegistry } from "@/lib/componentRegistry";
+import { auth } from "@clerk/nextjs/server";
 
 // Static scan, not a runtime one: dynamically-constructed class names are
 // missed, which is acceptable for an at-a-glance inventory
@@ -23,6 +24,7 @@ const NOT_COLORS = new Set([
 const COMPONENT_IMPORT = /from\s+["']@\/components\/([^"']+)["']/g;
 
 export async function GET(request: NextRequest) {
+  await auth.protect();
   if (process.env.NODE_ENV !== "development") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

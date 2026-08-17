@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { mapSongUserDataRow, songWithUserDataSelect } from "@/lib/songs";
-import { fetchSongWriters, saveSongWriters, WriterInput } from "@/lib/songWriters";
-import { useSongsList } from "@/components/song/SongsListContext";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { WriterInput } from "@/lib/songWriters";
 import { SongWithUserData } from "@/types/types";
 import { errorMessage } from "@/utils/errorMessage";
 import { normalizeTags } from "@/utils/songTags";
@@ -24,48 +24,56 @@ export interface SongDetailSaveValues {
   writers: WriterInput[];
 }
 
+const writersFromSong = (song: SongWithUserData): WriterInput[] =>
+  (song.song_artist_credits ?? []).map((credit) => ({
+    artistId: credit.artist_id,
+    canonicalName: credit.artists?.name ?? credit.credited_as,
+    creditedAs: credit.credited_as,
+    role: credit.role,
+    artistKind: credit.artists?.kind ?? null,
+    musicbrainzArtistId: credit.artists?.musicbrainz_artist_id ?? null,
+  }));
+
+const toConvexWriters = (writers: WriterInput[]) =>
+  writers.map((writer) => ({
+    artistId: writer.artistId
+      ? (writer.artistId as Id<"artists">)
+      : null,
+    canonicalName: writer.canonicalName ?? null,
+    creditedAs: writer.creditedAs,
+    role: writer.role,
+    artistKind: writer.artistKind ?? null,
+    musicbrainzArtistId: writer.musicbrainzArtistId ?? null,
+  }));
+
 export function useSongDetail(id: string) {
-  const { patchSong } = useSongsList();
+  const songId = id as Id<"songs">;
+  const result = useQuery(api.songs.getMine, { songId });
+  const updateSong = useMutation(api.songs.update);
+  const updateFavorite = useMutation(api.songs.setFavorite);
+  const updateTags = useMutation(api.songs.setTags);
+  const updateDiscoverability = useMutation(api.songs.setDiscoverability);
   const [song, setSong] = useState<SongWithUserData | null>(null);
   const [writers, setWriters] = useState<WriterInput[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const tagSaveQueue = useRef<Promise<void>>(Promise.resolve());
   const favoriteSaveQueue = useRef<Promise<void>>(Promise.resolve());
 
-  const fetchSong = useCallback(async () => {
-    setLoading(true);
+  useEffect(() => {
+    setSong(null);
+    setWriters([]);
     setError(null);
-    try {
-      const [{ data: songData, error: songError }, { data: adminData }] =
-        await Promise.all([
-          supabase
-            .from("song_user_data")
-            .select(songWithUserDataSelect)
-            .eq("song_id", id)
-            .single(),
-          supabase.rpc("is_site_admin"),
-        ]);
-      if (songError) throw new Error(`Error fetching Song: ${songError.message}`);
-      const mappedSong = mapSongUserDataRow(songData as never);
-      if (!mappedSong) throw new Error("Song not found in your list");
-
-      const fetchedWriters = await fetchSongWriters(id);
-      setSong(mappedSong);
-      setWriters(fetchedWriters);
-      setIsAdmin(Boolean(adminData));
-    } catch (fetchError) {
-      console.error("Fetch error:", fetchError);
-      setError(errorMessage(fetchError));
-    } finally {
-      setLoading(false);
-    }
   }, [id]);
 
   useEffect(() => {
-    void fetchSong();
-  }, [fetchSong]);
+    if (!result) return;
+    const nextSong = result.song as SongWithUserData;
+    setSong(nextSong);
+    setWriters(writersFromSong(nextSong));
+  }, [result]);
+
+  const isAdmin = result?.isAdmin ?? false;
+  const loading = result === undefined && song === null;
 
   const save = useCallback(async (values: SongDetailSaveValues) => {
     if (!song) return null;
@@ -84,42 +92,38 @@ export function useSongDetail(id: string) {
       return null;
     }
 
-    const tags = normalizeTags(values.tags);
-    const sharedFields = {
-      name: nextSharedTitle,
-      year: values.year || null,
-      wikipedia_extract: values.wikipediaExtract,
-      wikipedia_url: values.wikipediaUrl,
-      musicbrainz_work_id: values.musicbrainzWorkId,
-      work_date_start: values.workDateStart,
-      work_date_end: values.workDateEnd,
-    };
-    const { error: privateError } = await supabase
-      .from("song_user_data")
-      .update({
-        notes: values.notes.trim() || null,
-        display_title: normalizedDisplayTitle,
-        favorite: values.favorite,
-        tags: tags.length ? tags : null,
-      })
-      .eq("song_id", id);
-
-    if (privateError) {
-      console.error("Error saving private Song data:", privateError.message);
-      setError(`Error saving Song data: ${privateError.message}`);
+    const parsedYear = values.year.trim() ? Number(values.year) : null;
+    if (
+      parsedYear !== null &&
+      (!Number.isInteger(parsedYear) || parsedYear < -32768 || parsedYear > 32767)
+    ) {
+      setError("Year must be a whole number.");
       return null;
     }
 
+    const tags = normalizeTags(values.tags);
+    const sharedFields = {
+      name: nextSharedTitle,
+      year: parsedYear,
+      wikipediaExtract: values.wikipediaExtract,
+      wikipediaUrl: values.wikipediaUrl,
+      musicbrainzWorkId: values.musicbrainzWorkId,
+      workDateStart: values.workDateStart,
+      workDateEnd: values.workDateEnd,
+    };
+
     try {
-      let savedWriters = values.writers;
-      if (canEditShared) {
-        const { error: sharedError } = await supabase
-          .from("songs")
-          .update(sharedFields)
-          .eq("id", id);
-        if (sharedError) throw sharedError;
-        savedWriters = await saveSongWriters(id, values.writers);
-      }
+      await updateSong({
+        songId,
+        privateData: {
+          notes: values.notes.trim() || null,
+          displayTitle: normalizedDisplayTitle,
+          favorite: values.favorite,
+          tags: tags.length ? tags : null,
+        },
+        shared: canEditShared ? sharedFields : null,
+        writers: canEditShared ? toConvexWriters(values.writers) : null,
+      });
 
       const nextUserData = {
         ...song.user_data,
@@ -128,97 +132,86 @@ export function useSongDetail(id: string) {
         favorite: values.favorite,
         tags: tags.length ? tags : null,
       };
-      const nextSong = {
+      const nextSong: SongWithUserData = {
         ...song,
-        ...(canEditShared ? sharedFields : {}),
+        ...(canEditShared
+          ? {
+              name: sharedFields.name,
+              year: parsedYear === null ? null : String(parsedYear),
+              wikipedia_extract: sharedFields.wikipediaExtract,
+              wikipedia_url: sharedFields.wikipediaUrl,
+              musicbrainz_work_id: sharedFields.musicbrainzWorkId,
+              work_date_start: sharedFields.workDateStart,
+              work_date_end: sharedFields.workDateEnd,
+            }
+          : {}),
         user_data: nextUserData,
       };
+      const savedWriters = canEditShared ? values.writers : writers;
       setSong(nextSong);
       setWriters(savedWriters);
       setError(null);
-      patchSong(id, {
-        ...(canEditShared ? sharedFields : {}),
-        user_data: nextUserData,
-        ...(canEditShared ? { writers: savedWriters } : {}),
-      });
       return { song: nextSong, writers: savedWriters };
     } catch (saveError) {
       const message = errorMessage(saveError);
-      console.error("Error saving writers:", saveError);
-      setError(`Error saving writers: ${message}`);
+      console.error("Error saving Song:", saveError);
+      setError(`Error saving Song: ${message}`);
       return null;
     }
-  }, [id, isAdmin, patchSong, song]);
+  }, [isAdmin, song, songId, updateSong, writers]);
 
   const setDiscoverability = useCallback(async (nextValue: boolean) => {
     if (!song || !isAdmin) return false;
-    const { error: toggleError } = await supabase.rpc("set_song_discoverability", {
-      p_song_id: id,
-      p_is_discoverable: nextValue,
-    });
-    if (toggleError) {
-      setError(`Could not change visibility: ${toggleError.message}`);
+    try {
+      await updateDiscoverability({ songId, isDiscoverable: nextValue });
+      setSong({
+        ...song,
+        is_discoverable: nextValue,
+        first_discoverable_at:
+          nextValue && !song.first_discoverable_at
+            ? new Date().toISOString()
+            : song.first_discoverable_at,
+      });
+      setError(null);
+      return true;
+    } catch (toggleError) {
+      setError(`Could not change visibility: ${errorMessage(toggleError)}`);
       return false;
     }
-    const nextSong = {
-      ...song,
-      is_discoverable: nextValue,
-      first_discoverable_at:
-        nextValue && !song.first_discoverable_at
-          ? new Date().toISOString()
-          : song.first_discoverable_at,
-    };
-    setSong(nextSong);
-    patchSong(id, {
-      is_discoverable: nextValue,
-      first_discoverable_at: nextSong.first_discoverable_at,
-    });
-    setError(null);
-    return true;
-  }, [id, isAdmin, patchSong, song]);
+  }, [isAdmin, song, songId, updateDiscoverability]);
 
   const saveTags = useCallback((nextTags: string[]) => {
     const tags = normalizeTags(nextTags);
     const operation = tagSaveQueue.current.then(async () => {
       try {
-        const { error: tagsError } = await supabase
-          .from("song_user_data")
-          .update({ tags: tags.length ? tags : null })
-          .eq("song_id", id);
-        if (tagsError) throw tagsError;
+        await updateTags({ songId, tags });
+        return true;
       } catch (tagsError) {
         const message = errorMessage(tagsError);
         console.error("Error saving Song tags:", tagsError);
         setError(`Could not save Song tags: ${message}`);
         return false;
       }
-      patchSong(id, { user_data: { tags: tags.length ? tags : null } });
-      return true;
     });
     tagSaveQueue.current = operation.then(() => undefined);
     return operation;
-  }, [id, patchSong]);
+  }, [songId, updateTags]);
 
   const saveFavorite = useCallback((favorite: boolean) => {
     const operation = favoriteSaveQueue.current.then(async () => {
       try {
-        const { error: favoriteError } = await supabase
-          .from("song_user_data")
-          .update({ favorite })
-          .eq("song_id", id);
-        if (favoriteError) throw favoriteError;
+        await updateFavorite({ songId, favorite });
+        return true;
       } catch (favoriteError) {
         const message = errorMessage(favoriteError);
         console.error("Error saving Song favorite:", favoriteError);
         setError(`Could not save Song favorite: ${message}`);
         return false;
       }
-      patchSong(id, { user_data: { favorite } });
-      return true;
     });
     favoriteSaveQueue.current = operation.then(() => undefined);
     return operation;
-  }, [id, patchSong]);
+  }, [songId, updateFavorite]);
 
   return {
     song,

@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { leagueGothic, robotoCondensed, robotoMono } from "@/lib/fonts";
 import GlobalPlayerGate from "@/components/player/GlobalPlayerGate";
+import { ClerkProvider } from "@clerk/nextjs";
+import ConvexClientProvider from "@/components/layout/ConvexClientProvider";
 
 export const metadata: Metadata = {
   title: "Standards",
@@ -40,10 +42,14 @@ export default function RootLayout({
       <title>{String(metadata.title || "Default Title")}</title>
     </head>
     <body className={`bg-surface-app overscroll-none ${robotoCondensed.className}`}>
-    <div className="w-full h-full pt-[env(safe-area-inset-top)] bg-surface-app">
-      <GlobalPlayerGate>{children}</GlobalPlayerGate>
-    </div>
-    <div className="paper-grain" aria-hidden="true" />
+    <ClerkProvider>
+      <ConvexClientProvider>
+        <div className="w-full h-full pt-[env(safe-area-inset-top)] bg-surface-app">
+          <GlobalPlayerGate>{children}</GlobalPlayerGate>
+        </div>
+        <div className="paper-grain" aria-hidden="true" />
+      </ConvexClientProvider>
+    </ClerkProvider>
     </body>
     </html>
   );

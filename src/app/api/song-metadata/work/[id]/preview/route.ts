@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchSongWork } from "@/lib/musicbrainz";
 import { fetchBackgroundForWikidataId } from "@/lib/wikipedia";
+import { auth } from "@clerk/nextjs/server";
 
 // Combines the work detail (year, writers) and Wikipedia background lookups
 // behind one request -- both are needed together for AddSongModal's confirm
@@ -11,6 +12,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await auth.protect();
   const { id } = await params;
 
   try {

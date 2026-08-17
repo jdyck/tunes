@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
-import { User } from "@supabase/supabase-js";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import {
   ChevronDownIcon,
@@ -94,10 +92,8 @@ const titleForSorting = (title: string) => {
 export default function SongsListPane() {
   const router = useRouter();
   const pathname = usePathname();
-  const { songs, loading, error, fetchSongs } = useSongsList();
+  const { songs, loading, error } = useSongsList();
 
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [listState, setListState] = useSessionState(
     "standards:songs-list-state",
     initialSongsListState,
@@ -110,33 +106,7 @@ export default function SongsListPane() {
   const [visibleCount, setVisibleCount] = useState(songsPerPage);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const userId = user?.id;
-  const artworkBySong = useSongArtwork(userId);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-      setLoadingUser(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!loadingUser && !user) {
-      router.replace("/login");
-    }
-  }, [loadingUser, user, router]);
-
-  useEffect(() => {
-    if (userId) fetchSongs(userId);
-  }, [fetchSongs, userId]);
+  const artworkBySong = useSongArtwork(undefined);
 
   const goToSong = (id: string) => {
     router.push(`/song/${id}`);
@@ -251,10 +221,6 @@ export default function SongsListPane() {
   ).length;
   const filterCount = includedTags.length + Number(favoriteOnly);
   const hasActiveFilters = filterCount > 0 || excludeHoliday;
-
-  if (loadingUser || !user) {
-    return <p className="p-4">Loading...</p>;
-  }
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -418,7 +384,6 @@ export default function SongsListPane() {
           onClose={() => setShowAddSong(false)}
           onCreated={(id) => {
             setShowAddSong(false);
-            if (user) fetchSongs(user.id);
             goToSong(id);
           }}
         />

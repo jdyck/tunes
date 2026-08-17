@@ -20,18 +20,7 @@ export default function BrowseSidebar() {
         <NavLink href="/songs" icon="/songs.svg">
           Songs
         </NavLink>
-        <NavLink href="/artists" icon="/artists.svg">
-          Artists
-        </NavLink>
-        {/*<NavLink href="/recordings" icon="/record.svg">*/}
-        {/*  Recordings*/}
-        {/*</NavLink>*/}
-        <NavLink href="/tags" icon="/tags.svg">
-          Tags
-        </NavLink>
-        <NavLink href="/lists" icon="/lists.svg">
-          Lists
-        </NavLink>
+        {/* The branch evaluation stops at the Song/Artist-credit slice. */}
         {process.env.NODE_ENV === "development" && (
           <NavLink href="/dev/components" icon="/folder.svg">
             Components
