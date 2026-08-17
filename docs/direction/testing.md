@@ -45,3 +45,12 @@ Song artwork react without manual refresh plumbing and that unsaving returns to
 the Song rather than leaving the detail query in an error state. Then have the
 second User save the same canonical Recording with different private fields and
 confirm each User sees only their own key, tempo, notes, rating, tags, and order.
+
+For the Artist slice, confirm the restored Artists navigation lists both writer
+and performer identities with User-specific Song/Recording counts. Open a
+writer-only Artist and a performer-only Artist, confirm each detail shows only
+the appropriate owned Songs or saved Recordings, and confirm identity-backed
+Commons image lookup renders without browser errors. Backend contracts must
+also prove anonymous rejection, per-User repertoire counting and Recording
+isolation, duplicate-credit deduplication, and admin-only constrained image
+cache writes.

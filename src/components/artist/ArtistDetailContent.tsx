@@ -7,17 +7,15 @@ import {
   PlayIcon,
 } from "@heroicons/react/20/solid";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
-import { useSongsList } from "@/components/song/SongsListContext";
 import { usePlayer } from "@/components/player/GlobalPlayer";
-import { useArtistRecordings } from "@/hooks/useArtistRecordings";
 import RecordingListRow from "@/components/recording/RecordingListRow";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import PaneHeader from "@/components/layout/PaneHeader";
-import { ArtistKind } from "@/types/types";
+import type { ArtistKind } from "@/types/types";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import { formatWriterCredit } from "@/lib/songWriters";
 import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
-import { useArtistIdentity } from "@/hooks/useArtistIdentity";
+import { useArtistDetail } from "@/hooks/useArtistDetail";
 
 const kindLabels: Record<ArtistKind, string> = {
   person: "Person",
@@ -29,26 +27,14 @@ const kindLabels: Record<ArtistKind, string> = {
 };
 
 export default function ArtistDetailContent({ id }: { id: string }) {
-  const { songs, loading: songsLoading } = useSongsList();
   const { play } = usePlayer();
   const {
-    artist: canonicalArtist,
-    loading: artistLoading,
-    error: artistError,
-  } = useArtistIdentity(id);
-
-  // An artist credited as a writer is already present in the loaded Songs and
-  // their credits — no extra query. Performer-only artists (no writer credit)
-  // are resolved from the recordings query below instead.
-  const writerArtist = useMemo(() => {
-    for (const song of songs) {
-      const credit = (song.song_artist_credits ?? []).find(
-        (c) => c.artists?.id === id
-      );
-      if (credit?.artists) return credit.artists;
-    }
-    return null;
-  }, [songs, id]);
+    artist,
+    songs,
+    recordings,
+    recordingSongTitles,
+    loading,
+  } = useArtistDetail(id);
 
   const artistSongs = useMemo(
     () =>
@@ -67,22 +53,13 @@ export default function ArtistDetailContent({ id }: { id: string }) {
 
   const songTitleById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const song of songs) {
-      map.set(song.id, effectiveSongTitle(song, song.user_data));
+    for (const song of recordingSongTitles) {
+      map.set(song.song_id, song.title);
     }
     return map;
-  }, [songs]);
+  }, [recordingSongTitles]);
 
-  const {
-    recordings,
-    artist: performerArtist,
-    loading: recordingsLoading,
-    error: recordingsError,
-  } = useArtistRecordings(id);
-
-  const artist = canonicalArtist ?? writerArtist ?? performerArtist;
-
-  if ((songsLoading || recordingsLoading || artistLoading) && !artist) {
+  if (loading && !artist) {
     return <AsyncStateMessage>Loading artist...</AsyncStateMessage>;
   }
 
@@ -115,23 +92,23 @@ export default function ArtistDetailContent({ id }: { id: string }) {
               />
             )}
           </div>
-          {canonicalArtist?.image_url && (
+          {artist.image_url && (
             <div className="flex w-36 shrink-0 flex-col items-end">
               <img
-                src={canonicalArtist.image_url}
+                src={artist.image_url}
                 alt={artist.name}
                 className="h-auto max-h-52 max-w-full rounded-md object-contain"
               />
-              {canonicalArtist.image_source_url && (
+              {artist.image_source_url && (
                 <a
-                  href={canonicalArtist.image_source_url}
+                  href={artist.image_source_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-1 block text-right text-xs text-azure-600 underline"
                 >
                   Image source
-                  {canonicalArtist.image_license
-                    ? ` · ${canonicalArtist.image_license}`
+                  {artist.image_license
+                    ? ` · ${artist.image_license}`
                     : ""}
                 </a>
               )}
@@ -141,12 +118,6 @@ export default function ArtistDetailContent({ id }: { id: string }) {
       </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
-        {artistError && (
-          <p className="mb-3 text-sm text-vermillion-600">{artistError}</p>
-        )}
-        {recordingsError && (
-          <p className="mb-3 text-sm text-vermillion-600">{recordingsError}</p>
-        )}
         {artistSongs.length > 0 && (
           <section className="mb-8">
             <div className="flex items-center gap-2 mb-2 max-w-xl">

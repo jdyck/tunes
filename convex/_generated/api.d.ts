@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as artists from "../artists.js";
+import type * as model_artists from "../model/artists.js";
 import type * as model_auth from "../model/auth.js";
 import type * as model_recordings from "../model/recordings.js";
 import type * as model_songs from "../model/songs.js";
@@ -22,6 +24,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  artists: typeof artists;
+  "model/artists": typeof model_artists;
   "model/auth": typeof model_auth;
   "model/recordings": typeof model_recordings;
   "model/songs": typeof model_songs;

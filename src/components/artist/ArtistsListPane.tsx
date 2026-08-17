@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
-import { User } from "@supabase/supabase-js";
+import { useQuery } from "convex/react";
+import { api } from "@/../convex/_generated/api";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import {
   ChevronDownIcon,
@@ -12,9 +12,7 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
 } from "@heroicons/react/20/solid";
-import { useSongsList } from "@/components/song/SongsListContext";
-import { useRecordingArtists } from "@/hooks/useRecordingArtists";
-import { ArtistKind } from "@/types/types";
+import type { ArtistKind } from "@/types/types";
 import PaneHeader from "@/components/layout/PaneHeader";
 import { useSessionState } from "@/hooks/useSessionState";
 
@@ -70,17 +68,11 @@ const nameForSorting = (name: string) => {
 };
 
 export default function ArtistsListPane() {
-  const router = useRouter();
   const pathname = usePathname();
-  const { songs, loading: songsLoading, error, fetchSongs } = useSongsList();
-  const {
-    artists: recordingArtists,
-    loading: recordingArtistsLoading,
-  } = useRecordingArtists();
-  const loading = songsLoading || recordingArtistsLoading;
+  const artistResult = useQuery(api.artists.listMine, {});
+  const artists = artistResult ?? [];
+  const loading = artistResult === undefined;
 
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [listState, setListState] = useSessionState<ArtistsListState>(
     "standards:artists-list-state",
     () => ({ search: "", sortKey: "name", sortDirection: "asc" }),
@@ -88,81 +80,6 @@ export default function ArtistsListPane() {
   );
   const { search, sortKey, sortDirection } = listState;
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const userId = user?.id;
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-      setLoadingUser(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!loadingUser && !user) {
-      router.replace("/login");
-    }
-  }, [loadingUser, user, router]);
-
-  useEffect(() => {
-    if (userId) fetchSongs(userId);
-  }, [fetchSongs, userId]);
-
-  const artists = useMemo(() => {
-    const byId = new Map<string, ArtistSummary>();
-
-    // Writers: artists credited on the user's Songs.
-    for (const song of songs) {
-      const seenInSong = new Set<string>();
-      for (const credit of song.song_artist_credits ?? []) {
-        const artist = credit.artists;
-        if (!artist?.id) continue;
-        // Count each artist at most once per song, even with multiple roles.
-        if (seenInSong.has(artist.id)) continue;
-        seenInSong.add(artist.id);
-
-        const existing = byId.get(artist.id);
-        if (existing) {
-          existing.songCount += 1;
-        } else {
-          byId.set(artist.id, {
-            id: artist.id,
-            name: artist.name,
-            kind: artist.kind ?? null,
-            songCount: 1,
-            recordingCount: 0,
-          });
-        }
-      }
-    }
-
-    // Performers: artists credited on the user's saved Recordings. Merges
-    // into the same entry when the artist also wrote a Song.
-    for (const artist of recordingArtists) {
-      const existing = byId.get(artist.id);
-      if (existing) {
-        existing.recordingCount = artist.recordingCount;
-      } else {
-        byId.set(artist.id, {
-          id: artist.id,
-          name: artist.name,
-          kind: artist.kind,
-          songCount: 0,
-          recordingCount: artist.recordingCount,
-        });
-      }
-    }
-
-    return [...byId.values()];
-  }, [songs, recordingArtists]);
-
   const visibleArtists = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
     const filtered = searchTerm
@@ -189,10 +106,6 @@ export default function ArtistsListPane() {
       return sortDirection === "asc" ? comparison : -comparison;
     });
   }, [artists, search, sortDirection, sortKey]);
-
-  if (loadingUser || !user) {
-    return <p className="p-4">Loading...</p>;
-  }
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -292,8 +205,6 @@ export default function ArtistsListPane() {
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-12">
         {loading ? (
           <ArtistsListSkeleton />
-        ) : error ? (
-          <p className="text-vermillion-600">{error}</p>
         ) : visibleArtists.length > 0 ? (
           <ul>
             {visibleArtists.map((artist) => {

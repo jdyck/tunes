@@ -63,10 +63,27 @@ export default defineSchema({
       v.null(),
     ),
     musicbrainzArtistId: nullableString,
+    wikidataId: v.optional(nullableString),
+    imageUrl: v.optional(nullableString),
+    imageSourceUrl: v.optional(nullableString),
+    imageLicense: v.optional(nullableString),
+    imageLookupCompletedAt: v.optional(nullableString),
     legacySupabaseId: nullableString,
   })
     .index("by_musicbrainzArtistId", ["musicbrainzArtistId"])
     .index("by_legacySupabaseId", ["legacySupabaseId"]),
+
+  artistUserData: defineTable({
+    userId: v.id("users"),
+    artistId: v.id("artists"),
+    notes: nullableString,
+    tags: v.union(v.array(v.string()), v.null()),
+    legacyUserId: nullableString,
+    legacyArtistId: nullableString,
+  })
+    .index("by_userId", ["userId"])
+    .index("by_artistId", ["artistId"])
+    .index("by_userId_and_artistId", ["userId", "artistId"]),
 
   songArtistCredits: defineTable({
     songId: v.id("songs"),
