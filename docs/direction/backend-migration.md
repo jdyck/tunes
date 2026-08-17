@@ -29,6 +29,14 @@ Returning to the owner restored the favorite, all three ordered Recordings, and
 the Site Admin control. This completes the real two-User isolation smoke; the
 owner session is restored. Browser diagnostics contained no application errors.
 
+The production foundation now exists but cutover has not happened. Clerk
+Production was created for `tunes-seven.vercel.app` by cloning the Invite-only
+Development settings. Convex production `warmhearted-dog-849` has the current
+schema and functions plus
+`CLERK_JWT_ISSUER_DOMAIN=https://clerk.tunes-seven.vercel.app`. Its application
+tables are empty; no owner data has been imported and Supabase remains the
+source of truth.
+
 ## Portable source snapshot
 
 Run this from the repository root while the Supabase project is not receiving
@@ -79,6 +87,11 @@ source manifest:
 
 ## Remaining migration work
 
+- Finish Clerk Production setup: add production Google OAuth credentials,
+  configure the production app proxy/domain, install the live Clerk keys and
+  Convex production URL in hosting, deploy the frontend, and create the invited
+  owner User. Ensure that User exists in Convex and promote it to Site Admin
+  before importing owner-scoped data.
 - Before production cutover, freeze Supabase writes, take a fresh snapshot,
   import it into Convex production, and verify normal workflows before entering
   new repertoire data.
