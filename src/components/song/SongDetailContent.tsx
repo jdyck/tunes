@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { leagueGothic } from "@/lib/fonts";
 import { useSongsList } from "@/components/song/SongsListContext";
+import RecordingsSection from "@/components/song/RecordingsSection";
 import SongWriterCredits from "@/components/song/SongWriterCredits";
 import SongWritersEditor from "@/components/song/SongWritersEditor";
 import SongWorkResultsList from "@/components/song/SongWorkResultsList";
@@ -25,6 +26,9 @@ import {
 } from "@/lib/songMetadataClient";
 import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
+import { useSavedRecordings } from "@/hooks/useSavedRecordings";
+import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
+import { recordingArtwork } from "@/utils/recordingArtwork";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import Modal from "@/components/ui/Modal";
 import {
@@ -84,6 +88,12 @@ export default function SongDetailContent({ id }: { id: string }) {
     saveTags,
     setDiscoverability,
   } = useSongDetail(id);
+  const {
+    recordings,
+    loading: recordingsLoading,
+    error: recordingsError,
+    reorder: reorderRecordings,
+  } = useSavedRecordings(id);
   const [notes, setNotes] = useState("");
   const [favorite, setFavorite] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
@@ -293,14 +303,19 @@ export default function SongDetailContent({ id }: { id: string }) {
     saveLifecycle.markDirty();
   };
 
-  if (loading) return <SongDetailSkeleton />;
-  if (error && !song)
+  if (loading || recordingsLoading) return <SongDetailSkeleton />;
+  if ((error || recordingsError) && !song)
     return (
       <AsyncStateMessage variant="error">
-        {error}
+        {error || recordingsError}
       </AsyncStateMessage>
     );
   if (!song) return <AsyncStateMessage>No song found.</AsyncStateMessage>;
+
+  const firstRecording = recordings[0];
+  const songArtwork = firstRecording
+    ? recordingArtwork(firstRecording)
+    : { src: null, fallbackSrc: null };
 
   const canEditShared = isAdmin || !song.is_discoverable;
   const titleEditsPrivate =
@@ -350,7 +365,16 @@ export default function SongDetailContent({ id }: { id: string }) {
             </div>
           </div>
           <div className="grow-0 w-40 self-start">
-            <div className="aspect-square bg-ink-500/10 w-36"></div>
+            {firstRecording ? (
+              <RecordingThumbnail
+                src={songArtwork.src}
+                fallbackSrc={songArtwork.fallbackSrc}
+                alt=""
+                className="aspect-square w-36"
+              />
+            ) : (
+              <div className="aspect-square bg-ink-500/10 w-36"></div>
+            )}
             <button
               type="button"
               aria-pressed={favorite}
@@ -375,15 +399,17 @@ export default function SongDetailContent({ id }: { id: string }) {
       </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
-        {error && (
+        {(error || recordingsError) && (
           <p className="mb-3 text-sm text-vermillion-600">
-            {error}
+            {error || recordingsError}
           </p>
         )}
-        <p className="mb-4 rounded-md border border-paper-600 p-3 text-sm text-ink-600">
-          Recordings are intentionally unavailable in this Clerk/Convex
-          evaluation slice.
-        </p>
+        <RecordingsSection
+          songId={id}
+          songTitle={title}
+          recordings={recordings}
+          onReorder={reorderRecordings}
+        />
         <SaveAction
           status={saveLifecycle.status}
           error={saveLifecycle.error}

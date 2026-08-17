@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { PlayIcon } from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import PaneHeader from "@/components/layout/PaneHeader";
@@ -29,13 +31,8 @@ import DeleteButton from "@/components/ui/DeleteButton";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import { useRecordingDetail } from "@/hooks/useRecordingDetail";
 import { RecordingKind } from "@/types/types";
-import {
-  mapSongUserDataRow,
-  songWithUserDataSelect,
-} from "@/lib/songs";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import type { RecordingDraft } from "@/utils/recordingDraft";
-import { useSavedRecordingsRefresh } from "@/components/recording/SavedRecordingsRefreshContext";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 
 type RecordingDraftTextField =
@@ -63,8 +60,10 @@ export default function RecordingDetailContent({
 }) {
   const router = useRouter();
   const { play } = usePlayer();
-  const { requestRefresh: refreshSavedRecordings } =
-    useSavedRecordingsRefresh();
+  const songResult = useQuery(api.songs.getMine, {
+    songId: songId as Id<"songs">,
+  });
+  const unsaveRecording = useMutation(api.recordings.unsave);
   const {
     recording,
     draft,
@@ -76,8 +75,6 @@ export default function RecordingDetailContent({
     save,
   } = useRecordingDetail(id);
 
-  const [songTitle, setSongTitle] = useState<string | null>(null);
-  const [songWorkId, setSongWorkId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showYouTubeMediaInfo, setShowYouTubeMediaInfo] = useState(false);
   const [matchStatus, setMatchStatus] = useState<
@@ -113,24 +110,14 @@ export default function RecordingDetailContent({
   const musicbrainzReleaseId = draft?.musicbrainzReleaseId ?? null;
   const releaseGroup = draft?.releaseGroup ?? null;
   const videoId = recording?.youtube_items[0]?.video_id ?? null;
+  const songTitle = songResult
+    ? effectiveSongTitle(songResult.song, songResult.song.user_data)
+    : null;
+  const songWorkId = songResult?.song.musicbrainz_work_id ?? null;
   const handleDraftTextChange = (field: RecordingDraftTextField) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       patchDraft({ [field]: event.target.value });
     };
-
-  useEffect(() => {
-    const fetchSongTitle = async () => {
-      const { data } = await supabase
-        .from("song_user_data")
-        .select(songWithUserDataSelect)
-        .eq("song_id", songId)
-        .single();
-      const song = data ? mapSongUserDataRow(data as never) : null;
-      setSongTitle(song ? effectiveSongTitle(song, song.user_data) : null);
-      setSongWorkId(song?.musicbrainz_work_id ?? null);
-    };
-    fetchSongTitle();
-  }, [songId]);
 
   // Once the Recording and its Song's title have loaded, proactively search
   // MusicBrainz for a likely match -- gated on an existing `artist` value,
@@ -304,17 +291,13 @@ export default function RecordingDetailContent({
   const handleDelete = async () => {
     if (!id) return;
 
-    const { error } = await supabase
-      .from("user_recording_data")
-      .delete()
-      .eq("recording_id", id);
-
-    if (error) {
-      console.error("Error removing recording:", error.message);
-      setError(`Error removing recording: ${error.message}`);
-    } else {
-      refreshSavedRecordings();
+    try {
+      await unsaveRecording({ recordingId: id as Id<"recordings"> });
       router.push(backHref);
+    } catch (problem) {
+      const message = problem instanceof Error ? problem.message : String(problem);
+      console.error("Error removing recording:", problem);
+      setError(`Error removing recording: ${message}`);
     }
   };
 

@@ -9,7 +9,9 @@
  */
 
 import type * as model_auth from "../model/auth.js";
+import type * as model_recordings from "../model/recordings.js";
 import type * as model_songs from "../model/songs.js";
+import type * as recordings from "../recordings.js";
 import type * as songs from "../songs.js";
 import type * as users from "../users.js";
 
@@ -21,7 +23,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "model/auth": typeof model_auth;
+  "model/recordings": typeof model_recordings;
   "model/songs": typeof model_songs;
+  recordings: typeof recordings;
   songs: typeof songs;
   users: typeof users;
 }>;

@@ -106,7 +106,7 @@ export default function SongsListPane() {
   const [visibleCount, setVisibleCount] = useState(songsPerPage);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const artworkBySong = useSongArtwork(undefined);
+  const artworkBySong = useSongArtwork();
 
   const goToSong = (id: string) => {
     router.push(`/song/${id}`);

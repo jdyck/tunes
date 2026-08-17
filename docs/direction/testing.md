@@ -37,3 +37,11 @@ For the Stage 1 Song slice, the smoke is:
    save a private title, note, favorite, and tag.
 4. Confirm the second User cannot change the discoverable shared title or
    visibility, and confirm the owner cannot see the second User's private data.
+
+For the Recording slice, extend that smoke by having the owner add a YouTube
+Recording, open and play it, persist shared and private edits, reorder at least
+two saved Recordings, and unsave the temporary Recording. Confirm the list and
+Song artwork react without manual refresh plumbing and that unsaving returns to
+the Song rather than leaving the detail query in an error state. Then have the
+second User save the same canonical Recording with different private fields and
+confirm each User sees only their own key, tempo, notes, rating, tags, and order.

@@ -1,10 +1,13 @@
 import type { RecordingPerformer } from "../lib/musicbrainz.ts";
-import type { RecordingArtistCredit } from "../types/types.ts";
+import type {
+  ArtistKind,
+  RecordingArtistCredit,
+} from "../types/types.ts";
 
 export interface RecordingPerformerPayload {
   name: string;
   credited_as: string;
-  kind: string | null;
+  kind: ArtistKind | null;
   musicbrainz_artist_id: string;
 }
 

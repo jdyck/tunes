@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  mapSavedRecordingRow,
-  mapSongArtworkRows,
-} from "../src/lib/recordings.ts";
+import { mapSavedRecordingRow } from "../src/lib/recordings.ts";
 import {
   performerCreditsToDraft,
   performersToSavePayload,
@@ -90,76 +87,4 @@ test("preserves loaded performer credits through the Recording save payload", ()
       musicbrainz_artist_id: "artist-mbid-2",
     },
   ]);
-});
-
-const artworkRow = (
-  songId: string,
-  recording: Record<string, unknown> = {}
-) => ({
-  recordings: {
-    song_id: songId,
-    musicbrainz_release_id: null,
-    release_groups: null,
-    recording_youtube_items: null,
-    ...recording,
-  },
-});
-
-test("gives a Song the artwork of its first Recording in the User's order", () => {
-  const artwork = mapSongArtworkRows([
-    artworkRow("song-1", {
-      release_groups: { musicbrainz_release_group_id: "top-rg" },
-    }),
-    artworkRow("song-1", {
-      release_groups: { musicbrainz_release_group_id: "later-rg" },
-    }),
-  ]);
-
-  assert.match(artwork.get("song-1")?.src ?? "", /top-rg/);
-});
-
-test("prefers a song-category video over a capture for the fallback image", () => {
-  const artwork = mapSongArtworkRows([
-    artworkRow("song-1", {
-      release_groups: { musicbrainz_release_group_id: "rg-mbid" },
-      recording_youtube_items: [
-        {
-          created_at: "2026-07-01T00:00:00Z",
-          youtube_items: {
-            video_id: "capture0000",
-            search_category: "video",
-          },
-        },
-        {
-          created_at: "2026-07-22T00:00:00Z",
-          youtube_items: { video_id: "song0000000", search_category: "song" },
-        },
-      ],
-    }),
-  ]);
-
-  assert.match(artwork.get("song-1")?.fallbackSrc ?? "", /song0000000/);
-});
-
-// PostgREST returns an embedded to-one relationship as an object or as a
-// single-element array depending on how it resolves the relationship.
-test("reads embedded relationships whether they arrive boxed or not", () => {
-  const artwork = mapSongArtworkRows([
-    {
-      recordings: [
-        {
-          song_id: "song-1",
-          musicbrainz_release_id: null,
-          release_groups: [{ musicbrainz_release_group_id: "rg-mbid" }],
-          recording_youtube_items: null,
-        },
-      ],
-    },
-  ]);
-
-  assert.match(artwork.get("song-1")?.src ?? "", /release-group\/rg-mbid/);
-});
-
-test("leaves a Song out entirely when it has no saved Recording", () => {
-  assert.equal(mapSongArtworkRows([]).has("song-1"), false);
 });

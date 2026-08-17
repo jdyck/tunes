@@ -6,6 +6,7 @@
 // directly from a component.
 
 import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
+import type { ArtistKind } from "../types/types.ts";
 import { musicBrainzRecordingPerformers } from "../utils/musicbrainzPerformers.ts";
 import type {
   MusicBrainzArtistRelation,
@@ -255,7 +256,7 @@ export interface RecordingPerformer {
   musicbrainzArtistId: string;
   name: string;
   creditedAs: string;
-  kind: string | null;
+  kind: ArtistKind | null;
 }
 
 export interface ResolvedRecordingMatch {
