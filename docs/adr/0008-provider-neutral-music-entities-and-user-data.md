@@ -1,5 +1,10 @@
 # Music entities are provider-neutral; personal state is separate User data
 
+**Current implementation note (August 2026):** The domain boundaries in this
+ADR remain accepted. Clerk/Convex adoption replaced the Supabase RLS enforcement
+detail below with owner-scoped Convex authorization; see
+[ADR-0011](0011-clerk-authentication-and-convex-application-backend.md).
+
 Decided July 2026 while reconciling Standards' language with MusicBrainz, YouTube Music, and a future Discogs integration.
 
 **Song, Artist, Recording, and Release Group are canonical Standards entities.** External catalog entities identify or describe them but do not define whether they can exist. A Recording can therefore exist without a MusicBrainz match, including an uncatalogued YouTube performance capture, and one Recording can have several playable provider items or links.

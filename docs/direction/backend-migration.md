@@ -1,9 +1,11 @@
 # Clerk and Convex backend migration
 
-The application runtime uses Clerk for authentication and Convex for application
-data. The existing Supabase project remains the source of truth for the owner's
-real repertoire until its data has been imported into Convex and verified.
-Do not delete or modify that project as cleanup work.
+The Clerk/Convex architecture is adopted by
+[ADR-0011](../adr/0011-clerk-authentication-and-convex-application-backend.md).
+The application runtime uses Clerk for authentication and Convex for
+application data. The existing Supabase project remains the source of truth for
+the owner's real repertoire until its data has been imported into Convex
+production and verified. Do not delete or modify that project as cleanup work.
 
 ## Current checkpoint
 
@@ -77,12 +79,9 @@ source manifest:
 
 ## Remaining migration work
 
-- Make the explicit adopt-or-reject decision for this branch. Do not create or
-  mutate Clerk or Convex production until the replacement is adopted.
 - Before production cutover, freeze Supabase writes, take a fresh snapshot,
   import it into Convex production, and verify normal workflows before entering
   new repertoire data.
 
 Historical Supabase migrations and snapshots remain migration/rollback evidence
-until the Clerk/Convex architecture is adopted and cleanup is separately
-approved.
+until the production cutover is verified and cleanup is separately approved.
