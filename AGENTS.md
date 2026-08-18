@@ -34,7 +34,6 @@ src/lib/             effectful/stateful modules — anything that fetches or hol
 src/types/           shared TS types
 src/utils/           pure functions only
 convex/              schema, authenticated queries/mutations, and model helpers
-supabase/            legacy source schema retained only for data migration/audit
 docs/                domain model, ADRs, direction notes (issues + ideas by subject) — see docs/README.md
 ```
 
@@ -46,9 +45,6 @@ The folder scheme and lib/utils rule above are deliberate decisions (recorded in
 - Tailwind CSS
 - Clerk — authentication and invite-only account access
 - Convex — application data, authorization, reactive queries, and atomic mutations; read `convex/_generated/ai/guidelines.md` before editing `convex/`
-- Supabase migrations and the live source project are retained for the pending
-  production owner-data cutover and audit, not as an application runtime; follow
-  [docs/direction/backend-migration.md](docs/direction/backend-migration.md)
 - Persistent custom player for Recordings, backed by the YouTube IFrame API (`src/components/player/GlobalPlayer.tsx`, `src/lib/youtube.ts`) — see [docs/direction/music-player.md](docs/direction/music-player.md)
 - dnd-kit (`@dnd-kit/core`, `/sortable`, `/utilities`) — drag-to-reorder for a User's Recordings within a Song (`src/components/song/RecordingsSection.tsx`). Order is private state: `useSavedRecordings.reorder` calls the owner-scoped `recordings.reorder` mutation; position within a Song must remain private to the User.
 

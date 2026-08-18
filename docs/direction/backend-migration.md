@@ -3,9 +3,13 @@
 The Clerk/Convex architecture is adopted by
 [ADR-0011](../adr/0011-clerk-authentication-and-convex-application-backend.md).
 The application runtime uses Clerk for authentication and Convex for
-application data. The existing Supabase project remains the source of truth for
-the owner's real repertoire until its data has been imported into Convex
-production and verified. Do not delete or modify that project as cleanup work.
+application data. This repo's Supabase configuration, migrations, and the
+one-time export/import tooling have been removed (see git history for
+`supabase/`, `scripts/export-supabase.mjs`, and
+`scripts/import-supabase-to-convex.mjs`) now that the owner's data has been
+imported into Convex production, below. The live hosted Supabase project
+itself has not been deleted and remains rollback evidence until production is
+visually verified — do not delete or modify that project as cleanup work.
 
 ## Current checkpoint
 
@@ -29,74 +33,43 @@ Returning to the owner restored the favorite, all three ordered Recordings, and
 the Site Admin control. This completes the real two-User isolation smoke; the
 owner session is restored. Browser diagnostics contained no application errors.
 
-The production foundation now exists but cutover has not happened. Clerk
+The production foundation now exists and cutover has happened. Clerk
 Production was created for `tunes-seven.vercel.app` by cloning the Invite-only
-Development settings. Convex production `warmhearted-dog-849` has the current
-schema and functions plus
-`CLERK_JWT_ISSUER_DOMAIN=https://clerk.tunes-seven.vercel.app`. Its application
-tables are empty. Vercel Production has the matching live Clerk publishable and
-secret keys plus `NEXT_PUBLIC_CONVEX_URL` for that Convex deployment. The
-production frontend is deployed at `https://tunes-seven.vercel.app`; its Clerk
-login renders and the `/__clerk` proxy resolves successfully. No owner data has
-been imported and Supabase remains the source of truth.
+Development settings. Its Account Portal (`accounts.tunes-seven.vercel.app`)
+has no valid TLS certificate, because `tunes-seven.vercel.app` is a shared
+Vercel domain the project does not control DNS for — any redirect there (the
+default Clerk sign-in/sign-up/user-profile URLs, and `<RedirectToSignIn />`
+with no explicit `signInUrl`) failed the TLS handshake outright, which showed
+up as the app bouncing between the account portal and `/songs`. Convex
+production `warmhearted-dog-849` has the current schema and functions.
+Vercel Production has the matching live Clerk publishable and secret keys plus
+`NEXT_PUBLIC_CONVEX_URL` for that Convex deployment. The production frontend
+is deployed at `https://tunes-seven.vercel.app`; its Clerk login renders and
+the `/__clerk` proxy is verified in Clerk. Production Google OAuth is
+configured. Convex Production uses the proxy-backed Clerk issuer
+`https://tunes-seven.vercel.app/__clerk` (not the unresolvable
+`clerk.tunes-seven.vercel.app` subdomain); the owner completed a fresh
+production sign-in through `/login`, `/signup`, and `/account` — the app's
+own pages, which already route through the same proxy — and the matching
+Convex User exists.
 
-## Portable source snapshot
-
-Run this from the repository root while the Supabase project is not receiving
-writes:
-
-```bash
-npm run export:supabase
-```
-
-The exporter reads `NEXT_PUBLIC_SUPABASE_URL` and
-`SUPABASE_SERVICE_ROLE_KEY` from the environment or `.env.local`. It writes one
-JSON file per public application table plus `manifest.json` beneath the ignored
-`local/snapshots/` directory. The manifest records the export time, source schema
-version, per-table row counts, byte sizes, and SHA-256 checksums. The exporter
-reads every table in exact-count pages and verifies each file after writing it.
-
-The snapshot deliberately excludes Supabase Auth users, passwords, sessions,
-keys, and other secrets. Clerk identities are created separately. Application
-User ownership UUIDs remain in the exported rows so the Convex importer can bind
-the owner's legacy data to the correct Convex User.
-
-Supabase REST reads are not one cross-table transaction. Keep the application
-idle during the export, and take a fresh snapshot after freezing Supabase writes
-for the eventual production cutover.
-
-## Import procedure
-
-The idempotent, internal-only importer maps Supabase UUID relationships to native
-Convex document IDs in dependency order and verifies imported counts against the
-source manifest:
-
-  ```bash
-  npm run import:convex -- \
-    --snapshot local/snapshots/<snapshot-directory> \
-    --deployment <personal-dev-deployment>
-  ```
-
-- The importer binds the one legacy `site_admins` UUID to the one Convex Site
-  Admin User. It imports only that owner's private rows. Any other legacy User's
-  private rows remain preserved in the source snapshot and are reported rather
-  than silently reassigned.
-- Legacy Recording kinds that are absent use the application's established
-  `video_capture` fallback. Because legacy private Recording positions may be
-  absent, the importer deterministically normalizes each Song's owner-specific
-  ordering while preserving explicitly ordered rows ahead of unordered rows.
-- `user_recording_data` has no creation timestamp. Its imported `createdAt`
-  records the source snapshot time; ordering does not depend on this fallback.
+That owner User was promoted to Site Admin (`users:setRole`), and the
+`supabase-20260817T043229Z` snapshot (unchanged since export; Supabase
+received no writes afterward) was imported into Convex production with
+`--allow-production`. Convex's own post-import verification passed: 499
+artists, 151 songs, 134 release groups, 497 YouTube items, 338
+song-artist credits, 501 recordings, 504 recording-artist credits, 501
+recording-YouTube items, 151 song_user_data rows, and 479 user_recording_data
+rows, all bound to the Site Admin. The 2 non-owner private rows remain
+preserved only in the snapshot, as designed. This has not yet been visually
+verified by signing into the running production app. The live Supabase
+project remains the historical source of truth until that verification
+happens; this repo's Supabase tooling has already been removed per owner
+decision, since it is no longer needed to complete that verification.
 
 ## Remaining migration work
 
-- Finish Clerk Production setup: add production Google OAuth credentials,
-  confirm the working production app proxy in Clerk's setup flow, and create the
-  invited owner User. Ensure that User exists in Convex and promote it to Site
-  Admin before importing owner-scoped data.
-- Before production cutover, freeze Supabase writes, take a fresh snapshot,
-  import it into Convex production, and verify normal workflows before entering
-  new repertoire data.
-
-Historical Supabase migrations and snapshots remain migration/rollback evidence
-until the production cutover is verified and cleanup is separately approved.
+- Sign into `https://tunes-seven.vercel.app` and verify normal workflows
+  (Song list, favorites, ordered Recordings, Site Admin discoverability
+  control) against the imported production data before entering any new
+  repertoire data there.
