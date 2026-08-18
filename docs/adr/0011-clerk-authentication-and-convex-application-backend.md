@@ -1,5 +1,18 @@
 # Clerk authentication and Convex application backend
 
+**Current implementation note (August 2026):** Production cutover happened and
+the owner's data was imported into Convex production (see
+[docs/direction/backend-migration.md](../direction/backend-migration.md)).
+This repo's Supabase configuration and migrations (`supabase/`) and the
+one-time export/import tooling have been removed, superseding the "Supabase
+migrations... remain temporarily" and "their later removal is separately
+scoped cleanup" language in Consequences below — that cleanup has now
+happened. The live hosted Supabase project itself is untouched and remains
+rollback evidence per the Decision section below, pending visual verification
+of production. The `legacySupabaseId`/`legacySupabaseVideoId` fields remain on
+the Convex schema as harmless historical import bookkeeping; purging them from
+live data is unscoped.
+
 **Status:** Accepted 2026-08-17
 
 ## Decision

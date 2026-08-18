@@ -71,14 +71,7 @@ relationships, and constraints before and after; never infer data preservation
 from a successful migration command alone.
 
 For Convex deployment-affecting commands, identify and state the exact personal
-development, preview, or production target before running them. When the
-pending Supabase-to-Convex owner-data migration is in scope, verify both the
-source snapshot and target deployment and state whether production verification
-remains.
-
-Create a source snapshot with `npm run export:supabase`. Confirm that the
-generated `manifest.json` lists every expected application table, its exact row
-count, and a checksum before using the snapshot as migration input.
+development, preview, or production target before running them.
 
 ## Documentation impact
 
