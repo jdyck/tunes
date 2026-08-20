@@ -1,4 +1,4 @@
-See [AGENTS.md](AGENTS.md) — this project keeps agent instructions there so they apply regardless of which AI tool is being used.
+Read and follow @AGENTS.md.
 
 <!-- convex-ai-start -->
 
