@@ -220,7 +220,16 @@ test("counts only the current User's Songs and saved Recordings", async () => {
           credited_as: "Sarah Vaughan",
           kind: "person",
           musicbrainz_artist_id: "mb-sarah-vaughan",
-          relationships: [{ type: "performer" as const, details: [] }],
+          relationships: [
+            {
+              type: "instrument" as const,
+              details: [{ canonical: "piano", credited_as: null }],
+            },
+            {
+              type: "vocal" as const,
+              details: [{ canonical: "lead vocals", credited_as: null }],
+            },
+          ],
         },
       ],
     },

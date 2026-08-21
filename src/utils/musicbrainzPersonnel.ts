@@ -2,6 +2,7 @@ import { decodeHtmlEntities } from "./htmlEntities.ts";
 import { normalizeMusicBrainzArtistKind } from "./musicbrainzArtistCredits.ts";
 import type { RecordingPersonnelEntry } from "./recordingPersonnel.ts";
 import type { RecordingPersonnelDetail } from "../types/types.ts";
+import type { RecordingPersonnelRelationshipType } from "../types/types.ts";
 
 export interface MusicBrainzPersonnelRelation {
   type: string;
@@ -24,7 +25,7 @@ const unsupportedQualifiers = new Set([
 const normalizedText = (value: string) =>
   value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 
-const instrumentDetails = (
+const relationshipDetails = (
   relation: MusicBrainzPersonnelRelation,
 ): RecordingPersonnelDetail[] => {
   const details: RecordingPersonnelDetail[] = [];
@@ -54,14 +55,22 @@ export const musicBrainzRecordingPersonnel = (
   const personnelByArtist = new Map<
     string,
     RecordingPersonnelEntry & {
-      instrumentDetails: Map<string, RecordingPersonnelDetail>;
-      hasInstrument: boolean;
-      hasPerformer: boolean;
+      detailsByType: Record<
+        "instrument" | "vocal",
+        Map<string, RecordingPersonnelDetail>
+      >;
+      relationshipTypes: Set<RecordingPersonnelRelationshipType>;
     }
   >();
 
   for (const relation of relations) {
-    if (!["instrument", "performer"].includes(relation.type)) continue;
+    if (
+      !["instrument", "vocal", "performer", "conductor", "orchestra"].includes(
+        relation.type,
+      )
+    ) {
+      continue;
+    }
     const artistId = relation.artist?.id.trim();
     const artistName = relation.artist?.name.trim();
     if (!artistId || !artistName) continue;
@@ -75,33 +84,54 @@ export const musicBrainzRecordingPersonnel = (
       ),
       kind: normalizeMusicBrainzArtistKind(relation.artist?.type),
       relationships: [],
-      instrumentDetails: new Map(),
-      hasInstrument: false,
-      hasPerformer: false,
+      detailsByType: { instrument: new Map(), vocal: new Map() },
+      relationshipTypes: new Set(),
     };
     personnelByArtist.set(artistId, entry);
 
-    if (relation.type === "performer") {
-      entry.hasPerformer = true;
+    const relationshipType =
+      relation.type as RecordingPersonnelRelationshipType;
+    entry.relationshipTypes.add(relationshipType);
+    if (relationshipType !== "instrument" && relationshipType !== "vocal") {
       continue;
     }
-    entry.hasInstrument = true;
-    for (const detail of instrumentDetails(relation)) {
+    const details = entry.detailsByType[relationshipType];
+    for (const detail of relationshipDetails(relation)) {
       const key = detailKey(detail);
-      if (!entry.instrumentDetails.has(key)) {
-        entry.instrumentDetails.set(key, detail);
+      if (!details.has(key)) {
+        details.set(key, detail);
       }
     }
   }
 
-  return [...personnelByArtist.values()].map(
-    ({ instrumentDetails: details, hasInstrument, hasPerformer, ...entry }) => ({
+  const specificOrder = [
+    "instrument",
+    "vocal",
+    "conductor",
+    "orchestra",
+  ] as const;
+  return [...personnelByArtist.values()].map((value) => {
+    const { detailsByType, relationshipTypes, ...entry } = value;
+    const relationships = specificOrder.flatMap((type) => {
+      if (!relationshipTypes.has(type)) return [];
+      return [
+        {
+          type,
+          details:
+            type === "instrument" || type === "vocal"
+              ? [...detailsByType[type].values()]
+              : [],
+        },
+      ];
+    });
+    return {
       ...entry,
-      relationships: hasInstrument
-        ? [{ type: "instrument" as const, details: [...details.values()] }]
-        : hasPerformer
-          ? [{ type: "performer" as const, details: [] }]
-          : [],
-    }),
-  );
+      relationships:
+        relationships.length > 0
+          ? relationships
+          : relationshipTypes.has("performer")
+            ? [{ type: "performer" as const, details: [] }]
+            : [],
+    };
+  });
 };

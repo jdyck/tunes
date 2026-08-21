@@ -369,6 +369,106 @@ test("replaces detailed instrument Personnel and rejects duplicate details atomi
   });
 });
 
+test("persists all five Personnel relationship types and rejects malformed shapes", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("complete-personnel-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "complete-personnel-song",
+    shared: songInput("My Ship"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "My Ship", null);
+  input.shared.personnel = [
+    {
+      type: "musicbrainz",
+      name: "Nina Simone",
+      credited_as: "Nina Simone",
+      kind: "person",
+      musicbrainz_artist_id: "mb-nina-simone",
+      relationships: [
+        {
+          type: "instrument",
+          details: [{ canonical: "piano", credited_as: null }],
+        },
+        {
+          type: "vocal",
+          details: [{ canonical: "lead vocals", credited_as: "voice" }],
+        },
+      ],
+    },
+    {
+      type: "musicbrainz",
+      name: "Quincy Jones",
+      credited_as: "Quincy Jones",
+      kind: "person",
+      musicbrainz_artist_id: "mb-quincy-jones",
+      relationships: [{ type: "conductor", details: [] }],
+    },
+    {
+      type: "musicbrainz",
+      name: "Studio Orchestra",
+      credited_as: "Studio Orchestra",
+      kind: "orchestra",
+      musicbrainz_artist_id: "mb-studio-orchestra",
+      relationships: [{ type: "orchestra", details: [] }],
+    },
+    {
+      type: "musicbrainz",
+      name: "Unknown Performer",
+      credited_as: "Unknown Performer",
+      kind: null,
+      musicbrainz_artist_id: "mb-unknown-performer",
+      relationships: [{ type: "performer", details: [] }],
+    },
+  ];
+  await owner.mutation(api.recordings.update, input);
+  const saved = await owner.query(api.recordings.getMine, { recordingId });
+  expect(saved?.personnel.map((entry) => entry.relationships)).toEqual([
+    [
+      {
+        type: "instrument",
+        details: [{ canonical: "piano", credited_as: null }],
+      },
+      {
+        type: "vocal",
+        details: [{ canonical: "lead vocals", credited_as: "voice" }],
+      },
+    ],
+    [{ type: "conductor", details: [] }],
+    [{ type: "orchestra", details: [] }],
+    [{ type: "performer", details: [] }],
+  ]);
+
+  input.shared.personnel[1].relationships = [
+    {
+      type: "conductor",
+      details: [{ canonical: "guest", credited_as: null }],
+    },
+  ];
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "conductor Personnel cannot have details",
+  );
+  const afterMalformed = await owner.query(api.recordings.getMine, {
+    recordingId,
+  });
+  expect(afterMalformed?.personnel[1]).toMatchObject({
+    relationships: [{ type: "conductor", details: [] }],
+  });
+
+  input.shared.personnel[1].relationships = [
+    { type: "conductor", details: [] },
+  ];
+  input.shared.personnel[1].credited_as = " ";
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "requires credited-as Artist text",
+  );
+});
+
 test("enforces Recording Personnel Artist and aggregate detail bounds", async () => {
   const t = convexTest({ schema, modules });
   const owner = t.withIdentity(identity("personnel-bounds-owner"));

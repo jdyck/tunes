@@ -124,3 +124,63 @@ test("sorts instrument details and uses credited-as and missing-detail labels", 
     ],
   );
 });
+
+test("orders instrument, vocal, conductor, and orchestra details by type", () => {
+  const artistId = "artist-all-roles" as Id<"artists">;
+  assert.deepEqual(
+    recordingPersonnelRows([], [
+      {
+        artistId,
+        musicbrainzArtistId: "mb-all-roles",
+        name: "Multi Role Artist",
+        creditedAs: "Multi Role Artist",
+        kind: "person",
+        relationships: [
+          { type: "orchestra", details: [] },
+          {
+            type: "vocal",
+            details: [
+              { canonical: "lead vocals", credited_as: "voice" },
+              { canonical: "backing vocals", credited_as: null },
+            ],
+          },
+          { type: "conductor", details: [] },
+          {
+            type: "instrument",
+            details: [
+              { canonical: "piano", credited_as: null },
+              { canonical: "bass", credited_as: null },
+            ],
+          },
+        ],
+      },
+      {
+        artistId: "artist-vocal" as Id<"artists">,
+        musicbrainzArtistId: "mb-vocal",
+        name: "Vocalist",
+        creditedAs: "Vocalist",
+        kind: "person",
+        relationships: [{ type: "vocal", details: [] }],
+      },
+    ]),
+    [
+      {
+        artistId,
+        creditedAs: "Multi Role Artist",
+        details: [
+          "bass",
+          "piano",
+          "backing vocals",
+          "voice",
+          "conductor",
+          "orchestra",
+        ],
+      },
+      {
+        artistId: "artist-vocal",
+        creditedAs: "Vocalist",
+        details: ["vocals"],
+      },
+    ],
+  );
+});

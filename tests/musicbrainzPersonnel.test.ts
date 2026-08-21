@@ -105,3 +105,114 @@ test("excludes qualifiers, unsupported roles, malformed relations, and raw sourc
     ],
   );
 });
+
+test("groups instrument and vocal details and maps conductor and orchestra", () => {
+  assert.deepEqual(
+    musicBrainzRecordingPersonnel([
+      {
+        type: "vocal",
+        artist: { id: "artist-1", name: "Nina Simone", type: "Person" },
+        attributes: ["lead vocals"],
+        "attribute-values": { "lead vocals": "lead vocals" },
+        "attribute-credits": { "lead vocals": "voice" },
+      },
+      {
+        type: "instrument",
+        artist: { id: "artist-1", name: "Nina Simone", type: "Person" },
+        attributes: ["piano"],
+        "attribute-values": { piano: "piano" },
+      },
+      {
+        type: "performer",
+        artist: { id: "artist-1", name: "Nina Simone", type: "Person" },
+      },
+      {
+        type: "vocal",
+        artist: { id: "artist-1", name: "Nina Simone", type: "Person" },
+        attributes: ["LEAD VOCALS", "backing vocals"],
+        "attribute-values": {
+          "LEAD VOCALS": " lead   vocals ",
+          "backing vocals": "backing vocals",
+        },
+        "attribute-credits": { "LEAD VOCALS": " Voice " },
+      },
+      {
+        type: "conductor",
+        artist: { id: "artist-2", name: "Quincy Jones" },
+        attributes: ["guest"],
+      },
+      {
+        type: "orchestra",
+        artist: { id: "artist-3", name: "Studio Orchestra", type: "Orchestra" },
+      },
+    ]),
+    [
+      {
+        artistId: null,
+        musicbrainzArtistId: "artist-1",
+        name: "Nina Simone",
+        creditedAs: "Nina Simone",
+        kind: "person",
+        relationships: [
+          {
+            type: "instrument",
+            details: [{ canonical: "piano", credited_as: null }],
+          },
+          {
+            type: "vocal",
+            details: [
+              { canonical: "lead vocals", credited_as: "voice" },
+              { canonical: "backing vocals", credited_as: null },
+            ],
+          },
+        ],
+      },
+      {
+        artistId: null,
+        musicbrainzArtistId: "artist-2",
+        name: "Quincy Jones",
+        creditedAs: "Quincy Jones",
+        kind: null,
+        relationships: [{ type: "conductor", details: [] }],
+      },
+      {
+        artistId: null,
+        musicbrainzArtistId: "artist-3",
+        name: "Studio Orchestra",
+        creditedAs: "Studio Orchestra",
+        kind: "orchestra",
+        relationships: [{ type: "orchestra", details: [] }],
+      },
+    ],
+  );
+});
+
+test("keeps generic and missing-vocal fallbacks only when they are the best evidence", () => {
+  assert.deepEqual(
+    musicBrainzRecordingPersonnel([
+      {
+        type: "vocal",
+        artist: { id: "artist-4", name: "Singer" },
+        attributes: [],
+      },
+      {
+        type: "performer",
+        artist: { id: "artist-5", name: "Unknown Performer" },
+        "target-credit": "Mystery Guest",
+      },
+    ]).map((entry) => ({
+      creditedAs: entry.creditedAs,
+      relationships: entry.relationships,
+    })),
+    [
+      {
+        creditedAs: "Singer",
+        relationships: [{ type: "vocal", details: [] }],
+      },
+      {
+        creditedAs: "Mystery Guest",
+        relationships: [{ type: "performer", details: [] }],
+      },
+    ],
+  );
+});
