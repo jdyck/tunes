@@ -11,6 +11,7 @@ import {
   privateRecordingInputValidator,
   recordingArtworkViewValidator,
   recordingKindValidator,
+  replaceAttribution,
   replacePerformers,
   savedRecordingViewValidator,
   sharedRecordingInputValidator,
@@ -359,7 +360,7 @@ export const update = mutation({
     shared: sharedRecordingInputValidator,
     privateData: privateRecordingInputValidator,
   },
-  returns: v.id("recordings"),
+  returns: savedRecordingViewValidator,
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
     const membership = await loadSavedRecordingMembership(
@@ -397,6 +398,7 @@ export const update = mutation({
       recordingLocation: trimToNull(args.shared.recording_location),
       releaseGroupId,
     });
+    await replaceAttribution(ctx, recording._id, args.shared.attribution);
     await replacePerformers(ctx, recording._id, args.shared.performers);
     await ctx.db.patch(membership._id, {
       notes: trimToNull(args.privateData.notes),
@@ -406,7 +408,14 @@ export const update = mutation({
       key: trimToNull(args.privateData.key),
       tempo: trimToNull(args.privateData.tempo),
     });
-    return recording._id;
+    const [savedRecording, savedMembership] = await Promise.all([
+      ctx.db.get(recording._id),
+      ctx.db.get(membership._id),
+    ]);
+    if (!savedRecording || !savedMembership) {
+      throw new Error("Saved Recording disappeared during update");
+    }
+    return toSavedRecordingView(ctx, savedRecording, savedMembership);
   },
 });
 

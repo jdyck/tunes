@@ -12,7 +12,12 @@ takes, existing-Song-only attachment, and refusal of unmatched or ambiguous
 Song/Recording candidates.
 Artist-credit coverage includes provider identity, nullable kind,
 credited-as normalization, conflicting-identity protection, and stable local
-Artist reuse across refreshes and roles.
+Artist reuse across refreshes and roles. Artist-browsing coverage includes
+two-User Attribution reachability and isolation, distinct Recording counts,
+combined Attribution and Personnel reasons on one Recording row, and
+owner-scoped saved-Recording payloads. The Artist row's relationship-reason
+view model remains a focused pure contract rather than a component-internal
+test.
 
 The Clerk/Convex backend privacy boundary uses fast authorization-contract
 coverage with Vitest and `convex-test`. Exercise anonymous, owner, other-User,

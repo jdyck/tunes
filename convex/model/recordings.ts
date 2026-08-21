@@ -2,6 +2,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { v, type Infer } from "convex/values";
 import { artistKindValidator, artistViewValidator } from "./songs";
+import { formatRecordingArtistDisplay } from "../../src/utils/recordingAttribution";
 
 const nullableString = v.union(v.string(), v.null());
 
@@ -36,6 +37,34 @@ export const performerInputValidator = v.object({
 
 export type PerformerInput = Infer<typeof performerInputValidator>;
 
+const attributionCreditFields = {
+  credited_as: v.string(),
+  join_phrase: v.string(),
+};
+
+export const attributionInputValidator = v.union(
+  v.object({
+    type: v.literal("existing"),
+    artist_id: v.id("artists"),
+    ...attributionCreditFields,
+  }),
+  v.object({
+    type: v.literal("musicbrainz"),
+    name: v.string(),
+    kind: artistKindValidator,
+    musicbrainz_artist_id: v.string(),
+    ...attributionCreditFields,
+  }),
+  v.object({
+    type: v.literal("provider_unmatched"),
+    name: v.string(),
+    kind: artistKindValidator,
+    ...attributionCreditFields,
+  }),
+);
+
+export type AttributionInput = Infer<typeof attributionInputValidator>;
+
 export const sharedRecordingInputValidator = v.object({
   name: v.string(),
   kind: recordingKindValidator,
@@ -49,6 +78,7 @@ export const sharedRecordingInputValidator = v.object({
   recording_date_end: nullableString,
   recording_location: nullableString,
   release_group: v.union(releaseGroupInputValidator, v.null()),
+  attribution: v.array(attributionInputValidator),
   performers: v.array(performerInputValidator),
 });
 
@@ -77,6 +107,16 @@ const recordingArtistCreditViewValidator = v.object({
   artists: artistViewValidator,
 });
 
+const recordingAttributionViewValidator = v.object({
+  id: v.id("recordingArtistAttributions"),
+  recording_id: v.id("recordings"),
+  artist_id: v.id("artists"),
+  credited_as: v.string(),
+  join_phrase: v.string(),
+  sort_order: v.number(),
+  artists: artistViewValidator,
+});
+
 const youtubeItemViewValidator = v.object({
   video_id: v.string(),
   title: v.string(),
@@ -98,6 +138,7 @@ export const savedRecordingViewValidator = v.object({
   name: v.string(),
   kind: recordingKindValidator,
   artist: nullableString,
+  artist_attribution_fallback: nullableString,
   year: nullableString,
   album: nullableString,
   duration: nullableString,
@@ -109,6 +150,7 @@ export const savedRecordingViewValidator = v.object({
   release_group_id: v.union(v.id("releaseGroups"), v.null()),
   release_groups: v.union(releaseGroupViewValidator, v.null()),
   recording_artist_credits: v.array(recordingArtistCreditViewValidator),
+  recording_artist_attributions: v.array(recordingAttributionViewValidator),
   user_data: v.object({
     user_id: v.id("users"),
     recording_id: v.id("recordings"),
@@ -201,6 +243,44 @@ const loadPerformerCredits = async (
   );
 };
 
+const loadAttribution = async (
+  ctx: ReadContext,
+  recordingId: Id<"recordings">,
+) => {
+  const parts = await ctx.db
+    .query("recordingArtistAttributions")
+    .withIndex("by_recordingId_and_sortOrder", (query) =>
+      query.eq("recordingId", recordingId),
+    )
+    .take(101);
+  if (parts.length > 100) {
+    throw new Error("Recording Attribution exceeds 100 parts");
+  }
+
+  return Promise.all(
+    parts.map(async (part) => {
+      const artist = await ctx.db.get(part.artistId);
+      if (!artist) {
+        throw new Error("Recording Attribution references a missing Artist");
+      }
+      return {
+        id: part._id,
+        recording_id: recordingId,
+        artist_id: artist._id,
+        credited_as: part.creditedAs,
+        join_phrase: part.joinPhrase,
+        sort_order: part.sortOrder,
+        artists: {
+          id: artist._id,
+          name: artist.name,
+          kind: artist.kind,
+          musicbrainz_artist_id: artist.musicbrainzArtistId,
+        },
+      };
+    }),
+  );
+};
+
 const loadYouTubeItems = async (
   ctx: ReadContext,
   recordingId: Id<"recordings">,
@@ -249,35 +329,54 @@ export const toSavedRecordingView = async (
   ctx: ReadContext,
   recording: Doc<"recordings">,
   userData: Doc<"userRecordingData">,
-) => ({
-  id: recording._id,
-  song_id: recording.songId,
-  name: recording.name,
-  kind: recording.kind,
-  artist: recording.artist,
-  year: recording.year,
-  album: recording.album,
-  duration: recording.duration,
-  musicbrainz_recording_id: recording.musicbrainzRecordingId,
-  musicbrainz_release_id: recording.musicbrainzReleaseId,
-  recording_date_start: recording.recordingDateStart,
-  recording_date_end: recording.recordingDateEnd,
-  recording_location: recording.recordingLocation,
-  release_group_id: recording.releaseGroupId,
-  release_groups: await loadReleaseGroup(ctx, recording.releaseGroupId),
-  recording_artist_credits: await loadPerformerCredits(ctx, recording._id),
-  user_data: {
-    user_id: userData.userId,
-    recording_id: userData.recordingId,
-    notes: userData.notes,
-    rating: userData.rating,
-    sort_order: userData.sortOrder,
-    tags: userData.tags,
-    key: userData.key,
-    tempo: userData.tempo,
-  },
-  youtube_items: await loadYouTubeItems(ctx, recording._id),
-});
+) => {
+  const [releaseGroup, performers, attribution, youtubeItems] = await Promise.all([
+    loadReleaseGroup(ctx, recording.releaseGroupId),
+    loadPerformerCredits(ctx, recording._id),
+    loadAttribution(ctx, recording._id),
+    loadYouTubeItems(ctx, recording._id),
+  ]);
+  const providerHint = youtubeItems
+    .map((item) => item.ytmusic_artist_name ?? item.channel_name)
+    .find((value): value is string => Boolean(value?.trim()));
+
+  return {
+    id: recording._id,
+    song_id: recording.songId,
+    name: recording.name,
+    kind: recording.kind,
+    artist: formatRecordingArtistDisplay({
+      attribution,
+      fallback: recording.artist,
+      providerHint,
+      descriptor: recording.name,
+    }),
+    artist_attribution_fallback: recording.artist,
+    year: recording.year,
+    album: recording.album,
+    duration: recording.duration,
+    musicbrainz_recording_id: recording.musicbrainzRecordingId,
+    musicbrainz_release_id: recording.musicbrainzReleaseId,
+    recording_date_start: recording.recordingDateStart,
+    recording_date_end: recording.recordingDateEnd,
+    recording_location: recording.recordingLocation,
+    release_group_id: recording.releaseGroupId,
+    release_groups: releaseGroup,
+    recording_artist_credits: performers,
+    recording_artist_attributions: attribution,
+    user_data: {
+      user_id: userData.userId,
+      recording_id: userData.recordingId,
+      notes: userData.notes,
+      rating: userData.rating,
+      sort_order: userData.sortOrder,
+      tags: userData.tags,
+      key: userData.key,
+      tempo: userData.tempo,
+    },
+    youtube_items: youtubeItems,
+  };
+};
 
 export const toRecordingArtworkView = async (
   ctx: ReadContext,
@@ -302,12 +401,20 @@ export const toRecordingArtworkView = async (
   };
 };
 
-const resolveArtist = async (ctx: MutationCtx, performer: PerformerInput) => {
-  const musicbrainzArtistId = performer.musicbrainz_artist_id.trim();
-  const creditedAs = performer.credited_as.trim();
+type ArtistIdentityCreditInput = Pick<
+  PerformerInput,
+  "name" | "credited_as" | "kind" | "musicbrainz_artist_id"
+>;
+
+const resolveArtist = async (
+  ctx: MutationCtx,
+  credit: ArtistIdentityCreditInput,
+) => {
+  const musicbrainzArtistId = credit.musicbrainz_artist_id.trim();
+  const creditedAs = credit.credited_as.trim();
   if (!musicbrainzArtistId || !creditedAs) {
     throw new Error(
-      "A performer requires credited-as text and a MusicBrainz Artist ID",
+      "An Artist credit requires credited-as text and a MusicBrainz Artist ID",
     );
   }
 
@@ -318,15 +425,15 @@ const resolveArtist = async (ctx: MutationCtx, performer: PerformerInput) => {
     )
     .unique();
   if (existing) {
-    if (existing.kind === null && performer.kind !== null) {
-      await ctx.db.patch(existing._id, { kind: performer.kind });
+    if (existing.kind === null && credit.kind !== null) {
+      await ctx.db.patch(existing._id, { kind: credit.kind });
     }
     return existing._id;
   }
 
   return ctx.db.insert("artists", {
-    name: performer.name.trim() || creditedAs,
-    kind: performer.kind,
+    name: credit.name.trim() || creditedAs,
+    kind: credit.kind,
     musicbrainzArtistId,
     legacySupabaseId: null,
   });
@@ -361,6 +468,87 @@ export const replacePerformers = async (
     });
   }
 };
+
+export const replaceAttribution = async (
+  ctx: MutationCtx,
+  recordingId: Id<"recordings">,
+  attribution: AttributionInput[],
+) => {
+  if (attribution.length > 100) {
+    throw new Error("A Recording cannot have more than 100 Attribution parts");
+  }
+  for (const part of attribution) {
+    if (!part.credited_as.trim()) {
+      throw new Error(
+        "An Attribution part requires credited-as text",
+      );
+    }
+    if (
+      (part.type === "musicbrainz" || part.type === "provider_unmatched") &&
+      !part.name.trim()
+    ) {
+      throw new Error("An Attribution part requires an Artist name");
+    }
+    if (part.type === "musicbrainz" && !part.musicbrainz_artist_id.trim()) {
+      throw new Error(
+        "A MusicBrainz Attribution part requires a MusicBrainz Artist ID",
+      );
+    }
+  }
+
+  const existing = await ctx.db
+    .query("recordingArtistAttributions")
+    .withIndex("by_recordingId", (query) =>
+      query.eq("recordingId", recordingId),
+    )
+    .take(101);
+  if (existing.length > 100) {
+    throw new Error("Recording Attribution exceeds 100 parts");
+  }
+  await Promise.all(existing.map((part) => ctx.db.delete(part._id)));
+
+  for (const [sortOrder, part] of attribution.entries()) {
+    const artistId =
+      part.type === "existing"
+        ? await resolveExistingArtist(ctx, part.artist_id)
+        : part.type === "musicbrainz"
+          ? await resolveArtist(ctx, {
+              name: part.name,
+              credited_as: part.credited_as,
+              kind: part.kind,
+              musicbrainz_artist_id: part.musicbrainz_artist_id,
+            })
+          : await createProviderUnmatchedArtist(ctx, part);
+    await ctx.db.insert("recordingArtistAttributions", {
+      recordingId,
+      artistId,
+      creditedAs: part.credited_as,
+      joinPhrase: part.join_phrase,
+      sortOrder,
+      legacySupabaseId: null,
+    });
+  }
+};
+
+const resolveExistingArtist = async (
+  ctx: MutationCtx,
+  artistId: Id<"artists">,
+) => {
+  const artist = await ctx.db.get(artistId);
+  if (!artist) throw new Error("Recording Attribution references a missing Artist");
+  return artist._id;
+};
+
+const createProviderUnmatchedArtist = async (
+  ctx: MutationCtx,
+  part: Extract<AttributionInput, { type: "provider_unmatched" }>,
+) =>
+  ctx.db.insert("artists", {
+    name: part.name.trim(),
+    kind: part.kind,
+    musicbrainzArtistId: null,
+    legacySupabaseId: null,
+  });
 
 export const normalizeTags = (tags: string[]) => {
   const byKey = new Map<string, string>();

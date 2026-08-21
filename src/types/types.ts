@@ -88,6 +88,16 @@ export interface RecordingArtistCredit {
   artists?: Artist | null;
 }
 
+export interface RecordingAttributionPart {
+  id?: string;
+  recording_id: string;
+  artist_id: string;
+  credited_as: string;
+  join_phrase: string;
+  sort_order?: number | null;
+  artists?: Artist | null;
+}
+
 export type RecordingKind = "released" | "video_capture";
 
 export interface Recording {
@@ -106,7 +116,10 @@ export interface Recording {
   recording_location?: string | null;
   release_group_id?: string | null;
   release_groups?: ReleaseGroup | null;
+  /** Derived from structured Attribution, then the transitional fallback. */
   recording_artist_credits?: RecordingArtistCredit[];
+  artist_attribution_fallback?: string | null;
+  recording_artist_attributions?: RecordingAttributionPart[];
 }
 
 export interface ReleaseGroup {

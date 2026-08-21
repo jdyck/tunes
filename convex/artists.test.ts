@@ -46,6 +46,35 @@ test("requires authentication for Artist browsing", async () => {
   await expect(t.query(api.artists.listMine, {})).rejects.toThrow(
     "Unauthenticated",
   );
+  await expect(t.query(api.artists.search, { query: "Ella" })).rejects.toThrow(
+    "Unauthenticated",
+  );
+});
+
+test("searches existing canonical Artists for authenticated Users", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("artist-search-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  await owner.mutation(api.songs.create, {
+    requestId: "artist-search-song",
+    shared: songInput("How High the Moon"),
+    writers: [{
+      artistId: null,
+      canonicalName: "Ella Fitzgerald",
+      creditedAs: "Ella Fitzgerald",
+      role: "composer",
+      artistKind: "person",
+      musicbrainzArtistId: "mb-ella-fitzgerald",
+    }],
+  });
+
+  await expect(owner.query(api.artists.search, { query: "Ella" })).resolves.toEqual([
+    expect.objectContaining({
+      name: "Ella Fitzgerald",
+      musicbrainz_artist_id: "mb-ella-fitzgerald",
+    }),
+  ]);
+  await expect(owner.query(api.artists.search, { query: " " })).resolves.toEqual([]);
 });
 
 test("counts only the current User's Songs and saved Recordings", async () => {
@@ -96,6 +125,24 @@ test("counts only the current User's Songs and saved Recordings", async () => {
       recording_date_end: null,
       recording_location: null,
       release_group: null,
+      attribution: [
+        {
+          type: "musicbrainz" as const,
+          name: "Sarah Vaughan",
+          credited_as: "Sarah Vaughan",
+          join_phrase: "",
+          kind: "person",
+          musicbrainz_artist_id: "mb-sarah-vaughan",
+        },
+        {
+          type: "musicbrainz" as const,
+          name: "Carmen McRae",
+          credited_as: "Carmen McRae",
+          join_phrase: "",
+          kind: "person",
+          musicbrainz_artist_id: "mb-carmen-mcrae",
+        },
+      ],
       performers: [
         {
           name: "Sarah Vaughan",
@@ -138,6 +185,11 @@ test("counts only the current User's Songs and saved Recordings", async () => {
         songCount: 0,
         recordingCount: 1,
       }),
+      expect.objectContaining({
+        name: "Carmen McRae",
+        songCount: 0,
+        recordingCount: 1,
+      }),
     ]),
   );
   const otherArtists = await other.query(api.artists.listMine, {});
@@ -161,10 +213,33 @@ test("counts only the current User's Songs and saved Recordings", async () => {
   });
   expect(ownerDetail?.recordings).toHaveLength(1);
   expect(ownerDetail?.recordings[0].user_data.notes).toBe("Owner only");
+  expect(ownerDetail?.recordings[0].relationship_reasons).toEqual([
+    "attribution",
+    "personnel",
+  ]);
   expect(ownerDetail?.recording_song_titles).toEqual([
     { song_id: songId, title: "Lullaby of Birdland" },
   ]);
   expect(otherDetail?.recordings).toEqual([]);
+
+  const attributionArtist = ownerArtists.find(
+    (artist) => artist.name === "Carmen McRae",
+  );
+  if (!attributionArtist) throw new Error("Expected Attribution Artist");
+  await expect(
+    owner.query(api.artists.getMine, { artistId: attributionArtist.id }),
+  ).resolves.toMatchObject({
+    recordings: [
+      {
+        id: recordingId,
+        relationship_reasons: ["attribution"],
+        user_data: { notes: "Owner only" },
+      },
+    ],
+  });
+  await expect(
+    other.query(api.artists.getMine, { artistId: attributionArtist.id }),
+  ).resolves.toMatchObject({ recordings: [] });
 });
 
 test("only an admin can cache constrained shared Artist image metadata", async () => {

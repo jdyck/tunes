@@ -8,6 +8,11 @@
 
 ## Implementation order and blockers
 
+- Add structured Release Group Attribution as its own follow-up slice, with
+  Recording-detail presentation and Artist browsing through the User's saved
+  Recordings. Do not implement it by extending the former flattened Recording
+  field or by duplicating the existing Recording Attribution relationship.
+
 - Shared canonical rows cannot reuse an “owner may update their own row” rule
   indefinitely. The Song split deliberately introduces `songs.isDiscoverable`
   and the Site-Admin-only **Visible to all users** switch for stable authenticated

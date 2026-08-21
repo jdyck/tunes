@@ -12,6 +12,7 @@ import RecordingListRow from "@/components/recording/RecordingListRow";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import PaneHeader from "@/components/layout/PaneHeader";
 import type { ArtistKind } from "@/types/types";
+import { formatArtistRecordingRelationshipReasons } from "@/utils/artistRecordingRelationship";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import { formatWriterCredit } from "@/lib/songWriters";
 import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
@@ -187,6 +188,10 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                 const youtubeItem = recording.youtube_items[0];
                 const songTitle =
                   songTitleById.get(recording.song_id) ?? recording.name;
+                const relationshipReasons =
+                  formatArtistRecordingRelationshipReasons(
+                    recording.relationship_reasons,
+                  );
                 return (
                   <li
                     key={recording.id}
@@ -202,6 +207,11 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                         {songTitle}
                       </span>
                       <RecordingListRow recording={recording} />
+                      {relationshipReasons && (
+                        <span className="pb-2 pl-4 text-xs tracking-wide text-ink-600">
+                          Related through {relationshipReasons}
+                        </span>
+                      )}
                     </Link>
                     {youtubeItem && (
                       <button

@@ -50,8 +50,8 @@ interface SongsListState extends SongFilters {
 
 const initialSongsListState = (): SongsListState => ({
   search: "",
-  sortKey: "title",
-  sortDirection: "asc",
+  sortKey: "added",
+  sortDirection: "desc",
   favoriteOnly: false,
   includedTags: [],
   excludeHoliday: defaultExcludeHoliday(new Date()),

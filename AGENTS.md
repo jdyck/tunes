@@ -72,6 +72,23 @@ Codex and Claude share this local repository. Follow
 changes as owner or other-agent work. Do not revert or overwrite them; inspect
 and merge deliberately when work overlaps.
 
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked in GitHub Issues for this repository. See
+`docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the five default canonical label names. See
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repository with root domain context and ADRs. See
+`docs/agents/domain.md`.
+
 ## Local work in progress
 
 Use the git-ignored `local/` workspace for coordination that should not be

@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { SavedRecording } from "../src/types/types.ts";
 import {
-  recordingDraftDidSave,
+  recordingEditorStateAfterSave,
+  recordingDraftAfterMusicBrainzLookup,
   recordingDraftIsDirty,
   recordingDraftToPayload,
+  recordingDraftWithoutMusicBrainzMatch,
+  recordingDraftWithResolvedMatch,
   recordingToEditorState,
 } from "../src/utils/recordingDraft.ts";
 
@@ -14,6 +17,7 @@ const recordingFixture = (): SavedRecording => ({
   name: "You &amp; the Night &amp; the Music",
   kind: "released",
   artist: "Bill &amp; Jane",
+  artist_attribution_fallback: "Bill &amp; Jane",
   album: null,
   year: "1958",
   duration: "3:42",
@@ -43,6 +47,21 @@ const recordingFixture = (): SavedRecording => ({
       },
     },
   ],
+  recording_artist_attributions: [
+    {
+      recording_id: "recording-1",
+      artist_id: "artist-1",
+      credited_as: "Bill & Jane",
+      join_phrase: "",
+      sort_order: 0,
+      artists: {
+        id: "artist-1",
+        name: "Bill & Jane",
+        kind: "group",
+        musicbrainz_artist_id: "artist-mbid",
+      },
+    },
+  ],
   user_data: {
     user_id: "user-1",
     recording_id: "recording-1",
@@ -63,6 +82,7 @@ test("creates one Recording draft while preserving the loaded save baseline", ()
   assert.equal(state.draft.artist, "Bill & Jane");
   assert.equal(state.draft.album, "Album & Context");
   assert.equal(state.baseline.name, "You &amp; the Night &amp; the Music");
+  assert.equal(state.draft.attribution[0]?.artistId, "artist-1");
   assert.equal(recordingDraftIsDirty(state), true);
 });
 
@@ -87,6 +107,14 @@ test("maps the complete Recording draft to the presence-aware RPC payload", () =
         title: "Album &amp; Context",
         musicbrainz_release_group_id: "release-group-mbid",
       },
+      attribution: [
+        {
+          type: "existing",
+          artist_id: "artist-1",
+          credited_as: "Bill & Jane",
+          join_phrase: "",
+        },
+      ],
       performers: [
         {
           name: "Bill & Jane",
@@ -126,27 +154,108 @@ test("serializes cleared optional fields explicitly", () => {
     musicbrainzRecordingId: null,
     musicbrainzReleaseId: null,
     releaseGroup: null,
+    attribution: [],
     performers: [],
   });
 
   assert.equal(payload.shared.artist, null);
   assert.equal(payload.shared.release_group, null);
+  assert.deepEqual(payload.shared.attribution, []);
   assert.deepEqual(payload.shared.performers, []);
   assert.equal(payload.private.notes, null);
   assert.deepEqual(payload.private.tags, []);
 });
 
-test("keeps edits made during an in-flight save dirty", () => {
+test("keeps Attribution Fallback editable when structured Attribution is cleared", () => {
+  const recording = recordingFixture();
+  const { draft } = recordingToEditorState(recording);
+
+  assert.equal(draft.artist, "Bill & Jane");
+  const payload = recordingDraftToPayload(recording, { ...draft, attribution: [] });
+  assert.equal(payload.shared.artist, "Bill & Jane");
+  assert.deepEqual(payload.shared.attribution, []);
+});
+
+test("unlinking MusicBrainz clears source-only Personnel but retains Attribution", () => {
+  const { draft } = recordingToEditorState(recordingFixture());
+  const unlinked = recordingDraftWithoutMusicBrainzMatch(draft);
+
+  assert.equal(unlinked.musicbrainzRecordingId, null);
+  assert.equal(unlinked.musicbrainzReleaseId, null);
+  assert.equal(unlinked.releaseGroup, null);
+  assert.deepEqual(unlinked.performers, []);
+  assert.deepEqual(unlinked.attribution, draft.attribution);
+  assert.equal(unlinked.artist, draft.artist);
+});
+
+test("a resolved MusicBrainz match replaces the complete Attribution draft only on success", () => {
+  const { draft } = recordingToEditorState(recordingFixture());
+  const matched = recordingDraftWithResolvedMatch(draft, {
+    recordingId: "new-recording-mbid",
+    title: "You and the Night and the Music",
+    artistCredit: "Ella Fitzgerald with Louis Armstrong",
+    duration: "3:44",
+    recordingDateStart: null,
+    recordingDateEnd: null,
+    recordingLocation: null,
+    attribution: [
+      {
+        artistId: null,
+        musicbrainzArtistId: "ella-mbid",
+        providerUnmatchedConfirmed: false,
+        name: "Ella Fitzgerald",
+        creditedAs: "Ella Fitzgerald",
+        joinPhrase: " with ",
+        kind: "person",
+      },
+      {
+        artistId: null,
+        musicbrainzArtistId: "louis-mbid",
+        providerUnmatchedConfirmed: false,
+        name: "Louis Armstrong",
+        creditedAs: "Louis Armstrong",
+        joinPhrase: "",
+        kind: "person",
+      },
+    ],
+    performers: [],
+    releaseGroup: null,
+    representativeReleaseId: null,
+  });
+
+  assert.equal(matched.artist, draft.artist);
+  assert.deepEqual(
+    matched.attribution.map((part) => part.joinPhrase),
+    [" with ", ""],
+  );
+  assert.equal(matched.musicbrainzRecordingId, "new-recording-mbid");
+});
+
+test("a failed MusicBrainz lookup preserves the current Attribution draft", () => {
+  const { draft } = recordingToEditorState(recordingFixture());
+
+  assert.equal(recordingDraftAfterMusicBrainzLookup(draft, null), draft);
+});
+
+test("rehydrates saved canonical Artist IDs while preserving newer in-flight edits", () => {
   const initial = recordingToEditorState(recordingFixture());
-  const savedDraft = { ...initial.draft, notes: "Sent to the server" };
   const current = {
     baseline: initial.baseline,
-    draft: { ...savedDraft, notes: "Typed while saving" },
+    draft: { ...initial.draft, notes: "Typed while saving" },
   };
 
-  const afterSave = recordingDraftDidSave(current, savedDraft);
+  const afterSave = recordingEditorStateAfterSave(
+    current,
+    recordingFixture(),
+    false,
+  );
 
-  assert.equal(afterSave.baseline.notes, "Sent to the server");
+  assert.equal(afterSave.baseline.notes, "Practice the bridge");
   assert.equal(afterSave.draft.notes, "Typed while saving");
   assert.equal(recordingDraftIsDirty(afterSave), true);
+  assert.equal(
+    recordingEditorStateAfterSave(initial, recordingFixture(), true)
+      .draft.attribution[0]?.artistId,
+    "artist-1",
+  );
 });

@@ -1,4 +1,8 @@
-import type { RecordingPerformer } from "../lib/musicbrainz.ts";
+import type {
+  RecordingPerformer,
+  ResolvedRecordingMatch,
+} from "../lib/musicbrainz.ts";
+import type { RecordingAttributionInput } from "./musicbrainzRecordingAttribution.ts";
 import type { RecordingKind, SavedRecording } from "../types/types.ts";
 import { decodeHtmlEntities } from "./htmlEntities.ts";
 import {
@@ -6,6 +10,11 @@ import {
   performersToSavePayload,
   type RecordingPerformerPayload,
 } from "./recordingPerformers.ts";
+import {
+  attributionCreditsToDraft,
+  attributionsToSavePayload,
+  type RecordingAttributionPayload,
+} from "./recordingAttributions.ts";
 
 export interface RecordingDraftReleaseGroup {
   title: string;
@@ -29,6 +38,7 @@ export interface RecordingDraft {
   musicbrainzRecordingId: string | null;
   musicbrainzReleaseId: string | null;
   releaseGroup: RecordingDraftReleaseGroup | null;
+  attribution: RecordingAttributionInput[];
   performers: RecordingPerformer[];
 }
 
@@ -54,6 +64,7 @@ export interface RecordingSavePayload {
       title: string;
       musicbrainz_release_group_id: string;
     } | null;
+    attribution: RecordingAttributionPayload[];
     performers: RecordingPerformerPayload[];
   };
   private: {
@@ -75,7 +86,7 @@ const loadedDraft = (recording: SavedRecording): RecordingDraft => ({
   name: recording.name || "",
   kind: recording.kind || "video_capture",
   notes: recording.user_data.notes || "",
-  artist: recording.artist || "",
+  artist: recording.artist_attribution_fallback || "",
   album: recording.release_groups?.title || recording.album || "",
   year: recording.year || "",
   recordingDateStart: recording.recording_date_start || "",
@@ -97,6 +108,9 @@ const loadedDraft = (recording: SavedRecording): RecordingDraft => ({
           recording.release_groups.musicbrainz_release_group_id,
       }
     : null,
+  attribution: attributionCreditsToDraft(
+    recording.recording_artist_attributions ?? [],
+  ),
   performers: performerCreditsToDraft(
     recording.recording_artist_credits ?? []
   ),
@@ -136,6 +150,50 @@ export const recordingDraftDidSave = (
   draft: state.draft,
 });
 
+export const recordingEditorStateAfterSave = (
+  state: RecordingEditorState,
+  savedRecording: SavedRecording,
+  saveWasCurrent: boolean,
+): RecordingEditorState => {
+  const savedState = recordingToEditorState(savedRecording);
+  return saveWasCurrent
+    ? savedState
+    : { ...savedState, draft: state.draft };
+};
+
+export const recordingDraftWithoutMusicBrainzMatch = (
+  draft: RecordingDraft,
+): RecordingDraft => ({
+  ...draft,
+  musicbrainzRecordingId: null,
+  musicbrainzReleaseId: null,
+  releaseGroup: null,
+  performers: [],
+});
+
+export const recordingDraftWithResolvedMatch = (
+  draft: RecordingDraft,
+  match: ResolvedRecordingMatch,
+): RecordingDraft => ({
+  ...draft,
+  musicbrainzRecordingId: match.recordingId,
+  musicbrainzReleaseId: match.representativeReleaseId,
+  ...(match.releaseGroup ? { album: match.releaseGroup.title } : {}),
+  releaseGroup: match.releaseGroup,
+  recordingDateStart: match.recordingDateStart || "",
+  recordingDateEnd: match.recordingDateEnd || "",
+  recordingLocation: match.recordingLocation || "",
+  attribution: match.attribution,
+  performers: match.performers,
+  ...(match.duration ? { duration: match.duration } : {}),
+});
+
+export const recordingDraftAfterMusicBrainzLookup = (
+  draft: RecordingDraft,
+  match: ResolvedRecordingMatch | null,
+): RecordingDraft =>
+  match ? recordingDraftWithResolvedMatch(draft, match) : draft;
+
 export const recordingDraftToPayload = (
   recording: SavedRecording,
   draft: RecordingDraft
@@ -159,6 +217,7 @@ export const recordingDraftToPayload = (
             draft.releaseGroup.musicbrainzReleaseGroupId,
         }
       : null,
+    attribution: attributionsToSavePayload(draft.attribution),
     performers: performersToSavePayload(draft.performers),
   },
   private: {

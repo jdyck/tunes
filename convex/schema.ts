@@ -73,6 +73,7 @@ export default defineSchema({
     legacySupabaseId: nullableString,
   })
     .index("by_musicbrainzArtistId", ["musicbrainzArtistId"])
+    .searchIndex("search_name", { searchField: "name" })
     .index("by_legacySupabaseId", ["legacySupabaseId"]),
 
   artistUserData: defineTable({
@@ -207,6 +208,19 @@ export default defineSchema({
     artistId: v.id("artists"),
     role: v.literal("performer"),
     creditedAs: v.string(),
+    sortOrder: v.number(),
+    legacySupabaseId: nullableString,
+  })
+    .index("by_recordingId", ["recordingId"])
+    .index("by_recordingId_and_sortOrder", ["recordingId", "sortOrder"])
+    .index("by_artistId", ["artistId"])
+    .index("by_legacySupabaseId", ["legacySupabaseId"]),
+
+  recordingArtistAttributions: defineTable({
+    recordingId: v.id("recordings"),
+    artistId: v.id("artists"),
+    creditedAs: v.string(),
+    joinPhrase: v.string(),
     sortOrder: v.number(),
     legacySupabaseId: nullableString,
   })
