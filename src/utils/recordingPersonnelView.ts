@@ -40,8 +40,15 @@ export const recordingPersonnelRows = (
     .map(({ entry }) => ({
       artistId: entry.artistId,
       creditedAs: entry.creditedAs,
-      details: entry.relationships.flatMap((relationship) =>
-        relationship.type === "performer" ? [] : [relationship.type],
-      ),
+      details: entry.relationships.flatMap((relationship) => {
+        if (relationship.type === "performer") return [];
+        if (relationship.type !== "instrument") return [relationship.type];
+        if (relationship.details.length === 0) return ["instrument"];
+        return relationship.details
+          .map((detail) => detail.credited_as || detail.canonical)
+          .sort((left, right) =>
+            left.localeCompare(right, undefined, { sensitivity: "base" }),
+          );
+      }),
     }));
 };

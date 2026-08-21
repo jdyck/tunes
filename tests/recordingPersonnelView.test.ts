@@ -31,3 +31,96 @@ test("presents generic Personnel as one linked Artist row without a suffix", () 
 test("omits Personnel rows when the contract is empty", () => {
   assert.deepEqual(recordingPersonnelRows([], []), []);
 });
+
+test("orders Personnel by structured Attribution identity then unmatched Artist name", () => {
+  const groupId = "artist-group" as Id<"artists">;
+  const personId = "artist-person" as Id<"artists">;
+  const unmatchedId = "artist-unmatched" as Id<"artists">;
+  const attribution = [
+    {
+      artistId: groupId,
+      musicbrainzArtistId: "mb-group",
+      providerUnmatchedConfirmed: false,
+      name: "Bill Evans Trio",
+      creditedAs: "Bill Evans Trio",
+      joinPhrase: "",
+      kind: "group" as const,
+    },
+  ];
+  const generic = [{ type: "performer" as const, details: [] }];
+
+  assert.deepEqual(
+    recordingPersonnelRows(attribution, [
+      {
+        artistId: personId,
+        musicbrainzArtistId: "mb-person",
+        name: "Bill Evans",
+        creditedAs: "Bill Evans",
+        kind: "person",
+        relationships: generic,
+      },
+      {
+        artistId: unmatchedId,
+        musicbrainzArtistId: "mb-unmatched",
+        name: "Alice Coltrane",
+        creditedAs: "Alice Coltrane",
+        kind: "person",
+        relationships: generic,
+      },
+      {
+        artistId: groupId,
+        musicbrainzArtistId: "mb-group",
+        name: "Bill Evans Trio",
+        creditedAs: "The Bill Evans Trio",
+        kind: "group",
+        relationships: generic,
+      },
+    ]).map((row) => row.artistId),
+    [groupId, unmatchedId, personId],
+  );
+});
+
+test("sorts instrument details and uses credited-as and missing-detail labels", () => {
+  const artistId = "artist-2" as Id<"artists">;
+  assert.deepEqual(
+    recordingPersonnelRows([], [
+      {
+        artistId,
+        musicbrainzArtistId: "mb-artist-2",
+        name: "Multi Instrumentalist",
+        creditedAs: "Multi Instrumentalist",
+        kind: "person",
+        relationships: [
+          {
+            type: "instrument",
+            details: [
+              { canonical: "violin", credited_as: "1st violin" },
+              { canonical: "guitar", credited_as: null },
+              { canonical: "bass", credited_as: "upright bass" },
+            ],
+          },
+        ],
+      },
+      {
+        artistId: "artist-3" as Id<"artists">,
+        musicbrainzArtistId: "mb-artist-3",
+        name: "Unknown Instrumentalist",
+        creditedAs: "Unknown Instrumentalist",
+        kind: "person",
+        relationships: [{ type: "instrument", details: [] }],
+      },
+    ]),
+    [
+      {
+        artistId,
+        creditedAs: "Multi Instrumentalist",
+        details: ["1st violin", "guitar", "upright bass"],
+      },
+      {
+        artistId: "artist-3",
+        creditedAs: "Unknown Instrumentalist",
+        details: ["instrument"],
+      },
+    ],
+  );
+});

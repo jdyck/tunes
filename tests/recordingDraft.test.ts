@@ -241,7 +241,21 @@ test("a resolved MusicBrainz match replaces the complete Attribution draft only 
         kind: "person",
       },
     ],
-    personnel: [],
+    personnel: [
+      {
+        artistId: null,
+        musicbrainzArtistId: "barney-mbid",
+        name: "Barney Kessel",
+        creditedAs: "Barney Kessel",
+        kind: "person",
+        relationships: [
+          {
+            type: "instrument",
+            details: [{ canonical: "guitar", credited_as: null }],
+          },
+        ],
+      },
+    ],
     releaseGroup: {
       title: "Ella and Louis",
       musicbrainzReleaseGroupId: "ella-and-louis-mbid",
@@ -276,12 +290,43 @@ test("a resolved MusicBrainz match replaces the complete Attribution draft only 
   );
   assert.equal(matched.musicbrainzRecordingId, "new-recording-mbid");
   assert.equal(matched.releaseGroup?.attribution[0]?.joinPhrase, " & ");
+  assert.deepEqual(matched.personnel[0]?.relationships, [
+    {
+      type: "instrument",
+      details: [{ canonical: "guitar", credited_as: null }],
+    },
+  ]);
+  assert.deepEqual(draft.personnel[0]?.relationships, [
+    { type: "performer", details: [] },
+  ]);
 });
 
 test("a failed MusicBrainz lookup preserves the current Attribution draft", () => {
   const { draft } = recordingToEditorState(recordingFixture());
 
   assert.equal(recordingDraftAfterMusicBrainzLookup(draft, null), draft);
+});
+
+test("a successful empty MusicBrainz response clears draft Personnel", () => {
+  const { draft } = recordingToEditorState(recordingFixture());
+  const refreshed = recordingDraftWithResolvedMatch(draft, {
+    recordingId: "recording-mbid",
+    title: "You and the Night and the Music",
+    artistCredit: "Bill & Jane",
+    duration: null,
+    recordingDateStart: null,
+    recordingDateEnd: null,
+    recordingLocation: null,
+    attribution: draft.attribution,
+    personnel: [],
+    releaseGroup: null,
+    representativeReleaseId: null,
+  });
+
+  assert.deepEqual(refreshed.personnel, []);
+  assert.deepEqual(draft.personnel[0]?.relationships, [
+    { type: "performer", details: [] },
+  ]);
 });
 
 test("rehydrates saved canonical Artist IDs while preserving newer in-flight edits", () => {

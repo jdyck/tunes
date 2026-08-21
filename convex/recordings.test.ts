@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import type { AttributionInput } from "./model/recordings";
+import type { AttributionInput, PersonnelInput } from "./model/recordings";
 
 const modules = import.meta.glob("./**/*.ts");
 
@@ -84,7 +84,7 @@ const updateInput = (
         musicbrainz_artist_id: "mb-artist-id",
         relationships: [{ type: "performer" as const, details: [] }],
       },
-    ],
+    ] as PersonnelInput[],
   },
   privateData: {
     key: "F",
@@ -290,6 +290,132 @@ test("rejects duplicate Personnel Artists without replacing the stored set", asy
   ).resolves.toMatchObject({
     personnel: [{ credited_as: "Example Artist" }],
   });
+});
+
+test("replaces detailed instrument Personnel and rejects duplicate details atomically", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("instrument-personnel-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "instrument-personnel-song",
+    shared: songInput("Lush Life"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Lush Life", null);
+  input.shared.personnel = [
+    {
+      type: "musicbrainz",
+      name: "Barney Kessel",
+      credited_as: "Barney Kessel",
+      kind: "person",
+      musicbrainz_artist_id: "mb-barney-kessel",
+      relationships: [
+        {
+          type: "instrument",
+          details: [
+            { canonical: "guitar", credited_as: null },
+            { canonical: "violin", credited_as: "1st violin" },
+          ],
+        },
+      ],
+    },
+  ];
+  await owner.mutation(api.recordings.update, input);
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({
+    personnel: [
+      {
+        credited_as: "Barney Kessel",
+        relationships: [
+          {
+            type: "instrument",
+            details: [
+              { canonical: "guitar", credited_as: null },
+              { canonical: "violin", credited_as: "1st violin" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  input.shared.personnel[0].relationships[0].details.push({
+    canonical: " GUITAR ",
+    credited_as: null,
+  });
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "duplicate relationship detail",
+  );
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({
+    personnel: [
+      {
+        relationships: [
+          {
+            details: [
+              { canonical: "guitar", credited_as: null },
+              { canonical: "violin", credited_as: "1st violin" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+});
+
+test("enforces Recording Personnel Artist and aggregate detail bounds", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("personnel-bounds-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "personnel-bounds-song",
+    shared: songInput("Sophisticated Lady"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Sophisticated Lady", null);
+  input.shared.personnel = Array.from({ length: 101 }, (_, index) => ({
+    type: "musicbrainz" as const,
+    name: `Artist ${index}`,
+    credited_as: `Artist ${index}`,
+    kind: "person" as const,
+    musicbrainz_artist_id: `mb-artist-${index}`,
+    relationships: [{ type: "performer" as const, details: [] }],
+  }));
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "100 Personnel Artists",
+  );
+
+  input.shared.personnel = [
+    {
+      type: "musicbrainz",
+      name: "Many Instruments",
+      credited_as: "Many Instruments",
+      kind: "person",
+      musicbrainz_artist_id: "mb-many-instruments",
+      relationships: [
+        {
+          type: "instrument",
+          details: Array.from({ length: 501 }, (_, index) => ({
+            canonical: `instrument ${index}`,
+            credited_as: null,
+          })),
+        },
+      ],
+    },
+  ];
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "500 Personnel details",
+  );
 });
 
 test("reorders and unsaves only the current User's private relationships", async () => {

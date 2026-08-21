@@ -579,7 +579,7 @@ const normalizePersonnel = (personnel: PersonnelInput[]) => {
   }
 
   let detailCount = 0;
-  return personnel.map((entry) => {
+  const normalized = personnel.map((entry) => {
     const creditedAs = entry.credited_as.trim();
     if (!creditedAs) {
       throw new Error("Recording Personnel requires credited-as Artist text");
@@ -609,7 +609,11 @@ const normalizePersonnel = (personnel: PersonnelInput[]) => {
         if (!canonical) {
           throw new Error("Recording Personnel detail requires canonical text");
         }
-        const key = `${canonical.toLocaleLowerCase()}\u0000${creditedAs?.toLocaleLowerCase() ?? ""}`;
+        const normalizedDetailText = (value: string) =>
+          value.replace(/\s+/g, " ").toLocaleLowerCase();
+        const key = `${normalizedDetailText(canonical)}\u0000${
+          creditedAs ? normalizedDetailText(creditedAs) : ""
+        }`;
         if (detailKeys.has(key)) {
           throw new Error("Recording Personnel contains a duplicate relationship detail");
         }
@@ -620,12 +624,11 @@ const normalizePersonnel = (personnel: PersonnelInput[]) => {
     });
 
     return { entry, creditedAs, relationships };
-  }).map((entry) => {
-    if (detailCount > 500) {
-      throw new Error("A Recording cannot have more than 500 Personnel details");
-    }
-    return entry;
   });
+  if (detailCount > 500) {
+    throw new Error("A Recording cannot have more than 500 Personnel details");
+  }
+  return normalized;
 };
 
 const resolvePersonnelArtist = async (

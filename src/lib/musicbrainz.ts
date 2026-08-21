@@ -6,7 +6,7 @@
 // directly from a component.
 
 import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
-import { musicBrainzRecordingPerformers } from "../utils/musicbrainzPerformers.ts";
+import { musicBrainzRecordingPersonnel } from "../utils/musicbrainzPersonnel.ts";
 import type { RecordingPersonnelEntry } from "../utils/recordingPersonnel.ts";
 import {
   formatMusicBrainzRecordingCredit,
@@ -491,7 +491,7 @@ export const fetchRecordingMatch = async (
     const placeRelation = relations.find(
       (relation) => relation.place && ["recorded at", "recorded in"].includes(relation.type)
     );
-    const personnel = musicBrainzRecordingPerformers(relations);
+    const personnel = musicBrainzRecordingPersonnel(relations);
     const attribution = musicBrainzRecordingAttribution(
       recording["artist-credit"] ?? [],
     );
