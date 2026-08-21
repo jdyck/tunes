@@ -313,6 +313,7 @@ export const saveYoutube = mutation({
         recordingLocation: null,
         releaseGroupId: null,
         personnelMigrated: true,
+        personnelMigrationKind: "saved",
         legacySupabaseId: null,
       });
       await ctx.db.insert("recordingYoutubeItems", {

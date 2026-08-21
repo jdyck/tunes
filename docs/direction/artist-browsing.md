@@ -24,8 +24,8 @@ Per [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md), Ar
 
 The schema exposes `artists` as the single shared canonical identity, private
 notes/tags in `artistUserData` (at most one row per User/Artist), and
-role-bearing `songArtistCredits` / `recordingArtistCredits` relationships,
-plus identity-bearing `recordingArtistAttributions` and
+role-bearing `songArtistCredits`, grouped `recordingPersonnel`, plus
+identity-bearing `recordingArtistAttributions` and
 `releaseGroupArtistAttributions`. Build browsing on those Artist-backed
 surfaces; do not reintroduce a separate Person identity for Song writers.
 
@@ -65,10 +65,13 @@ Recordings (including their relationship reasons and Release Group title),
 Recording Song titles, and optional private Artist row. React does not rebuild
 these joins from unrelated global queries.
 
-Structured Recording performer credits are populated when a User confirms a
-MusicBrainz Recording match. Their absence remains an ordinary empty state
-rather than an error; do not infer performers from the free-text credited-as
-field.
+Recording Personnel is populated when a User confirms or explicitly refreshes
+a MusicBrainz Recording match. It groups instrument, vocal, conductor,
+orchestra, and generic performer evidence by canonical Artist; Artist browsing
+follows that grouped relationship once per saved Recording regardless of how
+many contribution details it contains. Its absence remains an ordinary empty
+state rather than an error; never infer Personnel from Attribution or fallback
+text.
 
 Artist detail resolves an identity-backed image on first view through the
 stored MusicBrainz Artist ID, its Wikidata relationship, and Wikidata's

@@ -205,7 +205,7 @@ test("reuses shared Recording identity while isolating each User's private data"
   expect(otherView.personnel).toHaveLength(1);
 });
 
-test("falls back to legacy generic Personnel until an explicit empty replacement", async () => {
+test("ignores legacy generic rows after the Personnel storage cutover", async () => {
   const t = convexTest({ schema, modules });
   const owner = t.withIdentity(identity("personnel-compat-owner"));
   await owner.mutation(api.users.ensureCurrent, {});
@@ -240,20 +240,17 @@ test("falls back to legacy generic Personnel until an explicit empty replacement
       legacySupabaseId: null,
     });
     await ctx.db.delete(personnel._id);
-    const { personnelMigrated: _marker, ...unmigrated } = recording;
+    const {
+      personnelMigrated: _marker,
+      personnelMigrationKind: _kind,
+      ...unmigrated
+    } = recording;
     await ctx.db.replace(recordingId, unmigrated);
   });
 
   await expect(
     owner.query(api.recordings.getMine, { recordingId }),
-  ).resolves.toMatchObject({
-    personnel: [
-      {
-        credited_as: "Example Artist",
-        relationships: [{ type: "performer", details: [] }],
-      },
-    ],
-  });
+  ).resolves.toMatchObject({ personnel: [] });
 
   input.shared.personnel = [];
   await owner.mutation(api.recordings.update, input);

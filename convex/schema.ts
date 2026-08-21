@@ -129,6 +129,9 @@ export default defineSchema({
     recordingLocation: nullableString,
     releaseGroupId: v.union(v.id("releaseGroups"), v.null()),
     personnelMigrated: v.optional(v.boolean()),
+    personnelMigrationKind: v.optional(
+      v.union(v.literal("saved"), v.literal("legacy_backfill")),
+    ),
     legacySupabaseId: nullableString,
   })
     .index("by_songId", ["songId"])

@@ -25,7 +25,7 @@ Decided July 2026 while reconciling Standards' language with MusicBrainz, YouTub
 
 ## Consequences
 
-- Song writing credits and structured Recording performer credits converge on the same shared `artists` identity; the credit role belongs on the relationship.
+- Song writing credits and grouped Recording Personnel converge on the same shared `artists` identity; the evidenced contribution belongs on the relationship.
 - Recording and Release Group Attributions use structured, identity-bearing Artist credits; the former `Recording.artist` display snapshot remains only as transitional fallback text. This consequence is refined by [ADR-0012](0012-artist-attributions-are-structured-identity-bearing-credits.md).
 - The Recording boundary uses `user_recording_data` for private saved state and normalized YouTube Items plus associations for provider evidence. Release Groups are shared canonical rows attached through a single nullable Recording relationship.
 - Release Group identity is first-class and provider-neutral; edition identity remains subordinate and optional.

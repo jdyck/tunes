@@ -300,70 +300,36 @@ const loadReleaseGroupAttribution = async (
 
 export const loadPersonnel = async (
   ctx: ReadContext,
-  recording: Doc<"recordings">,
+  recordingId: Id<"recordings">,
 ) => {
   const personnel = await ctx.db
     .query("recordingPersonnel")
     .withIndex("by_recordingId_and_sortOrder", (query) =>
-      query.eq("recordingId", recording._id),
+      query.eq("recordingId", recordingId),
     )
     .take(101);
   if (personnel.length > 100) {
     throw new Error("Recording Personnel exceeds 100 Artists");
   }
 
-  if (personnel.length > 0 || recording.personnelMigrated) {
-    return Promise.all(
-      personnel.map(async (entry) => {
-        const artist = await ctx.db.get(entry.artistId);
-        if (!artist) {
-          throw new Error("Recording Personnel references a missing Artist");
-        }
-        return {
-          recording_id: recording._id,
-          artist_id: artist._id,
-          credited_as: entry.creditedAs,
-          sort_order: entry.sortOrder,
-          relationships: entry.relationships.map((relationship) => ({
-            type: relationship.type,
-            details: relationship.details.map((detail) => ({
-              canonical: detail.canonical,
-              credited_as: detail.creditedAs,
-            })),
-          })),
-          artists: {
-            id: artist._id,
-            name: artist.name,
-            kind: artist.kind,
-            musicbrainz_artist_id: artist.musicbrainzArtistId,
-          },
-        };
-      }),
-    );
-  }
-
-  const legacyCredits = await ctx.db
-    .query("recordingArtistCredits")
-    .withIndex("by_recordingId_and_sortOrder", (query) =>
-      query.eq("recordingId", recording._id),
-    )
-    .take(101);
-  if (legacyCredits.length > 100) {
-    throw new Error("Legacy Recording Personnel exceeds 100 Artists");
-  }
-
   return Promise.all(
-    legacyCredits.map(async (credit) => {
-      const artist = await ctx.db.get(credit.artistId);
+    personnel.map(async (entry) => {
+      const artist = await ctx.db.get(entry.artistId);
       if (!artist) {
-        throw new Error("Legacy Recording Personnel references a missing Artist");
+        throw new Error("Recording Personnel references a missing Artist");
       }
       return {
-        recording_id: recording._id,
+        recording_id: recordingId,
         artist_id: artist._id,
-        credited_as: credit.creditedAs,
-        sort_order: credit.sortOrder,
-        relationships: [{ type: "performer" as const, details: [] }],
+        credited_as: entry.creditedAs,
+        sort_order: entry.sortOrder,
+        relationships: entry.relationships.map((relationship) => ({
+          type: relationship.type,
+          details: relationship.details.map((detail) => ({
+            canonical: detail.canonical,
+            credited_as: detail.creditedAs,
+          })),
+        })),
         artists: {
           id: artist._id,
           name: artist.name,
@@ -464,7 +430,7 @@ export const toSavedRecordingView = async (
 ) => {
   const [releaseGroup, personnel, attribution, youtubeItems] = await Promise.all([
     loadReleaseGroup(ctx, recording.releaseGroupId),
-    loadPersonnel(ctx, recording),
+    loadPersonnel(ctx, recording._id),
     loadAttribution(ctx, recording._id),
     loadYouTubeItems(ctx, recording._id),
   ]);
@@ -680,7 +646,10 @@ export const replacePersonnel = async (
       relationships: entry.relationships,
     });
   }
-  await ctx.db.patch(recordingId, { personnelMigrated: true });
+  await ctx.db.patch(recordingId, {
+    personnelMigrated: true,
+    personnelMigrationKind: "saved",
+  });
 };
 
 export const replaceAttribution = async (

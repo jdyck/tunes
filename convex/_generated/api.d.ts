@@ -9,6 +9,7 @@
  */
 
 import type * as artists from "../artists.js";
+import type * as migrations from "../migrations.js";
 import type * as model_artists from "../model/artists.js";
 import type * as model_auth from "../model/auth.js";
 import type * as model_recordings from "../model/recordings.js";
@@ -25,6 +26,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   artists: typeof artists;
+  migrations: typeof migrations;
   "model/artists": typeof model_artists;
   "model/auth": typeof model_auth;
   "model/recordings": typeof model_recordings;
@@ -60,4 +62,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
+};

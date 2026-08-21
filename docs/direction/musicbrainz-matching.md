@@ -181,13 +181,20 @@ into recording date.
 
 ## Persistence boundary
 
-`release_groups` is authenticated-readable and has no direct client writes.
-The bounded `update_saved_recording(uuid, jsonb, jsonb)` RPC verifies that the
-caller saved the Recording, performs presence-aware partial updates, atomically
-inserts-or-gets a MusicBrainz-backed Release Group, and replaces confirmed
-performer credits. An absent JSON key preserves a field; a present null clears
-it. The legacy scalar overload remains temporarily for deployed-client
-compatibility.
+`releaseGroups` is authenticated-readable and has no direct client writes. The
+bounded `recordings:update` mutation verifies that the caller saved the
+Recording, atomically updates shared Recording facts and owner-scoped private
+data, resolves the MusicBrainz-backed Release Group, and replaces confirmed
+Attribution and Personnel. Personnel reads and writes use `recordingPersonnel`
+exclusively after the verified storage cutover.
+
+The repeatable `migrations:backfillRecordingPersonnel` migration converts
+legacy generic rows without a provider refetch, and
+`migrations:verifyRecordingPersonnel` checks grouped source coverage, target
+uniqueness, Artist references, relationship shape, required text, and bounds.
+Roll out the compatibility commits first, run and verify both migrations on the
+named deployment with the required consent, then deploy the new-only read
+cutover. Do not deploy the cutover before verification succeeds.
 
 Do not persist raw MusicBrainz JSON, search scores/evidence, relationship
 indexes, Release type/status/date copies, artwork URLs, or every edition.
@@ -218,6 +225,9 @@ honest partial-success message if media persistence or enrichment fails.
 - Remove legacy `recordings.year` / `album` and the scalar save overload only
   in a separately reviewed contract migration after deployed clients and
   unmatched/manual editing paths have replacements.
+- After the Recording Personnel cutover has been verified and its rollback
+  window has closed, remove `recordingArtistCredits` and the temporary migration
+  markers only with fresh, explicit destructive-cleanup authorization.
 - Add normalized parent-Work choices and the editable Song “Part of” field as
   its own metadata-field task.
 - Add explicit Work-family discovery and Recording matching for translated and

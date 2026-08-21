@@ -29,22 +29,13 @@ const loadRecordingArtistRelationships = async (
   ctx: Pick<QueryCtx, "db">,
   recording: Doc<"recordings">,
 ) => {
-  const targetPersonnel = await ctx.db
-    .query("recordingPersonnel")
-    .withIndex("by_recordingId", (index) =>
-      index.eq("recordingId", recording._id),
-    )
-    .take(101);
-  const personnel =
-    targetPersonnel.length > 0 || recording.personnelMigrated
-      ? targetPersonnel
-      : await ctx.db
-          .query("recordingArtistCredits")
-          .withIndex("by_recordingId", (index) =>
-            index.eq("recordingId", recording._id),
-          )
-          .take(101);
-  const [attribution, releaseGroupAttribution] = await Promise.all([
+  const [personnel, attribution, releaseGroupAttribution] = await Promise.all([
+    ctx.db
+      .query("recordingPersonnel")
+      .withIndex("by_recordingId", (index) =>
+        index.eq("recordingId", recording._id),
+      )
+      .take(101),
     ctx.db
       .query("recordingArtistAttributions")
       .withIndex("by_recordingId", (index) =>
