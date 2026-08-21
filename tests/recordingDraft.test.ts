@@ -3,8 +3,11 @@ import test from "node:test";
 import type { SavedRecording } from "../src/types/types.ts";
 import {
   recordingDraftDidSave,
+  recordingDraftAfterMusicBrainzLookup,
   recordingDraftIsDirty,
   recordingDraftToPayload,
+  recordingDraftWithoutMusicBrainzMatch,
+  recordingDraftWithResolvedMatch,
   recordingToEditorState,
 } from "../src/utils/recordingDraft.ts";
 
@@ -14,6 +17,7 @@ const recordingFixture = (): SavedRecording => ({
   name: "You &amp; the Night &amp; the Music",
   kind: "released",
   artist: "Bill &amp; Jane",
+  artist_attribution_fallback: "Bill &amp; Jane",
   album: null,
   year: "1958",
   duration: "3:42",
@@ -34,6 +38,21 @@ const recordingFixture = (): SavedRecording => ({
       artist_id: "artist-1",
       role: "performer",
       credited_as: "Bill & Jane",
+      sort_order: 0,
+      artists: {
+        id: "artist-1",
+        name: "Bill & Jane",
+        kind: "group",
+        musicbrainz_artist_id: "artist-mbid",
+      },
+    },
+  ],
+  recording_artist_attributions: [
+    {
+      recording_id: "recording-1",
+      artist_id: "artist-1",
+      credited_as: "Bill & Jane",
+      join_phrase: "",
       sort_order: 0,
       artists: {
         id: "artist-1",
@@ -87,6 +106,15 @@ test("maps the complete Recording draft to the presence-aware RPC payload", () =
         title: "Album &amp; Context",
         musicbrainz_release_group_id: "release-group-mbid",
       },
+      attribution: [
+        {
+          name: "Bill & Jane",
+          credited_as: "Bill & Jane",
+          join_phrase: "",
+          kind: "group",
+          musicbrainz_artist_id: "artist-mbid",
+        },
+      ],
       performers: [
         {
           name: "Bill & Jane",
@@ -126,14 +154,73 @@ test("serializes cleared optional fields explicitly", () => {
     musicbrainzRecordingId: null,
     musicbrainzReleaseId: null,
     releaseGroup: null,
+    attribution: [],
     performers: [],
   });
 
   assert.equal(payload.shared.artist, null);
   assert.equal(payload.shared.release_group, null);
+  assert.deepEqual(payload.shared.attribution, []);
   assert.deepEqual(payload.shared.performers, []);
   assert.equal(payload.private.notes, null);
   assert.deepEqual(payload.private.tags, []);
+});
+
+test("unlinking MusicBrainz clears source-only Personnel but retains Attribution", () => {
+  const { draft } = recordingToEditorState(recordingFixture());
+  const unlinked = recordingDraftWithoutMusicBrainzMatch(draft);
+
+  assert.equal(unlinked.musicbrainzRecordingId, null);
+  assert.equal(unlinked.musicbrainzReleaseId, null);
+  assert.equal(unlinked.releaseGroup, null);
+  assert.deepEqual(unlinked.performers, []);
+  assert.deepEqual(unlinked.attribution, draft.attribution);
+  assert.equal(unlinked.artist, draft.artist);
+});
+
+test("a resolved MusicBrainz match replaces the complete Attribution draft only on success", () => {
+  const { draft } = recordingToEditorState(recordingFixture());
+  const matched = recordingDraftWithResolvedMatch(draft, {
+    recordingId: "new-recording-mbid",
+    title: "You and the Night and the Music",
+    artistCredit: "Ella Fitzgerald with Louis Armstrong",
+    duration: "3:44",
+    recordingDateStart: null,
+    recordingDateEnd: null,
+    recordingLocation: null,
+    attribution: [
+      {
+        musicbrainzArtistId: "ella-mbid",
+        name: "Ella Fitzgerald",
+        creditedAs: "Ella Fitzgerald",
+        joinPhrase: " with ",
+        kind: "person",
+      },
+      {
+        musicbrainzArtistId: "louis-mbid",
+        name: "Louis Armstrong",
+        creditedAs: "Louis Armstrong",
+        joinPhrase: "",
+        kind: "person",
+      },
+    ],
+    performers: [],
+    releaseGroup: null,
+    representativeReleaseId: null,
+  });
+
+  assert.equal(matched.artist, draft.artist);
+  assert.deepEqual(
+    matched.attribution.map((part) => part.joinPhrase),
+    [" with ", ""],
+  );
+  assert.equal(matched.musicbrainzRecordingId, "new-recording-mbid");
+});
+
+test("a failed MusicBrainz lookup preserves the current Attribution draft", () => {
+  const { draft } = recordingToEditorState(recordingFixture());
+
+  assert.equal(recordingDraftAfterMusicBrainzLookup(draft, null), draft);
 });
 
 test("keeps edits made during an in-flight save dirty", () => {

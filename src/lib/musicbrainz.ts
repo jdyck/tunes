@@ -8,6 +8,11 @@
 import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
 import type { ArtistKind } from "../types/types.ts";
 import { musicBrainzRecordingPerformers } from "../utils/musicbrainzPerformers.ts";
+import {
+  formatMusicBrainzRecordingCredit,
+  musicBrainzRecordingAttribution,
+  type RecordingAttributionInput,
+} from "../utils/musicbrainzRecordingAttribution.ts";
 import type {
   MusicBrainzArtistRelation,
   MusicBrainzSongArtistCredit,
@@ -196,7 +201,11 @@ interface MusicBrainzRecording {
   length?: number;
   score?: number;
   "first-release-date"?: string;
-  "artist-credit"?: { name: string }[];
+  "artist-credit"?: {
+    name?: string;
+    joinphrase?: string;
+    artist?: { id?: string; name?: string; type?: string | null };
+  }[];
   releases?: MusicBrainzRelease[];
   relations?: MusicBrainzRecordingRelation[];
 }
@@ -267,6 +276,7 @@ export interface ResolvedRecordingMatch {
   recordingDateStart: string | null;
   recordingDateEnd: string | null;
   recordingLocation: string | null;
+  attribution: RecordingAttributionInput[];
   performers: RecordingPerformer[];
   releaseGroup: { title: string; musicbrainzReleaseGroupId: string } | null;
   representativeReleaseId: string | null;
@@ -383,7 +393,9 @@ export const searchRecordingMatches = async (
   }
   const titleTarget = normalizeForCompare(songTitle);
   const evidence: RecordingCandidateEvidence[] = recordings.map((recording) => {
-    const credit = (recording["artist-credit"] ?? []).map((item) => decodeHtmlEntities(item.name)).join(" & ");
+    const credit = formatMusicBrainzRecordingCredit(
+      recording["artist-credit"] ?? [],
+    );
     const hint = releaseHint(recording, albumHint ?? null);
     return {
       recordingId: recording.id,
@@ -416,7 +428,9 @@ export const searchRecordingMatches = async (
       return {
         recordingId: recording.id,
         title: decodeHtmlEntities(recording.title),
-        artistCredit: (recording["artist-credit"] ?? []).map((credit) => decodeHtmlEntities(credit.name)).join(" & "),
+        artistCredit: formatMusicBrainzRecordingCredit(
+          recording["artist-credit"] ?? [],
+        ),
         durationMs: recording.length ?? null,
         workMatch: item.workMatch,
         score: item.score,
@@ -465,6 +479,9 @@ export const fetchRecordingMatch = async (
       (relation) => relation.place && ["recorded at", "recorded in"].includes(relation.type)
     );
     const performers = musicBrainzRecordingPerformers(relations);
+    const attribution = musicBrainzRecordingAttribution(
+      recording["artist-credit"] ?? [],
+    );
     const groups = new Map<string, ReleaseGroupEvidence>();
     for (const release of recording.releases ?? []) {
       const group = release["release-group"];
@@ -489,7 +506,9 @@ export const fetchRecordingMatch = async (
     return {
       recordingId: recording.id,
       title: decodeHtmlEntities(recording.title),
-      artistCredit: (recording["artist-credit"] ?? []).map((credit) => decodeHtmlEntities(credit.name)).join(" & "),
+      artistCredit: formatMusicBrainzRecordingCredit(
+        recording["artist-credit"] ?? [],
+      ),
       duration: formatMsDuration(recording.length),
       recordingDateStart: datedWorkRelation?.date.start.value ?? null,
       recordingDateEnd: datedWorkRelation?.date.end?.value ?? null,
@@ -498,6 +517,7 @@ export const fetchRecordingMatch = async (
             [placeRelation.place.name, placeRelation.place.disambiguation].filter(Boolean).join(", ")
           )
         : null,
+      attribution,
       performers,
       releaseGroup: selected.releaseGroupId && selected.title
         ? { title: selected.title, musicbrainzReleaseGroupId: selected.releaseGroupId }

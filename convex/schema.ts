@@ -214,4 +214,17 @@ export default defineSchema({
     .index("by_recordingId_and_sortOrder", ["recordingId", "sortOrder"])
     .index("by_artistId", ["artistId"])
     .index("by_legacySupabaseId", ["legacySupabaseId"]),
+
+  recordingArtistAttributions: defineTable({
+    recordingId: v.id("recordings"),
+    artistId: v.id("artists"),
+    creditedAs: v.string(),
+    joinPhrase: v.string(),
+    sortOrder: v.number(),
+    legacySupabaseId: nullableString,
+  })
+    .index("by_recordingId", ["recordingId"])
+    .index("by_recordingId_and_sortOrder", ["recordingId", "sortOrder"])
+    .index("by_artistId", ["artistId"])
+    .index("by_legacySupabaseId", ["legacySupabaseId"]),
 });

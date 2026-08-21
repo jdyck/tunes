@@ -1,23 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { PlayIcon } from "@heroicons/react/20/solid";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import PaneHeader from "@/components/layout/PaneHeader";
 import LinkButton from "@/components/ui/LinkButton";
-import type {
-  RecordingCandidate,
-  ResolvedRecordingMatch,
-} from "@/lib/musicbrainz";
 import {
   coverArtUrl,
-  fetchRecordingDetail,
   releaseGroupCoverArtUrl,
-  searchRecordingMetadata,
 } from "@/lib/recordingMetadataClient";
 import RecordingMatchSuggestion from "@/components/recording/RecordingMatchSuggestion";
 import RecordingMatchResultsList from "@/components/recording/RecordingMatchResultsList";
@@ -31,7 +26,7 @@ import DeleteButton from "@/components/ui/DeleteButton";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import { useRecordingDetail } from "@/hooks/useRecordingDetail";
 import { RecordingKind } from "@/types/types";
-import { effectiveSongTitle } from "@/utils/songTitle";
+import { formatRecordingAttribution } from "@/utils/recordingAttribution";
 import type { RecordingDraft } from "@/utils/recordingDraft";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 
@@ -60,12 +55,10 @@ export default function RecordingDetailContent({
 }) {
   const router = useRouter();
   const { play } = usePlayer();
-  const songResult = useQuery(api.songs.getMine, {
-    songId: songId as Id<"songs">,
-  });
   const unsaveRecording = useMutation(api.recordings.unsave);
   const {
     recording,
+    songTitle,
     draft,
     loading,
     loadError,
@@ -73,30 +66,51 @@ export default function RecordingDetailContent({
     saveStatus,
     patchDraft,
     save,
-  } = useRecordingDetail(id);
+    matching,
+  } = useRecordingDetail(id, songId);
 
   const [error, setError] = useState<string | null>(null);
   const [showYouTubeMediaInfo, setShowYouTubeMediaInfo] = useState(false);
-  const [matchStatus, setMatchStatus] = useState<
-    "idle" | "searching" | "suggested" | "dismissed" | "no-results"
-  >("idle");
-  const [suggestedMatch, setSuggestedMatch] =
-    useState<RecordingCandidate | null>(null);
-  const [showManualSearch, setShowManualSearch] = useState(false);
-  const [manualQuery, setManualQuery] = useState("");
-  const [manualResults, setManualResults] = useState<RecordingCandidate[]>(
-    []
-  );
-  const [manualSearching, setManualSearching] = useState(false);
-  const [ignoreAlbumForMatch, setIgnoreAlbumForMatch] = useState(false);
-  const [matchError, setMatchError] = useState<string | null>(null);
-  const [syncingFromMusicBrainz, setSyncingFromMusicBrainz] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
+  const {
+    matchStatus,
+    suggestedMatch,
+    showManualSearch,
+    setShowManualSearch,
+    manualQuery,
+    setManualQuery,
+    manualResults,
+    manualSearching,
+    ignoreAlbumForMatch,
+    setIgnoreAlbumForMatch,
+    matchError,
+    syncingFromMusicBrainz,
+    syncError,
+    applyMatch,
+    handleOpenManualSearch,
+    handleManualSearch,
+    handleUpdateFromMusicBrainz,
+    handleRemoveMusicBrainzMatch,
+    handleRejectSuggestion,
+    handleChangeMatch,
+  } = matching;
 
   const name = draft?.name ?? "";
   const kind = draft?.kind ?? "video_capture";
   const notes = draft?.notes ?? "";
   const artist = draft?.artist ?? "";
+  const attribution = draft?.attribution ?? [];
+  const attributionText = formatRecordingAttribution(
+    attribution.map((part, sortOrder) => ({
+      credited_as: part.creditedAs,
+      join_phrase: part.joinPhrase,
+      sort_order: sortOrder,
+    })),
+  );
+  const savedAttributionByMusicBrainzId = new Map(
+    (recording?.recording_artist_attributions ?? [])
+      .filter((part) => part.artists?.musicbrainz_artist_id)
+      .map((part) => [part.artists!.musicbrainz_artist_id!, part]),
+  );
   const album = draft?.album ?? "";
   const year = draft?.year ?? "";
   const recordingDateStart = draft?.recordingDateStart ?? "";
@@ -110,183 +124,10 @@ export default function RecordingDetailContent({
   const musicbrainzReleaseId = draft?.musicbrainzReleaseId ?? null;
   const releaseGroup = draft?.releaseGroup ?? null;
   const videoId = recording?.youtube_items[0]?.video_id ?? null;
-  const songTitle = songResult
-    ? effectiveSongTitle(songResult.song, songResult.song.user_data)
-    : null;
-  const songWorkId = songResult?.song.musicbrainz_work_id ?? null;
   const handleDraftTextChange = (field: RecordingDraftTextField) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       patchDraft({ [field]: event.target.value });
     };
-
-  // Once the Recording and its Song's title have loaded, proactively search
-  // MusicBrainz for a likely match -- gated on an existing `artist` value,
-  // since title-only search is too noisy for songs with many recorded
-  // versions. A rejected/no-result search isn't persisted anywhere; it may
-  // suggest again on a later visit (kept deliberately simple).
-  useEffect(() => {
-    if (
-      loading ||
-      !songTitle ||
-      !artist ||
-      musicbrainzRecordingId ||
-      matchStatus !== "idle"
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-    setMatchStatus("searching");
-
-    searchRecordingMetadata(songTitle, artist, duration, album, songWorkId, year)
-      .then((result) => {
-        if (cancelled) return;
-        if (result.state === "clear" && result.candidates.length > 0) {
-          setSuggestedMatch(result.candidates[0]);
-          setMatchStatus("suggested");
-        } else if (result.candidates.length > 0) {
-          setManualResults(result.candidates);
-          setShowManualSearch(true);
-          setMatchStatus("dismissed");
-          setMatchError(
-            result.state === "degraded"
-              ? "MusicBrainz results are based on incomplete evidence. Choose a match."
-              : "Several MusicBrainz recordings are plausible. Choose a match."
-          );
-        } else {
-          setMatchStatus("no-results");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setMatchStatus("no-results");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // matchStatus is deliberately excluded: it's set inside this effect, so
-    // including it would make the effect re-run (and cancel itself, via the
-    // cleanup above) the instant it flips to "searching".
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, songTitle, artist, duration, album, year, songWorkId, musicbrainzRecordingId]);
-
-  // Links a chosen MusicBrainz Recording and autofills the fields it knows
-  // about -- unlike the Song/Work flow, which only links the ID and leaves
-  // autofill to a separate "Update from MusicBrainz" action, since autofill
-  // on confirm is the point of this feature. Used by both the auto-suggest
-  // confirm button and picking a result from manual search.
-  const applyResolvedMatch = (match: ResolvedRecordingMatch) => {
-    patchDraft({
-      musicbrainzRecordingId: match.recordingId,
-      musicbrainzReleaseId: match.representativeReleaseId,
-      ...(match.artistCredit ? { artist: match.artistCredit } : {}),
-      ...(match.releaseGroup ? { album: match.releaseGroup.title } : {}),
-      releaseGroup: match.releaseGroup,
-      recordingDateStart: match.recordingDateStart || "",
-      recordingDateEnd: match.recordingDateEnd || "",
-      recordingLocation: match.recordingLocation || "",
-      performers: match.performers,
-      ...(match.duration ? { duration: match.duration } : {}),
-    });
-    setSuggestedMatch(null);
-    setShowManualSearch(false);
-    setManualResults([]);
-    setMatchError(null);
-  };
-
-  const applyMatch = async (candidate: RecordingCandidate) => {
-    setManualSearching(true);
-    setMatchError(null);
-    const match = await fetchRecordingDetail(candidate.recordingId, songWorkId);
-    setManualSearching(false);
-    if (!match) {
-      setMatchError("Couldn't load that MusicBrainz recording. Try again.");
-      return;
-    }
-    applyResolvedMatch(match);
-  };
-
-  const handleRejectSuggestion = () => {
-    setSuggestedMatch(null);
-    setMatchStatus("dismissed");
-  };
-
-  const handleOpenManualSearch = () => {
-    setShowManualSearch(true);
-    setManualQuery(songTitle || name);
-    setIgnoreAlbumForMatch(false);
-    setMatchError(null);
-  };
-
-  const handleManualSearch = async () => {
-    if (!manualQuery.trim()) return;
-
-    setManualSearching(true);
-    setMatchError(null);
-    try {
-      const result = await searchRecordingMetadata(
-          manualQuery,
-          artist,
-          duration,
-          ignoreAlbumForMatch ? null : album,
-          songWorkId,
-          year
-        );
-      setManualResults(result.candidates);
-      if (result.state !== "clear") {
-        setMatchError(
-          result.state === "degraded"
-            ? "Results use incomplete evidence. Choose carefully."
-            : "Several results are plausible. Choose the correct recording."
-        );
-      }
-    } catch {
-      setMatchError("Couldn't search MusicBrainz. Try again later.");
-    }
-    setManualSearching(false);
-  };
-
-  // Re-fetches artist/album/year/duration from the linked MusicBrainz
-  // recording and overwrites the current form state with it -- mirrors the
-  // Song page's "Update from MusicBrainz". User still has to hit Save.
-  const handleUpdateFromMusicBrainz = async () => {
-    if (!musicbrainzRecordingId) return;
-
-    setSyncError(null);
-    setSyncingFromMusicBrainz(true);
-    const match = await fetchRecordingDetail(musicbrainzRecordingId, songWorkId);
-    setSyncingFromMusicBrainz(false);
-
-    if (!match) {
-      setSyncError("Couldn't fetch the latest data from MusicBrainz.");
-      return;
-    }
-
-    applyResolvedMatch(match);
-  };
-
-  const handleChangeMatch = () => {
-    setShowManualSearch(true);
-    setManualQuery(songTitle || name);
-    setManualResults([]);
-    setIgnoreAlbumForMatch(false);
-    setMatchError(null);
-  };
-
-  const handleRemoveMusicBrainzMatch = () => {
-    patchDraft({
-      musicbrainzRecordingId: null,
-      musicbrainzReleaseId: null,
-      releaseGroup: null,
-      performers: [],
-    });
-    setSuggestedMatch(null);
-    setShowManualSearch(false);
-    setManualResults([]);
-    setMatchStatus("dismissed");
-    setMatchError(null);
-    setSyncError(null);
-  };
 
   const handleDelete = async () => {
     if (!id) return;
@@ -379,8 +220,35 @@ export default function RecordingDetailContent({
         </div>
 
         <div className="mb-4">
+          {attribution.length > 0 && (
+            <div className="mb-4">
+              <span className="block text-xs text-ink-600">Attribution</span>
+              <p className="p-1.5" aria-label={attributionText ?? undefined}>
+                {attribution.map((part, index) => {
+                  const savedPart = savedAttributionByMusicBrainzId.get(
+                    part.musicbrainzArtistId,
+                  );
+                  return (
+                    <span key={`${part.musicbrainzArtistId}-${index}`}>
+                      {savedPart?.artists ? (
+                        <Link
+                          href={`/artist/${savedPart.artists.id}`}
+                          className="hover:text-azure-600"
+                        >
+                          {part.creditedAs}
+                        </Link>
+                      ) : (
+                        part.creditedAs
+                      )}
+                      {part.joinPhrase}
+                    </span>
+                  );
+                })}
+              </p>
+            </div>
+          )}
           <FormField
-            label="Artist"
+            label={attribution.length > 0 ? "Attribution fallback" : "Artist"}
             value={artist}
             onChange={handleDraftTextChange("artist")}
           />

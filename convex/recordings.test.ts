@@ -63,6 +63,15 @@ const updateInput = (
       title: "Example Album",
       musicbrainz_release_group_id: "mb-release-group-id",
     },
+    attribution: [
+      {
+        name: "Example Artist",
+        credited_as: "Example Artist",
+        join_phrase: "",
+        kind: "person" as const,
+        musicbrainz_artist_id: "mb-artist-id",
+      },
+    ],
     performers: [
       {
         name: "Example Artist",
@@ -103,6 +112,19 @@ test("requires authentication and Song membership to save a Recording", async ()
       youtubeInput(songId, "abcdefghijk"),
     ),
   ).rejects.toThrow("Song not found in your list");
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  await expect(
+    t.mutation(api.recordings.update, updateInput(recordingId, "All of Me", null)),
+  ).rejects.toThrow("Unauthenticated");
+  await expect(
+    other.mutation(
+      api.recordings.update,
+      updateInput(recordingId, "All of Me", null),
+    ),
+  ).rejects.toThrow("Saved Recording not found");
 });
 
 test("reuses shared Recording identity while isolating each User's private data", async () => {
@@ -226,4 +248,125 @@ test("reorders and unsaves only the current User's private relationships", async
   await expect(
     owner.query(api.recordings.getMine, { recordingId: firstId }),
   ).resolves.toBeNull();
+});
+
+test("replaces Recording Attribution atomically, preserving repeated Artist parts", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("attribution-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "recording-attribution-song",
+    shared: songInput("A Fine Romance"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "A Fine Romance", null);
+  input.shared.attribution = [
+    {
+        name: "Example Artist",
+        credited_as: "Example Artist",
+        join_phrase: " with ",
+        kind: "person",
+        musicbrainz_artist_id: "mb-artist-id",
+      },
+      {
+        name: "Example Artist",
+        credited_as: "Example",
+        join_phrase: "",
+        kind: "person",
+        musicbrainz_artist_id: "mb-artist-id",
+    },
+  ];
+  await owner.mutation(api.recordings.update, input);
+
+  const firstView = await owner.query(api.recordings.getMine, { recordingId });
+  expect(firstView?.artist).toBe("Example Artist with Example");
+  expect(firstView?.artist_attribution_fallback).toBe("Example Artist");
+  expect(firstView?.recording_artist_attributions).toHaveLength(2);
+  expect(firstView?.recording_artist_attributions[0]?.artist_id).toBe(
+    firstView?.recording_artist_attributions[1]?.artist_id,
+  );
+  expect(firstView?.recording_artist_attributions[0]?.artist_id).toBe(
+    firstView?.recording_artist_credits[0]?.artist_id,
+  );
+
+  input.shared.attribution = [
+    {
+      name: "Louis Armstrong",
+      credited_as: "Louis Armstrong",
+      join_phrase: "",
+      kind: "person",
+      musicbrainz_artist_id: "mb-louis",
+    },
+  ];
+  await owner.mutation(api.recordings.update, input);
+  const replaced = await owner.query(api.recordings.getMine, { recordingId });
+  expect(replaced?.recording_artist_attributions).toMatchObject([
+    { credited_as: "Louis Armstrong", join_phrase: "" },
+  ]);
+
+  const unlinkInput = {
+    ...input,
+    shared: {
+      ...input.shared,
+      musicbrainz_recording_id: null,
+      musicbrainz_release_id: null,
+      release_group: null,
+      performers: [],
+    },
+  };
+  await owner.mutation(api.recordings.update, unlinkInput);
+  const unlinked = await owner.query(api.recordings.getMine, { recordingId });
+  expect(unlinked?.musicbrainz_recording_id).toBeNull();
+  expect(unlinked?.recording_artist_credits).toEqual([]);
+  expect(unlinked?.recording_artist_attributions).toMatchObject([
+    { credited_as: "Louis Armstrong" },
+  ]);
+
+  const clearInput = {
+    ...unlinkInput,
+    shared: { ...unlinkInput.shared, attribution: [] },
+  };
+  await owner.mutation(api.recordings.update, clearInput);
+  const cleared = await owner.query(api.recordings.getMine, { recordingId });
+  expect(cleared?.recording_artist_attributions).toEqual([]);
+  expect(cleared?.artist).toBe("Example Artist");
+});
+
+test("rejects an oversized Attribution before replacing stored parts", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("attribution-bounds"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "recording-attribution-bounds",
+    shared: songInput("I Get a Kick Out of You"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "I Get a Kick Out of You", null);
+  await owner.mutation(api.recordings.update, input);
+
+  input.shared.attribution = Array.from({ length: 101 }, (_, index) => ({
+    name: `Artist ${index}`,
+    credited_as: `Artist ${index}`,
+    join_phrase: "",
+    kind: "person" as const,
+    musicbrainz_artist_id: `mb-artist-${index}`,
+  }));
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "100 Attribution parts",
+  );
+
+  const afterRejectedSave = await owner.query(api.recordings.getMine, {
+    recordingId,
+  });
+  expect(afterRejectedSave?.recording_artist_attributions).toMatchObject([
+    { credited_as: "Example Artist" },
+  ]);
 });

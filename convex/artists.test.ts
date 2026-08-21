@@ -96,6 +96,15 @@ test("counts only the current User's Songs and saved Recordings", async () => {
       recording_date_end: null,
       recording_location: null,
       release_group: null,
+      attribution: [
+        {
+          name: "Sarah Vaughan",
+          credited_as: "Sarah Vaughan",
+          join_phrase: "",
+          kind: "person",
+          musicbrainz_artist_id: "mb-sarah-vaughan",
+        },
+      ],
       performers: [
         {
           name: "Sarah Vaughan",

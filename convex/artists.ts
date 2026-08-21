@@ -72,14 +72,25 @@ export const listMine = query({
       addCounts(new Set(credits.map((credit) => credit.artistId)), "songCount");
     }
     for (const membership of recordingMemberships) {
-      const credits = await ctx.db
-        .query("recordingArtistCredits")
-        .withIndex("by_recordingId", (index) =>
-          index.eq("recordingId", membership.recordingId),
-        )
-        .take(100);
+      const [personnel, attribution] = await Promise.all([
+        ctx.db
+          .query("recordingArtistCredits")
+          .withIndex("by_recordingId", (index) =>
+            index.eq("recordingId", membership.recordingId),
+          )
+          .take(100),
+        ctx.db
+          .query("recordingArtistAttributions")
+          .withIndex("by_recordingId", (index) =>
+            index.eq("recordingId", membership.recordingId),
+          )
+          .take(101),
+      ]);
+      if (attribution.length > 100) {
+        throw new Error("Recording Attribution exceeds 100 parts");
+      }
       addCounts(
-        new Set(credits.map((credit) => credit.artistId)),
+        new Set([...personnel, ...attribution].map((credit) => credit.artistId)),
         "recordingCount",
       );
     }
@@ -136,7 +147,7 @@ export const getMine = query({
     const artist = await ctx.db.get(artistId);
     if (!artist) return null;
 
-    const [privateData, songCredits, recordingCredits] = await Promise.all([
+    const [privateData, songCredits, recordingCredits, attributionParts] = await Promise.all([
       ctx.db
         .query("artistUserData")
         .withIndex("by_userId_and_artistId", (index) =>
@@ -151,10 +162,15 @@ export const getMine = query({
         .query("recordingArtistCredits")
         .withIndex("by_artistId", (index) => index.eq("artistId", artistId))
         .take(repertoireLimit + 1),
+      ctx.db
+        .query("recordingArtistAttributions")
+        .withIndex("by_artistId", (index) => index.eq("artistId", artistId))
+        .take(repertoireLimit + 1),
     ]);
     if (
       songCredits.length > repertoireLimit ||
-      recordingCredits.length > repertoireLimit
+      recordingCredits.length > repertoireLimit ||
+      attributionParts.length > repertoireLimit
     ) {
       throw new Error("Artist detail supports up to 500 credited items");
     }
@@ -175,7 +191,9 @@ export const getMine = query({
 
     const recordings = [];
     for (const recordingId of new Set(
-      recordingCredits.map((credit) => credit.recordingId),
+      [...recordingCredits, ...attributionParts].map(
+        (credit) => credit.recordingId,
+      ),
     )) {
       const membership = await ctx.db
         .query("userRecordingData")

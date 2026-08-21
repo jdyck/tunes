@@ -11,6 +11,7 @@ import {
   privateRecordingInputValidator,
   recordingArtworkViewValidator,
   recordingKindValidator,
+  replaceAttribution,
   replacePerformers,
   savedRecordingViewValidator,
   sharedRecordingInputValidator,
@@ -397,6 +398,7 @@ export const update = mutation({
       recordingLocation: trimToNull(args.shared.recording_location),
       releaseGroupId,
     });
+    await replaceAttribution(ctx, recording._id, args.shared.attribution);
     await replacePerformers(ctx, recording._id, args.shared.performers);
     await ctx.db.patch(membership._id, {
       notes: trimToNull(args.privateData.notes),
