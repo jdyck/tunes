@@ -1,7 +1,7 @@
 import type {
   Artist,
   Recording,
-  RecordingArtistCredit,
+  RecordingPersonnelEntry,
   RecordingYouTubeItem,
   SavedRecording,
   UserRecordingData,
@@ -14,13 +14,17 @@ interface RecordingAssociationRow {
   youtube_items: YouTubeItem | YouTubeItem[] | null;
 }
 
-interface RecordingArtistCreditRow
-  extends Omit<RecordingArtistCredit, "artists"> {
+interface RecordingArtistCreditRow {
+  recording_id: string;
+  artist_id: string;
+  role: "performer";
+  credited_as: string;
+  sort_order?: number | null;
   artists: Artist | Artist[] | null;
 }
 
 interface SavedRecordingRow extends UserRecordingData {
-  recordings: (Omit<Recording, "recording_artist_credits"> & {
+  recordings: (Recording & {
     recording_artist_credits?: RecordingArtistCreditRow[] | null;
     recording_youtube_items?: RecordingAssociationRow[] | null;
   }) | null;
@@ -52,9 +56,13 @@ export const mapSavedRecordingRow = (
     recording_youtube_items,
     ...recording
   } = row.recordings;
-  const recordingArtistCredits = (recording_artist_credits ?? [])
-    .map((credit): RecordingArtistCredit => ({
-      ...credit,
+  const personnel = (recording_artist_credits ?? [])
+    .map((credit): RecordingPersonnelEntry => ({
+      recording_id: credit.recording_id,
+      artist_id: credit.artist_id,
+      credited_as: credit.credited_as,
+      sort_order: credit.sort_order,
+      relationships: [{ type: "performer", details: [] }],
       artists: unwrapOne(credit.artists),
     }))
     .sort(
@@ -74,7 +82,7 @@ export const mapSavedRecordingRow = (
 
   return {
     ...recording,
-    recording_artist_credits: recordingArtistCredits,
+    personnel,
     user_data: {
       user_id: row.user_id,
       recording_id: row.recording_id,

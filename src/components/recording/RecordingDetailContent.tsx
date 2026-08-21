@@ -29,6 +29,7 @@ import type { RecordingDraft } from "@/utils/recordingDraft";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 import RecordingAttributionEditor from "@/components/recording/RecordingAttributionEditor";
 import ReleaseGroupAttribution from "@/components/recording/ReleaseGroupAttribution";
+import RecordingPersonnel from "@/components/recording/RecordingPersonnel";
 
 type RecordingDraftTextField =
   | "name"
@@ -99,6 +100,7 @@ export default function RecordingDetailContent({
   const notes = draft?.notes ?? "";
   const artist = draft?.artist ?? "";
   const attribution = draft?.attribution ?? [];
+  const personnel = draft?.personnel ?? [];
   const album = draft?.album ?? "";
   const year = draft?.year ?? "";
   const recordingDateStart = draft?.recordingDateStart ?? "";
@@ -207,6 +209,10 @@ export default function RecordingDetailContent({
             <RecordingAttributionEditor
               value={attribution}
               onChange={(next) => patchDraft({ attribution: next })}
+            />
+            <RecordingPersonnel
+              attribution={attribution}
+              personnel={personnel}
             />
             <FormField
               label="Attribution fallback"

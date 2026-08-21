@@ -72,7 +72,7 @@ const recordingUpdateInput = (
       }[];
     } | null,
     attribution: [],
-    performers: [],
+    personnel: [],
   },
   privateData: {
     key: null,
@@ -213,12 +213,14 @@ test("counts only the current User's Songs and saved Recordings", async () => {
           musicbrainz_artist_id: "mb-carmen-mcrae",
         },
       ],
-      performers: [
+      personnel: [
         {
+          type: "musicbrainz" as const,
           name: "Sarah Vaughan",
           credited_as: "Sarah Vaughan",
           kind: "person",
           musicbrainz_artist_id: "mb-sarah-vaughan",
+          relationships: [{ type: "performer" as const, details: [] }],
         },
       ],
     },
@@ -385,7 +387,7 @@ test("browses each User's saved Recordings through one shared Release Group", as
       attribution: releaseGroupAttribution,
     };
     input.shared.attribution = [];
-    input.shared.performers = [];
+    input.shared.personnel = [];
     await owner.mutation(api.recordings.update, input);
   }
 

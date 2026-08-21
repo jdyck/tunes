@@ -16,16 +16,20 @@ test("collapses an artist credited for several roles into one performer", () => 
   // violate recording_artist_credits_identity_key on save.
   assert.deepEqual(performers, [
     {
+      artistId: null,
       musicbrainzArtistId: "artist-1",
       name: "Joe Pass",
       creditedAs: "Joe Pass",
       kind: null,
+      relationships: [{ type: "performer", details: [] }],
     },
     {
+      artistId: null,
       musicbrainzArtistId: "artist-2",
       name: "Ella Fitzgerald",
       creditedAs: "Ella Fitzgerald",
       kind: "person",
+      relationships: [{ type: "performer", details: [] }],
     },
   ]);
 });
@@ -43,10 +47,12 @@ test("keeps only performer-role relations and decodes credited-as", () => {
 
   assert.deepEqual(performers, [
     {
+      artistId: null,
       musicbrainzArtistId: "artist-3",
       name: "Nelson Riddle & His Orchestra",
       creditedAs: "Nelson Riddle & Orchestra",
       kind: null,
+      relationships: [{ type: "performer", details: [] }],
     },
   ]);
 });

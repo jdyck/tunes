@@ -1,4 +1,4 @@
-import type { RecordingPerformer } from "../lib/musicbrainz.ts";
+import type { RecordingPersonnelEntry } from "./recordingPersonnel.ts";
 import { decodeHtmlEntities } from "./htmlEntities.ts";
 import { normalizeMusicBrainzArtistKind } from "./musicbrainzArtistCredits.ts";
 
@@ -24,8 +24,8 @@ const performerRelationTypes = new Set([
 // violate recording_artist_credits_identity_key on save.
 export const musicBrainzRecordingPerformers = (
   relations: MusicBrainzPerformerRelation[]
-): RecordingPerformer[] => {
-  const performersById = new Map<string, RecordingPerformer>();
+): RecordingPersonnelEntry[] => {
+  const performersById = new Map<string, RecordingPersonnelEntry>();
 
   for (const relation of relations) {
     if (!relation.artist || !performerRelationTypes.has(relation.type)) {
@@ -33,12 +33,14 @@ export const musicBrainzRecordingPerformers = (
     }
     if (performersById.has(relation.artist.id)) continue;
     performersById.set(relation.artist.id, {
+      artistId: null,
       musicbrainzArtistId: relation.artist.id,
       name: decodeHtmlEntities(relation.artist.name),
       creditedAs: decodeHtmlEntities(
         relation["target-credit"] || relation.artist.name
       ),
       kind: normalizeMusicBrainzArtistKind(relation.artist.type),
+      relationships: [{ type: "performer", details: [] }],
     });
   }
 

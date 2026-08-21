@@ -128,6 +128,7 @@ export default defineSchema({
     recordingDateEnd: nullableString,
     recordingLocation: nullableString,
     releaseGroupId: v.union(v.id("releaseGroups"), v.null()),
+    personnelMigrated: v.optional(v.boolean()),
     legacySupabaseId: nullableString,
   })
     .index("by_songId", ["songId"])
@@ -215,6 +216,33 @@ export default defineSchema({
     .index("by_recordingId_and_sortOrder", ["recordingId", "sortOrder"])
     .index("by_artistId", ["artistId"])
     .index("by_legacySupabaseId", ["legacySupabaseId"]),
+
+  recordingPersonnel: defineTable({
+    recordingId: v.id("recordings"),
+    artistId: v.id("artists"),
+    creditedAs: v.string(),
+    sortOrder: v.number(),
+    relationships: v.array(
+      v.object({
+        type: v.union(
+          v.literal("instrument"),
+          v.literal("vocal"),
+          v.literal("performer"),
+          v.literal("conductor"),
+          v.literal("orchestra"),
+        ),
+        details: v.array(
+          v.object({
+            canonical: v.string(),
+            creditedAs: nullableString,
+          }),
+        ),
+      }),
+    ),
+  })
+    .index("by_recordingId", ["recordingId"])
+    .index("by_recordingId_and_sortOrder", ["recordingId", "sortOrder"])
+    .index("by_artistId", ["artistId"]),
 
   recordingArtistAttributions: defineTable({
     recordingId: v.id("recordings"),

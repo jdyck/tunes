@@ -75,12 +75,14 @@ const updateInput = (
         musicbrainz_artist_id: "mb-artist-id",
       },
     ] as AttributionInput[],
-    performers: [
+    personnel: [
       {
+        type: "musicbrainz" as const,
         name: "Example Artist",
         credited_as: "Example Artist",
         kind: "person" as const,
         musicbrainz_artist_id: "mb-artist-id",
+        relationships: [{ type: "performer" as const, details: [] }],
       },
     ],
   },
@@ -200,7 +202,94 @@ test("reuses shared Recording identity while isolating each User's private data"
     tempo: "120",
   });
   expect(otherView.release_groups?.title).toBe("Example Album");
-  expect(otherView.recording_artist_credits).toHaveLength(1);
+  expect(otherView.personnel).toHaveLength(1);
+});
+
+test("falls back to legacy generic Personnel until an explicit empty replacement", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("personnel-compat-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "personnel-compat-song",
+    shared: songInput("Easy Living"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Easy Living", null);
+  await owner.mutation(api.recordings.update, input);
+
+  await t.run(async (ctx) => {
+    const recording = await ctx.db.get(recordingId);
+    if (!recording) throw new Error("Expected Recording");
+    const personnel = await ctx.db
+      .query("recordingPersonnel")
+      .withIndex("by_recordingId", (query) =>
+        query.eq("recordingId", recordingId),
+      )
+      .unique();
+    if (!personnel) throw new Error("Expected Personnel");
+    await ctx.db.insert("recordingArtistCredits", {
+      recordingId,
+      artistId: personnel.artistId,
+      role: "performer",
+      creditedAs: personnel.creditedAs,
+      sortOrder: personnel.sortOrder,
+      legacySupabaseId: null,
+    });
+    await ctx.db.delete(personnel._id);
+    const { personnelMigrated: _marker, ...unmigrated } = recording;
+    await ctx.db.replace(recordingId, unmigrated);
+  });
+
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({
+    personnel: [
+      {
+        credited_as: "Example Artist",
+        relationships: [{ type: "performer", details: [] }],
+      },
+    ],
+  });
+
+  input.shared.personnel = [];
+  await owner.mutation(api.recordings.update, input);
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({ personnel: [] });
+});
+
+test("rejects duplicate Personnel Artists without replacing the stored set", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("personnel-duplicate-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "personnel-duplicate-song",
+    shared: songInput("Moonlight in Vermont"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Moonlight in Vermont", null);
+  await owner.mutation(api.recordings.update, input);
+  input.shared.personnel = [
+    input.shared.personnel[0],
+    { ...input.shared.personnel[0], credited_as: "Duplicate" },
+  ];
+
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "cannot repeat an Artist",
+  );
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({
+    personnel: [{ credited_as: "Example Artist" }],
+  });
 });
 
 test("reorders and unsaves only the current User's private relationships", async () => {
@@ -295,7 +384,7 @@ test("replaces Recording Attribution atomically, preserving repeated Artist part
     firstView?.recording_artist_attributions[1]?.artist_id,
   );
   expect(firstView?.recording_artist_attributions[0]?.artist_id).toBe(
-    firstView?.recording_artist_credits[0]?.artist_id,
+    firstView?.personnel[0]?.artist_id,
   );
 
   input.shared.attribution = [
@@ -321,13 +410,13 @@ test("replaces Recording Attribution atomically, preserving repeated Artist part
       musicbrainz_recording_id: null,
       musicbrainz_release_id: null,
       release_group: null,
-      performers: [],
+      personnel: [],
     },
   };
   await owner.mutation(api.recordings.update, unlinkInput);
   const unlinked = await owner.query(api.recordings.getMine, { recordingId });
   expect(unlinked?.musicbrainz_recording_id).toBeNull();
-  expect(unlinked?.recording_artist_credits).toEqual([]);
+  expect(unlinked?.personnel).toEqual([]);
   expect(unlinked?.recording_artist_attributions).toMatchObject([
     { credited_as: "Louis Armstrong" },
   ]);

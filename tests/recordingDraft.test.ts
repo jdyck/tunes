@@ -47,13 +47,13 @@ const recordingFixture = (): SavedRecording => ({
       },
     ],
   },
-  recording_artist_credits: [
+  personnel: [
     {
       recording_id: "recording-1",
       artist_id: "artist-1",
-      role: "performer",
       credited_as: "Bill & Jane",
       sort_order: 0,
+      relationships: [{ type: "performer", details: [] }],
       artists: {
         id: "artist-1",
         name: "Bill & Jane",
@@ -138,12 +138,12 @@ test("maps the complete Recording draft to the presence-aware RPC payload", () =
           join_phrase: "",
         },
       ],
-      performers: [
+      personnel: [
         {
-          name: "Bill & Jane",
+          type: "existing",
+          artist_id: "artist-1",
           credited_as: "Bill & Jane",
-          kind: "group",
-          musicbrainz_artist_id: "artist-mbid",
+          relationships: [{ type: "performer", details: [] }],
         },
       ],
     },
@@ -178,13 +178,13 @@ test("serializes cleared optional fields explicitly", () => {
     musicbrainzReleaseId: null,
     releaseGroup: null,
     attribution: [],
-    performers: [],
+    personnel: [],
   });
 
   assert.equal(payload.shared.artist, null);
   assert.equal(payload.shared.release_group, null);
   assert.deepEqual(payload.shared.attribution, []);
-  assert.deepEqual(payload.shared.performers, []);
+  assert.deepEqual(payload.shared.personnel, []);
   assert.equal(payload.private.notes, null);
   assert.deepEqual(payload.private.tags, []);
 });
@@ -206,7 +206,7 @@ test("unlinking MusicBrainz clears source-only Personnel but retains Attribution
   assert.equal(unlinked.musicbrainzRecordingId, null);
   assert.equal(unlinked.musicbrainzReleaseId, null);
   assert.equal(unlinked.releaseGroup, null);
-  assert.deepEqual(unlinked.performers, []);
+  assert.deepEqual(unlinked.personnel, []);
   assert.deepEqual(unlinked.attribution, draft.attribution);
   assert.equal(unlinked.artist, draft.artist);
 });
@@ -241,7 +241,7 @@ test("a resolved MusicBrainz match replaces the complete Attribution draft only 
         kind: "person",
       },
     ],
-    performers: [],
+    personnel: [],
     releaseGroup: {
       title: "Ella and Louis",
       musicbrainzReleaseGroupId: "ella-and-louis-mbid",

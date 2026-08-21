@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { getCurrentUser, requireAdmin } from "./model/auth";
@@ -27,27 +27,35 @@ const artistRecordingViewValidator = savedRecordingViewValidator.extend({
 
 const loadRecordingArtistRelationships = async (
   ctx: Pick<QueryCtx, "db">,
-  recordingId: Id<"recordings">,
-  releaseGroupId: Id<"releaseGroups"> | null,
+  recording: Doc<"recordings">,
 ) => {
-  const [personnel, attribution, releaseGroupAttribution] = await Promise.all([
-    ctx.db
-      .query("recordingArtistCredits")
-      .withIndex("by_recordingId", (index) =>
-        index.eq("recordingId", recordingId),
-      )
-      .take(101),
+  const targetPersonnel = await ctx.db
+    .query("recordingPersonnel")
+    .withIndex("by_recordingId", (index) =>
+      index.eq("recordingId", recording._id),
+    )
+    .take(101);
+  const personnel =
+    targetPersonnel.length > 0 || recording.personnelMigrated
+      ? targetPersonnel
+      : await ctx.db
+          .query("recordingArtistCredits")
+          .withIndex("by_recordingId", (index) =>
+            index.eq("recordingId", recording._id),
+          )
+          .take(101);
+  const [attribution, releaseGroupAttribution] = await Promise.all([
     ctx.db
       .query("recordingArtistAttributions")
       .withIndex("by_recordingId", (index) =>
-        index.eq("recordingId", recordingId),
+        index.eq("recordingId", recording._id),
       )
       .take(101),
-    releaseGroupId
+    recording.releaseGroupId
       ? ctx.db
           .query("releaseGroupArtistAttributions")
           .withIndex("by_releaseGroupId", (index) =>
-            index.eq("releaseGroupId", releaseGroupId),
+            index.eq("releaseGroupId", recording.releaseGroupId!),
           )
           .take(101)
       : Promise.resolve([]),
@@ -129,8 +137,7 @@ export const listMine = query({
       const { personnel, attribution, releaseGroupAttribution } =
         await loadRecordingArtistRelationships(
           ctx,
-          membership.recordingId,
-          recording.releaseGroupId,
+          recording,
         );
       addCounts(
         new Set(
@@ -261,8 +268,7 @@ export const getMine = query({
         }
         const relationships = await loadRecordingArtistRelationships(
           ctx,
-          membership.recordingId,
-          recording.releaseGroupId,
+          recording,
         );
 
         const { personnel, attribution, releaseGroupAttribution } =

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { mapSavedRecordingRow } from "../src/lib/recordings.ts";
 import {
-  performerCreditsToDraft,
-  performersToSavePayload,
-} from "../src/utils/recordingPerformers.ts";
+  personnelEntriesToDraft,
+  personnelEntriesToSavePayload,
+} from "../src/utils/recordingPersonnel.ts";
 
 test("maps preferred key and tempo from private Recording data", () => {
   const savedRecording = mapSavedRecordingRow({
@@ -69,22 +69,20 @@ test("preserves loaded performer credits through the Recording save payload", ()
   });
 
   assert.ok(savedRecording);
-  const draft = performerCreditsToDraft(
-    savedRecording.recording_artist_credits ?? []
-  );
+  const draft = personnelEntriesToDraft(savedRecording.personnel ?? []);
 
-  assert.deepEqual(performersToSavePayload(draft), [
+  assert.deepEqual(personnelEntriesToSavePayload(draft), [
     {
-      name: "Oscar Moore",
+      type: "existing",
+      artist_id: "artist-1",
       credited_as: "Oscar Moore",
-      kind: "person",
-      musicbrainz_artist_id: "artist-mbid-1",
+      relationships: [{ type: "performer", details: [] }],
     },
     {
-      name: "Nat King Cole",
+      type: "existing",
+      artist_id: "artist-2",
       credited_as: "Cole, Nat King",
-      kind: "person",
-      musicbrainz_artist_id: "artist-mbid-2",
+      relationships: [{ type: "performer", details: [] }],
     },
   ]);
 });

@@ -1,15 +1,13 @@
-import type {
-  RecordingPerformer,
-  ResolvedRecordingMatch,
-} from "../lib/musicbrainz.ts";
+import type { ResolvedRecordingMatch } from "../lib/musicbrainz.ts";
 import type { RecordingAttributionInput } from "./musicbrainzRecordingAttribution.ts";
 import type { RecordingKind, SavedRecording } from "../types/types.ts";
 import { decodeHtmlEntities } from "./htmlEntities.ts";
 import {
-  performerCreditsToDraft,
-  performersToSavePayload,
-  type RecordingPerformerPayload,
-} from "./recordingPerformers.ts";
+  personnelEntriesToDraft,
+  personnelEntriesToSavePayload,
+  type RecordingPersonnelEntry,
+  type RecordingPersonnelPayload,
+} from "./recordingPersonnel.ts";
 import {
   attributionCreditsToDraft,
   attributionsToSavePayload,
@@ -40,7 +38,7 @@ export interface RecordingDraft {
   musicbrainzReleaseId: string | null;
   releaseGroup: RecordingDraftReleaseGroup | null;
   attribution: RecordingAttributionInput[];
-  performers: RecordingPerformer[];
+  personnel: RecordingPersonnelEntry[];
 }
 
 export interface RecordingEditorState {
@@ -67,7 +65,7 @@ export interface RecordingSavePayload {
       attribution: RecordingAttributionPayload[];
     } | null;
     attribution: RecordingAttributionPayload[];
-    performers: RecordingPerformerPayload[];
+    personnel: RecordingPersonnelPayload[];
   };
   private: {
     key: string | null;
@@ -116,9 +114,7 @@ const loadedDraft = (recording: SavedRecording): RecordingDraft => ({
   attribution: attributionCreditsToDraft(
     recording.recording_artist_attributions ?? [],
   ),
-  performers: performerCreditsToDraft(
-    recording.recording_artist_credits ?? []
-  ),
+  personnel: personnelEntriesToDraft(recording.personnel ?? []),
 });
 
 export const recordingToEditorState = (
@@ -173,7 +169,7 @@ export const recordingDraftWithoutMusicBrainzMatch = (
   musicbrainzRecordingId: null,
   musicbrainzReleaseId: null,
   releaseGroup: null,
-  performers: [],
+  personnel: [],
 });
 
 export const recordingDraftWithResolvedMatch = (
@@ -189,7 +185,7 @@ export const recordingDraftWithResolvedMatch = (
   recordingDateEnd: match.recordingDateEnd || "",
   recordingLocation: match.recordingLocation || "",
   attribution: match.attribution,
-  performers: match.performers,
+  personnel: match.personnel,
   ...(match.duration ? { duration: match.duration } : {}),
 });
 
@@ -226,7 +222,7 @@ export const recordingDraftToPayload = (
         }
       : null,
     attribution: attributionsToSavePayload(draft.attribution),
-    performers: performersToSavePayload(draft.performers),
+    personnel: personnelEntriesToSavePayload(draft.personnel),
   },
   private: {
     key: draft.key || null,

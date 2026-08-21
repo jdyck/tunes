@@ -12,7 +12,7 @@ import {
   recordingArtworkViewValidator,
   recordingKindValidator,
   replaceAttribution,
-  replacePerformers,
+  replacePersonnel,
   replaceReleaseGroupAttribution,
   savedRecordingViewValidator,
   sharedRecordingInputValidator,
@@ -312,6 +312,7 @@ export const saveYoutube = mutation({
         recordingDateEnd: null,
         recordingLocation: null,
         releaseGroupId: null,
+        personnelMigrated: true,
         legacySupabaseId: null,
       });
       await ctx.db.insert("recordingYoutubeItems", {
@@ -403,7 +404,7 @@ export const update = mutation({
       releaseGroupId,
     });
     await replaceAttribution(ctx, recording._id, args.shared.attribution);
-    await replacePerformers(ctx, recording._id, args.shared.performers);
+    await replacePersonnel(ctx, recording._id, args.shared.personnel);
     await ctx.db.patch(membership._id, {
       notes: trimToNull(args.privateData.notes),
       rating: args.privateData.rating,
