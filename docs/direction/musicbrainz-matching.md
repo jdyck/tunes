@@ -63,6 +63,23 @@ The normal flow is cheap and bounded for Vercel Hobby:
    date, place, performer relationships, Release Groups, and representative
    edition. The user still saves the populated form explicitly.
 
+MusicBrainz Recording artist credit initializes or refreshes the structured
+Recording Attribution: preserve every referenced Artist identity, credited-as
+name, position, and exact following join phrase. Do not replace source phrases
+such as “with” with a hard-coded ampersand, trim meaningful join-phrase
+whitespace, or deduplicate repeated Artist references. Attribution remains
+separate from Recording Personnel even though both relationships reference
+canonical Artists.
+
+A successful explicit refresh replaces the complete Recording Attribution in
+the draft; only Save persists it atomically with the other confirmed metadata.
+A provider failure preserves the existing Attribution. Removing the
+MusicBrainz Recording match preserves the editable, provider-neutral
+Attribution and Attribution Fallback while clearing source-only Personnel; the
+User may edit or clear an incorrect Attribution separately. Existing linked
+Recordings enrich lazily on explicit refresh rather than through a bulk network
+migration.
+
 Ranking prioritizes duration proximity, then lenient credited-artist and
 normalized-title agreement, a pinned album/year corroborator when supplied,
 exact Work linkage, and MusicBrainz score. Title normalization removes reissue
@@ -70,12 +87,16 @@ noise such as remaster/mono/stereo/version/featuring but preserves meaningful
 take/live/alternate markers. Album pinning is a soft discovery boost, not a
 stored album decision and not a filter.
 
+Recording search derives its artist text from structured Recording Attribution
+when present and otherwise uses Attribution Fallback. Candidate presentation
+uses the same shared Attribution formatter as saved Recording surfaces.
+
 Search-summary Releases are provisional hints only. They may help the user
 recognize a candidate but never supply a performance date or durable Release
 Group relationship. Milliseconds stay inside matching and are formatted only
 at the UI/save edge.
 
-## Dates, performers, and location
+## Dates, Personnel, and location
 
 Recording dates come only from the selected Recording's `performance`
 relationship to the Song's exact Work. Preserve `YYYY`, `YYYY-MM`, or
@@ -90,9 +111,38 @@ Work dates use the earliest composer/lyricist/writer relationship and live on
 They are stored for future song-age/public-domain work but have no UI yet.
 
 The optional `recording_location` is a display string from a recorded-at/in
-place relationship. Structured performer credits include MusicBrainz artist
-relationships such as instrument, vocal, conductor, orchestra, or generic
-performer; production roles and inferred group membership stay out.
+place relationship. Recording Personnel maps exactly five MusicBrainz
+Artist-to-Recording relationship types: instrument, vocal, conductor,
+orchestra, and generic performer. Production roles, chorus master,
+concertmaster, and inferred group membership stay out of this scope.
+One credited Artist may retain several distinct relationships or relationship
+details on the same Recording. A successful confirmed match or explicit
+refresh replaces the complete structured personnel set, including clearing it
+when MusicBrainz successfully returns none; a provider failure preserves the
+existing set. Map the supported relationship semantics rather than storing raw
+MusicBrainz relationship JSON: instrument and vocal relationships retain their
+canonical attribute text plus optional credited-as text, while guest, solo,
+additional, assistant, and relationship-date qualifiers remain out of scope.
+Generic performer is a fallback and is omitted for an Artist when a more
+specific supported relationship exists. For one Artist, merge relationships
+of the same supported type and retain all distinct instrument or vocal details.
+An instrument relationship with no instrument detail maps to `instrument`; a
+vocal relationship with no subtype maps to `vocals`; conductor and orchestra
+retain those labels. Deduplicate details only when the relationship type,
+canonical detail, and optional credited-as detail are equal after case and
+whitespace normalization; distinct credited-as variants remain distinct.
+Existing linked Recordings are not refreshed automatically.
+
+Removing a Recording's MusicBrainz match clears the source-derived personnel
+set in the same draft but preserves structured Attribution and Attribution
+Fallback. Saving persists the changes atomically; abandoning the draft
+preserves the stored match and personnel.
+
+The bounded Recording update accepts at most 100 credited Artists and 500
+mapped relationship details. It validates and deduplicates the complete nested
+payload before atomically replacing existing credits. This work does not change
+the temporary shared Recording edit authority or introduce provenance,
+verification, conflict-resolution, or admin-correction policy.
 
 ## Album identity and artwork
 
@@ -102,6 +152,21 @@ non-remix studio Album containing the exact Recording; otherwise choose the
 earliest available containing Release Group; otherwise leave it null. This
 choice is independent of performance date and may differ from the album pinned
 for discovery.
+
+The selected MusicBrainz Release Group's artist credit initializes or refreshes
+the Release Group Attribution; a representative Release's possibly different
+artist credit does not replace it. Preserve the ordered credited-as names, each
+referenced Artist identity, and every exact join phrase. The same Artist MBID
+can therefore link to one canonical Artist while retaining a Release
+Group-specific credited name such as “Nat ‘King’ Cole and His Trio.” This
+Attribution never overwrites a contained Recording's Attribution.
+
+An explicit successful match or refresh replaces the complete shared Release
+Group Attribution atomically when the User saves the draft, including clearing
+the list when MusicBrainz successfully returns none. A failed lookup preserves
+the stored Attribution. Existing MusicBrainz-backed Release Groups enrich
+lazily when a containing Recording is matched or explicitly refreshed; do not
+bulk-fetch provider data as a schema migration.
 
 Use Release Group cover art first and the retained representative
 `musicbrainz_release_id` edition art second. A 404 is an ordinary no-art state.

@@ -8,6 +8,20 @@
 
 ## Implementation order and blockers
 
+- Introduce structured attributions in two sequenced slices. First replace the
+  flattened canonical Recording credit with structured Recording Attribution,
+  retaining the old text as a transitional fallback and building the shared
+  formatting/editing foundation. Then add structured Release Group Attribution,
+  its Recording-detail presentation, and Artist browsing through the User's
+  saved Recordings. Do not combine both migrations into one large change or
+  implement Release Group Attribution by extending the flattened Recording
+  field.
+- The first slice must move every current `recordings.artist` consumer to the
+  shared derived display contract—MusicBrainz search/ranking, detail, compact
+  rows, player payloads, accessibility labels, and direct Recording Attribution
+  reachability in Artist browsing—without redesigning those surfaces. The
+  second slice adds the Release Group-derived Artist-browsing path.
+
 - Shared canonical rows cannot reuse an “owner may update their own row” rule
   indefinitely. The Song split deliberately introduces `songs.isDiscoverable`
   and the Site-Admin-only **Visible to all users** switch for stable authenticated

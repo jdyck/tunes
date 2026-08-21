@@ -2,9 +2,10 @@
 
 The Artists destination follows the Songs-pane pattern: a searchable, sortable
 list on the left and the selected Artist in the parallel detail pane. It brings
-together Songs on which the Artist has a writer credit and saved Recordings on
-which the Artist has a structured performer credit. Artist kind and a direct
-MusicBrainz link appear when that canonical metadata is available.
+together Songs on which the Artist has a writer credit, saved Recordings on
+which the Artist has a structured performer credit, and Release Group
+Attributions reached through the User's saved Recordings. Artist kind and a
+direct MusicBrainz link appear when that canonical metadata is available.
 
 ## Remaining detail enrichment
 
@@ -26,7 +27,30 @@ role-bearing `songArtistCredits` / `recordingArtistCredits` relationships.
 Build browsing on those Artist-backed surfaces; do not reintroduce a separate
 Person identity for Song writers.
 
-The product still distinguishes a Recording's published credited-as text from its structured Artist relationships. Keep `Recording.artist` as an editable display snapshot: “Billie Holiday” or a group credit can be what the release says even when other individually credited performers are also attached. Do not infer group members or individual performers from that free text. A group credit also does not stand in for its members; both can be represented when the evidence supports both relationships.
+The product distinguishes a Recording's structured Attribution from its
+structured Personnel relationships. Both use the same canonical Artist
+identities, but Attribution preserves ordered credited-as names and exact join
+phrases while Personnel describes evidenced contributions. A transitional
+Attribution Fallback may display unresolved legacy, manual, or provider text
+when no structured Attribution exists; it never creates an Artist-browsing
+relationship. Do not infer group members or performers from either the
+Attribution or its fallback. A group credit does not stand in for its members;
+both can be represented when the evidence supports both relationships.
+
+A Release Group Attribution is another structured Artist-backed surface, not a
+Song Credit or Recording Personnel evidence. When a User has saved a Recording
+from that Release Group, its attributed Artists are reachable in the User's
+Artists view and link to their local Artist detail. Artist detail must describe
+that Release Group path rather than implying authorship of the Song or a
+performance relationship to the Recording.
+
+Artist detail presents each reachable saved Recording as its own row rather
+than introducing a Release Group detail page. A Release Group-derived row names
+the album-credit provenance and Release Group title. If the same Artist is also
+connected to that Recording through Recording Attribution or Personnel, keep
+one Recording row and show its several reasons rather than duplicating it.
+The Artists-list Recording count likewise counts distinct saved Recordings
+across all three paths, not relationships or Release Groups.
 
 The Artists pane lists all Artist kinds rather than silently filtering out groups. Kind can be shown only when useful for disambiguation or filtering; it does not need to clutter every row. Compositions come from Song-to-Artist credits whose role is composer, lyricist, or writer. Recordings come from structured Recording-to-Artist credits.
 
