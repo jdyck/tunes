@@ -149,6 +149,11 @@ export const verifyRecordingPersonnel = migrations.define({
           details.add(key);
         }
       }
+      if (relationshipTypes.has("performer") && relationshipTypes.size > 1) {
+        throw new Error(
+          "Recording Personnel combines generic and specific relationships",
+        );
+      }
       if (detailCount > 500) {
         throw new Error("Recording Personnel exceeds 500 details");
       }

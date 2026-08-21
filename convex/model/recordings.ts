@@ -588,6 +588,11 @@ const normalizePersonnel = (personnel: PersonnelInput[]) => {
       });
       return { type: relationship.type, details };
     });
+    if (relationshipTypes.has("performer") && relationshipTypes.size > 1) {
+      throw new Error(
+        "Recording Personnel cannot combine generic performer with specific evidence",
+      );
+    }
 
     return { entry, creditedAs, relationships };
   });

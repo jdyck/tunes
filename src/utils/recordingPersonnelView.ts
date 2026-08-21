@@ -44,19 +44,34 @@ export const recordingPersonnelRows = (
 ): RecordingPersonnelRow[] => {
   const attributionOrder = new Map<string, number>();
   for (const [index, part] of attribution.entries()) {
-    if (part.artistId && !attributionOrder.has(part.artistId)) {
-      attributionOrder.set(part.artistId, index);
+    const identity = part.artistId
+      ? `artist:${part.artistId}`
+      : part.musicbrainzArtistId
+        ? `musicbrainz:${part.musicbrainzArtistId}`
+        : null;
+    if (identity && !attributionOrder.has(identity)) {
+      attributionOrder.set(identity, index);
     }
   }
 
   return personnel
     .map((entry, sourceOrder) => ({ entry, sourceOrder }))
     .sort((left, right) => {
-      const leftOrder = left.entry.artistId
-        ? attributionOrder.get(left.entry.artistId)
+      const leftIdentity = left.entry.artistId
+        ? `artist:${left.entry.artistId}`
+        : left.entry.musicbrainzArtistId
+          ? `musicbrainz:${left.entry.musicbrainzArtistId}`
+          : null;
+      const rightIdentity = right.entry.artistId
+        ? `artist:${right.entry.artistId}`
+        : right.entry.musicbrainzArtistId
+          ? `musicbrainz:${right.entry.musicbrainzArtistId}`
+          : null;
+      const leftOrder = leftIdentity
+        ? attributionOrder.get(leftIdentity)
         : undefined;
-      const rightOrder = right.entry.artistId
-        ? attributionOrder.get(right.entry.artistId)
+      const rightOrder = rightIdentity
+        ? attributionOrder.get(rightIdentity)
         : undefined;
       if (leftOrder !== undefined || rightOrder !== undefined) {
         if (leftOrder === undefined) return 1;

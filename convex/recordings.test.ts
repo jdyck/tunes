@@ -464,6 +464,21 @@ test("persists all five Personnel relationship types and rejects malformed shape
   await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
     "requires credited-as Artist text",
   );
+
+  input.shared.personnel[1] = {
+    type: "musicbrainz",
+    name: "Quincy Jones",
+    credited_as: "Quincy Jones",
+    kind: "person",
+    musicbrainz_artist_id: "mb-quincy-jones",
+    relationships: [
+      { type: "performer", details: [] },
+      { type: "conductor", details: [] },
+    ],
+  };
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "generic performer",
+  );
 });
 
 test("enforces Recording Personnel Artist and aggregate detail bounds", async () => {

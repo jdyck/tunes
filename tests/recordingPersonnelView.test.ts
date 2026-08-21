@@ -80,6 +80,52 @@ test("orders Personnel by structured Attribution identity then unmatched Artist 
   );
 });
 
+test("orders a newly fetched draft by MusicBrainz Artist identity", () => {
+  const attribution = [
+    {
+      artistId: null,
+      musicbrainzArtistId: "mb-zed",
+      providerUnmatchedConfirmed: false,
+      name: "Zed Artist",
+      creditedAs: "Zed Artist",
+      joinPhrase: " with ",
+      kind: "person" as const,
+    },
+    {
+      artistId: null,
+      musicbrainzArtistId: "mb-amy",
+      providerUnmatchedConfirmed: false,
+      name: "Amy Artist",
+      creditedAs: "Amy Artist",
+      joinPhrase: "",
+      kind: "person" as const,
+    },
+  ];
+  const generic = [{ type: "performer" as const, details: [] }];
+
+  assert.deepEqual(
+    recordingPersonnelRows(attribution, [
+      {
+        artistId: null,
+        musicbrainzArtistId: "mb-amy",
+        name: "Amy Artist",
+        creditedAs: "Amy Artist",
+        kind: "person",
+        relationships: generic,
+      },
+      {
+        artistId: null,
+        musicbrainzArtistId: "mb-zed",
+        name: "Zed Artist",
+        creditedAs: "Zed Artist",
+        kind: "person",
+        relationships: generic,
+      },
+    ]).map((row) => row.creditedAs),
+    ["Zed Artist", "Amy Artist"],
+  );
+});
+
 test("sorts instrument details and uses credited-as and missing-detail labels", () => {
   const artistId = "artist-2" as Id<"artists">;
   assert.deepEqual(

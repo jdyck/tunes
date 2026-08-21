@@ -198,6 +198,8 @@ interface MusicBrainzRecordingRelation {
   artist?: { id: string; name: string; type?: string | null };
   place?: { name: string; disambiguation?: string };
   attributes?: string[];
+  "attribute-values"?: Record<string, string>;
+  "attribute-credits"?: Record<string, string>;
   "target-credit"?: string;
 }
 

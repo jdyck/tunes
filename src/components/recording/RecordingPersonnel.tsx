@@ -22,8 +22,8 @@ export default function RecordingPersonnel({
         Personnel
       </h2>
       <ul className="mt-1 space-y-1 text-sm text-ink-800">
-        {rows.map((row) => (
-          <li key={row.artistId ?? `${row.creditedAs}-${row.details.join("|")}`}>
+        {rows.map((row, index) => (
+          <li key={row.artistId ?? `${index}-${row.creditedAs}`}>
             {row.artistId ? (
               <Link
                 href={`/artist/${row.artistId}`}
