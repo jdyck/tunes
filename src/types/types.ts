@@ -102,16 +102,6 @@ export interface RecordingPersonnelEntry {
   artists?: Artist | null;
 }
 
-/** Legacy import-row shape retained only by the inactive Supabase mapper. */
-export interface RecordingArtistCredit {
-  recording_id: string;
-  artist_id: string;
-  role: "performer";
-  credited_as: string;
-  sort_order?: number | null;
-  artists?: Artist | null;
-}
-
 export interface RecordingAttributionPart {
   id?: string;
   recording_id: string;

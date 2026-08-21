@@ -222,9 +222,8 @@ honest partial-success message if media persistence or enrichment fails.
   multi-candidate route.
 - Tune the documented ±3-second/near-twin thresholds against more real
   fixtures without changing the truthful state contract.
-- Remove legacy `recordings.year` / `album` and the scalar save overload only
-  in a separately reviewed contract migration after deployed clients and
-  unmatched/manual editing paths have replacements.
+- Remove legacy `recordings.year` / `album` only in a separately reviewed
+  contract migration after unmatched/manual editing paths have replacements.
 - After the Recording Personnel cutover has been verified and its rollback
   window has closed, remove `recordingArtistCredits` and the temporary migration
   markers only with fresh, explicit destructive-cleanup authorization.

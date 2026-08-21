@@ -63,6 +63,9 @@ export const personnelInputValidator = v.union(
 
 export type PersonnelInput = Infer<typeof personnelInputValidator>;
 
+export const normalizePersonnelText = (value: string) =>
+  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+
 const attributionCreditFields = {
   credited_as: v.string(),
   join_phrase: v.string(),
@@ -575,10 +578,8 @@ const normalizePersonnel = (personnel: PersonnelInput[]) => {
         if (!canonical) {
           throw new Error("Recording Personnel detail requires canonical text");
         }
-        const normalizedDetailText = (value: string) =>
-          value.replace(/\s+/g, " ").toLocaleLowerCase();
-        const key = `${normalizedDetailText(canonical)}\u0000${
-          creditedAs ? normalizedDetailText(creditedAs) : ""
+        const key = `${normalizePersonnelText(canonical)}\u0000${
+          creditedAs ? normalizePersonnelText(creditedAs) : ""
         }`;
         if (detailKeys.has(key)) {
           throw new Error("Recording Personnel contains a duplicate relationship detail");

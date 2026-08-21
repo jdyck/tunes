@@ -5,7 +5,7 @@ import type {
 } from "../types/types.ts";
 import type { Id } from "../../convex/_generated/dataModel.ts";
 
-export interface RecordingPersonnelEntry {
+export interface RecordingPersonnelDraftEntry {
   artistId: Id<"artists"> | null;
   musicbrainzArtistId: string | null;
   name: string;
@@ -13,6 +13,9 @@ export interface RecordingPersonnelEntry {
   kind: ArtistKind | null;
   relationships: RecordingPersonnelRelationship[];
 }
+
+export const normalizePersonnelText = (value: string) =>
+  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 
 export type RecordingPersonnelPayload =
   | {
@@ -32,7 +35,7 @@ export type RecordingPersonnelPayload =
 
 export const personnelEntriesToDraft = (
   entries: readonly SavedRecordingPersonnelEntry[],
-): RecordingPersonnelEntry[] =>
+): RecordingPersonnelDraftEntry[] =>
   entries.flatMap((entry) => {
     const artist = entry.artists;
     if (!artist) return [];
@@ -49,7 +52,7 @@ export const personnelEntriesToDraft = (
   });
 
 export const personnelEntriesToSavePayload = (
-  entries: readonly RecordingPersonnelEntry[],
+  entries: readonly RecordingPersonnelDraftEntry[],
 ): RecordingPersonnelPayload[] =>
   entries.map((entry) => {
     const common = {

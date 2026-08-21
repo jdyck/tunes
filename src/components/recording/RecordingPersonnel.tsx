@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { RecordingAttributionInput } from "@/utils/musicbrainzRecordingAttribution";
-import type { RecordingPersonnelEntry } from "@/utils/recordingPersonnel";
+import type { RecordingPersonnelDraftEntry } from "@/utils/recordingPersonnel";
 import { recordingPersonnelRows } from "@/utils/recordingPersonnelView";
 
 export default function RecordingPersonnel({
@@ -8,7 +8,7 @@ export default function RecordingPersonnel({
   personnel,
 }: {
   attribution: readonly RecordingAttributionInput[];
-  personnel: readonly RecordingPersonnelEntry[];
+  personnel: readonly RecordingPersonnelDraftEntry[];
 }) {
   const rows = recordingPersonnelRows(attribution, personnel);
   if (rows.length === 0) return null;

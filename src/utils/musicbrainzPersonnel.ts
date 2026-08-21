@@ -1,6 +1,9 @@
 import { decodeHtmlEntities } from "./htmlEntities.ts";
 import { normalizeMusicBrainzArtistKind } from "./musicbrainzArtistCredits.ts";
-import type { RecordingPersonnelEntry } from "./recordingPersonnel.ts";
+import {
+  normalizePersonnelText,
+  type RecordingPersonnelDraftEntry,
+} from "./recordingPersonnel.ts";
 import type { RecordingPersonnelDetail } from "../types/types.ts";
 import type { RecordingPersonnelRelationshipType } from "../types/types.ts";
 
@@ -22,15 +25,12 @@ const unsupportedQualifiers = new Set([
   "assistant",
 ]);
 
-const normalizedText = (value: string) =>
-  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
-
 const relationshipDetails = (
   relation: MusicBrainzPersonnelRelation,
 ): RecordingPersonnelDetail[] => {
   const details: RecordingPersonnelDetail[] = [];
   for (const attribute of relation.attributes ?? []) {
-    if (unsupportedQualifiers.has(normalizedText(attribute))) continue;
+    if (unsupportedQualifiers.has(normalizePersonnelText(attribute))) continue;
     const canonical = decodeHtmlEntities(
       relation["attribute-values"]?.[attribute] ?? attribute,
     ).trim();
@@ -45,16 +45,16 @@ const relationshipDetails = (
 };
 
 const detailKey = (detail: RecordingPersonnelDetail) =>
-  `${normalizedText(detail.canonical)}\u0000${
-    detail.credited_as ? normalizedText(detail.credited_as) : ""
+  `${normalizePersonnelText(detail.canonical)}\u0000${
+    detail.credited_as ? normalizePersonnelText(detail.credited_as) : ""
   }`;
 
 export const musicBrainzRecordingPersonnel = (
   relations: readonly MusicBrainzPersonnelRelation[],
-): RecordingPersonnelEntry[] => {
+): RecordingPersonnelDraftEntry[] => {
   const personnelByArtist = new Map<
     string,
-    RecordingPersonnelEntry & {
+    RecordingPersonnelDraftEntry & {
       detailsByType: Record<
         "instrument" | "vocal",
         Map<string, RecordingPersonnelDetail>

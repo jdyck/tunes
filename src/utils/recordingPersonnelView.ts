@@ -1,5 +1,8 @@
 import type { RecordingAttributionInput } from "./musicbrainzRecordingAttribution.ts";
-import type { RecordingPersonnelEntry } from "./recordingPersonnel.ts";
+import {
+  normalizePersonnelText,
+  type RecordingPersonnelDraftEntry,
+} from "./recordingPersonnel.ts";
 
 export interface RecordingPersonnelRow {
   artistId: string | null;
@@ -15,11 +18,8 @@ const relationshipOrder = {
   performer: 4,
 } as const;
 
-const normalizedLabel = (value: string) =>
-  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
-
 const relationshipLabels = (
-  relationship: RecordingPersonnelEntry["relationships"][number],
+  relationship: RecordingPersonnelDraftEntry["relationships"][number],
 ) => {
   if (relationship.type === "performer") return [];
   if (relationship.type === "conductor") return ["conductor"];
@@ -30,7 +30,7 @@ const relationshipLabels = (
   const labels = new Map<string, string>();
   for (const detail of relationship.details) {
     const label = detail.credited_as || detail.canonical;
-    const key = normalizedLabel(label);
+    const key = normalizePersonnelText(label);
     if (!labels.has(key)) labels.set(key, label);
   }
   return [...labels.values()].sort((left, right) =>
@@ -38,9 +38,16 @@ const relationshipLabels = (
   );
 };
 
+const personnelIdentity = (entry: RecordingPersonnelDraftEntry) =>
+  entry.artistId
+    ? `artist:${entry.artistId}`
+    : entry.musicbrainzArtistId
+      ? `musicbrainz:${entry.musicbrainzArtistId}`
+      : null;
+
 export const recordingPersonnelRows = (
   attribution: readonly RecordingAttributionInput[],
-  personnel: readonly RecordingPersonnelEntry[],
+  personnel: readonly RecordingPersonnelDraftEntry[],
 ): RecordingPersonnelRow[] => {
   const attributionOrder = new Map<string, number>();
   for (const [index, part] of attribution.entries()) {
@@ -57,16 +64,8 @@ export const recordingPersonnelRows = (
   return personnel
     .map((entry, sourceOrder) => ({ entry, sourceOrder }))
     .sort((left, right) => {
-      const leftIdentity = left.entry.artistId
-        ? `artist:${left.entry.artistId}`
-        : left.entry.musicbrainzArtistId
-          ? `musicbrainz:${left.entry.musicbrainzArtistId}`
-          : null;
-      const rightIdentity = right.entry.artistId
-        ? `artist:${right.entry.artistId}`
-        : right.entry.musicbrainzArtistId
-          ? `musicbrainz:${right.entry.musicbrainzArtistId}`
-          : null;
+      const leftIdentity = personnelIdentity(left.entry);
+      const rightIdentity = personnelIdentity(right.entry);
       const leftOrder = leftIdentity
         ? attributionOrder.get(leftIdentity)
         : undefined;

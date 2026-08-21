@@ -5,7 +5,7 @@ import { decodeHtmlEntities } from "./htmlEntities.ts";
 import {
   personnelEntriesToDraft,
   personnelEntriesToSavePayload,
-  type RecordingPersonnelEntry,
+  type RecordingPersonnelDraftEntry,
   type RecordingPersonnelPayload,
 } from "./recordingPersonnel.ts";
 import {
@@ -38,7 +38,7 @@ export interface RecordingDraft {
   musicbrainzReleaseId: string | null;
   releaseGroup: RecordingDraftReleaseGroup | null;
   attribution: RecordingAttributionInput[];
-  personnel: RecordingPersonnelEntry[];
+  personnel: RecordingPersonnelDraftEntry[];
 }
 
 export interface RecordingEditorState {

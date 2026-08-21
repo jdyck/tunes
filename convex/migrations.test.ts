@@ -245,3 +245,56 @@ test("verification rejects a missing canonical Personnel Artist", async () => {
     ),
   ).rejects.toThrow("missing Artist");
 });
+
+test("verification rejects more than 500 aggregate details across Artists", async () => {
+  const t = convexTest({ schema, modules });
+  migrationsComponent.register(t);
+  const owner = t.withIdentity(identity("migration-bounds-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "migration-bounds-song",
+    shared: songInput("Very Early"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "boundcheck1"),
+  );
+
+  await t.run(async (ctx) => {
+    for (const artistIndex of [0, 1]) {
+      const artistId = await ctx.db.insert("artists", {
+        name: `Personnel Artist ${artistIndex}`,
+        kind: "person",
+        musicbrainzArtistId: `mb-personnel-artist-${artistIndex}`,
+        legacySupabaseId: null,
+      });
+      await ctx.db.insert("recordingPersonnel", {
+        recordingId,
+        artistId,
+        creditedAs: `Personnel Artist ${artistIndex}`,
+        sortOrder: artistIndex,
+        relationships: [
+          {
+            type: "instrument",
+            details: Array.from({ length: 251 }, (_, detailIndex) => ({
+              canonical: `instrument-${artistIndex}-${detailIndex}`,
+              creditedAs: null,
+            })),
+          },
+        ],
+      });
+    }
+  });
+
+  await expect(
+    t.run((ctx) =>
+      runToCompletion(
+        ctx,
+        components.migrations,
+        internal.migrations.verifyRecordingPersonnel,
+        { cursor: null },
+      ),
+    ),
+  ).rejects.toThrow("more than 500 Personnel details");
+});

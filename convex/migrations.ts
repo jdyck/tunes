@@ -2,13 +2,11 @@ import { Migrations } from "@convex-dev/migrations";
 import { components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx } from "./_generated/server";
+import { normalizePersonnelText } from "./model/recordings";
 
 export const migrations = new Migrations(components.migrations, {
   internalMutation,
 });
-
-const normalizedText = (value: string) =>
-  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 
 const loadLegacyCredits = async (
   ctx: Pick<MutationCtx, "db">,
@@ -109,6 +107,7 @@ export const verifyRecordingPersonnel = migrations.define({
       throw new Error("Recording Personnel contains duplicate Artists");
     }
 
+    let detailCount = 0;
     for (const entry of personnel) {
       const artist = await ctx.db.get(entry.artistId);
       if (!artist) {
@@ -120,7 +119,6 @@ export const verifyRecordingPersonnel = migrations.define({
       if (entry.relationships.length === 0) {
         throw new Error("Recording Personnel requires a relationship");
       }
-      let detailCount = 0;
       const relationshipTypes = new Set<string>();
       for (const relationship of entry.relationships) {
         if (relationshipTypes.has(relationship.type)) {
@@ -140,8 +138,8 @@ export const verifyRecordingPersonnel = migrations.define({
           if (!detail.canonical.trim()) {
             throw new Error("Recording Personnel detail requires canonical text");
           }
-          const key = `${normalizedText(detail.canonical)}\u0000${
-            detail.creditedAs ? normalizedText(detail.creditedAs) : ""
+          const key = `${normalizePersonnelText(detail.canonical)}\u0000${
+            detail.creditedAs ? normalizePersonnelText(detail.creditedAs) : ""
           }`;
           if (details.has(key)) {
             throw new Error("Recording Personnel contains duplicate details");
@@ -154,9 +152,9 @@ export const verifyRecordingPersonnel = migrations.define({
           "Recording Personnel combines generic and specific relationships",
         );
       }
-      if (detailCount > 500) {
-        throw new Error("Recording Personnel exceeds 500 details");
-      }
+    }
+    if (detailCount > 500) {
+      throw new Error("Recording has more than 500 Personnel details");
     }
 
     if (recording.personnelMigrationKind === "legacy_backfill") {

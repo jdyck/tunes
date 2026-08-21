@@ -7,7 +7,7 @@
 
 import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
 import { musicBrainzRecordingPersonnel } from "../utils/musicbrainzPersonnel.ts";
-import type { RecordingPersonnelEntry } from "../utils/recordingPersonnel.ts";
+import type { RecordingPersonnelDraftEntry } from "../utils/recordingPersonnel.ts";
 import {
   formatMusicBrainzRecordingCredit,
   musicBrainzRecordingAttribution,
@@ -278,7 +278,7 @@ export interface ResolvedRecordingMatch {
   recordingDateEnd: string | null;
   recordingLocation: string | null;
   attribution: RecordingAttributionInput[];
-  personnel: RecordingPersonnelEntry[];
+  personnel: RecordingPersonnelDraftEntry[];
   releaseGroup: {
     title: string;
     musicbrainzReleaseGroupId: string;
