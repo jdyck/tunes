@@ -150,6 +150,17 @@ export const recordingDraftDidSave = (
   draft: state.draft,
 });
 
+export const recordingEditorStateAfterSave = (
+  state: RecordingEditorState,
+  savedRecording: SavedRecording,
+  saveWasCurrent: boolean,
+): RecordingEditorState => {
+  const savedState = recordingToEditorState(savedRecording);
+  return saveWasCurrent
+    ? savedState
+    : { ...savedState, draft: state.draft };
+};
+
 export const recordingDraftWithoutMusicBrainzMatch = (
   draft: RecordingDraft,
 ): RecordingDraft => ({

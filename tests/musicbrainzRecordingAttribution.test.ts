@@ -29,22 +29,28 @@ test("decodes and preserves every MusicBrainz Recording credit part", () => {
       },
     ]),
     [
-      {
-        musicbrainzArtistId: "duke-ellington",
+    {
+      artistId: null,
+      musicbrainzArtistId: "duke-ellington",
+      providerUnmatchedConfirmed: false,
         name: "Duke Ellington & His Orchestra",
         creditedAs: "Duke Ellington & His Orchestra",
         joinPhrase: " featuring ",
         kind: "orchestra",
       },
-      {
-        musicbrainzArtistId: "duke-ellington",
+    {
+      artistId: null,
+      musicbrainzArtistId: "duke-ellington",
+      providerUnmatchedConfirmed: false,
         name: "Duke Ellington",
         creditedAs: "Duke",
         joinPhrase: " / ",
         kind: "person",
       },
-      {
-        musicbrainzArtistId: "guests",
+    {
+      artistId: null,
+      musicbrainzArtistId: "guests",
+      providerUnmatchedConfirmed: false,
         name: "Guests",
         creditedAs: "Guests",
         joinPhrase: "",

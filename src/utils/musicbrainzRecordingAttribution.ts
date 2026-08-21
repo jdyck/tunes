@@ -1,10 +1,13 @@
 import type { ArtistKind } from "../types/types.ts";
+import type { Id } from "../../convex/_generated/dataModel.ts";
 import { decodeHtmlEntities } from "./htmlEntities.ts";
 import { normalizeMusicBrainzArtistKind } from "./musicbrainzArtistCredits.ts";
 import { formatRecordingAttribution } from "./recordingAttribution.ts";
 
 export interface RecordingAttributionInput {
-  musicbrainzArtistId: string;
+  artistId: Id<"artists"> | null;
+  musicbrainzArtistId: string | null;
+  providerUnmatchedConfirmed: boolean;
   name: string;
   creditedAs: string;
   joinPhrase: string;
@@ -34,7 +37,9 @@ export const musicBrainzRecordingAttribution = (
     }
 
     return {
+      artistId: null,
       musicbrainzArtistId,
+      providerUnmatchedConfirmed: false,
       name: decodeHtmlEntities(canonicalName),
       creditedAs: decodeHtmlEntities(credit.name ?? canonicalName),
       joinPhrase: decodeHtmlEntities(credit.joinphrase ?? ""),

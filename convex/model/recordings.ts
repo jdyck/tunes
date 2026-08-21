@@ -37,9 +37,31 @@ export const performerInputValidator = v.object({
 
 export type PerformerInput = Infer<typeof performerInputValidator>;
 
-export const attributionInputValidator = performerInputValidator.extend({
+const attributionCreditFields = {
+  credited_as: v.string(),
   join_phrase: v.string(),
-});
+};
+
+export const attributionInputValidator = v.union(
+  v.object({
+    type: v.literal("existing"),
+    artist_id: v.id("artists"),
+    ...attributionCreditFields,
+  }),
+  v.object({
+    type: v.literal("musicbrainz"),
+    name: v.string(),
+    kind: artistKindValidator,
+    musicbrainz_artist_id: v.string(),
+    ...attributionCreditFields,
+  }),
+  v.object({
+    type: v.literal("provider_unmatched"),
+    name: v.string(),
+    kind: artistKindValidator,
+    ...attributionCreditFields,
+  }),
+);
 
 export type AttributionInput = Infer<typeof attributionInputValidator>;
 
@@ -456,13 +478,20 @@ export const replaceAttribution = async (
     throw new Error("A Recording cannot have more than 100 Attribution parts");
   }
   for (const part of attribution) {
+    if (!part.credited_as.trim()) {
+      throw new Error(
+        "An Attribution part requires credited-as text",
+      );
+    }
     if (
-      !part.musicbrainz_artist_id.trim() ||
-      !part.credited_as.trim() ||
+      (part.type === "musicbrainz" || part.type === "provider_unmatched") &&
       !part.name.trim()
     ) {
+      throw new Error("An Attribution part requires an Artist name");
+    }
+    if (part.type === "musicbrainz" && !part.musicbrainz_artist_id.trim()) {
       throw new Error(
-        "An Attribution part requires credited-as text and a MusicBrainz Artist ID",
+        "A MusicBrainz Attribution part requires a MusicBrainz Artist ID",
       );
     }
   }
@@ -479,7 +508,17 @@ export const replaceAttribution = async (
   await Promise.all(existing.map((part) => ctx.db.delete(part._id)));
 
   for (const [sortOrder, part] of attribution.entries()) {
-    const artistId = await resolveArtist(ctx, part);
+    const artistId =
+      part.type === "existing"
+        ? await resolveExistingArtist(ctx, part.artist_id)
+        : part.type === "musicbrainz"
+          ? await resolveArtist(ctx, {
+              name: part.name,
+              credited_as: part.credited_as,
+              kind: part.kind,
+              musicbrainz_artist_id: part.musicbrainz_artist_id,
+            })
+          : await createProviderUnmatchedArtist(ctx, part);
     await ctx.db.insert("recordingArtistAttributions", {
       recordingId,
       artistId,
@@ -490,6 +529,26 @@ export const replaceAttribution = async (
     });
   }
 };
+
+const resolveExistingArtist = async (
+  ctx: MutationCtx,
+  artistId: Id<"artists">,
+) => {
+  const artist = await ctx.db.get(artistId);
+  if (!artist) throw new Error("Recording Attribution references a missing Artist");
+  return artist._id;
+};
+
+const createProviderUnmatchedArtist = async (
+  ctx: MutationCtx,
+  part: Extract<AttributionInput, { type: "provider_unmatched" }>,
+) =>
+  ctx.db.insert("artists", {
+    name: part.name.trim(),
+    kind: part.kind,
+    musicbrainzArtistId: null,
+    legacySupabaseId: null,
+  });
 
 export const normalizeTags = (tags: string[]) => {
   const byKey = new Map<string, string>();

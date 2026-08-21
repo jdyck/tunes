@@ -7,8 +7,8 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { useSavedRecording } from "@/hooks/useSavedRecording";
 import { useSaveLifecycle } from "@/hooks/useSaveLifecycle";
 import {
-  recordingDraftDidSave,
   recordingDraftAfterMusicBrainzLookup,
+  recordingEditorStateAfterSave,
   recordingDraftIsDirty,
   recordingDraftToPayload,
   recordingDraftWithoutMusicBrainzMatch,
@@ -273,17 +273,19 @@ export function useRecordingDetail(id: string, songId: string) {
 
     try {
       const payload = recordingDraftToPayload(recording, draft);
-      await updateRecording({
+      const savedRecording = await updateRecording({
         recordingId: id as Id<"recordings">,
         shared: payload.shared,
         privateData: payload.private,
       });
 
       setSaveError(null);
+      const saveWasCurrent = saveSucceeded(saveRevision);
       setEditorState((current) =>
-        current ? recordingDraftDidSave(current, draft) : current
+        !current
+          ? current
+          : recordingEditorStateAfterSave(current, savedRecording, saveWasCurrent)
       );
-      saveSucceeded(saveRevision);
     } catch (saveProblem) {
       const message = `Error saving data: ${errorMessage(saveProblem)}`;
       console.error("Error saving data:", saveProblem);

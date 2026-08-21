@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { SavedRecording } from "../src/types/types.ts";
 import {
-  recordingDraftDidSave,
+  recordingEditorStateAfterSave,
   recordingDraftAfterMusicBrainzLookup,
   recordingDraftIsDirty,
   recordingDraftToPayload,
@@ -82,6 +82,7 @@ test("creates one Recording draft while preserving the loaded save baseline", ()
   assert.equal(state.draft.artist, "Bill & Jane");
   assert.equal(state.draft.album, "Album & Context");
   assert.equal(state.baseline.name, "You &amp; the Night &amp; the Music");
+  assert.equal(state.draft.attribution[0]?.artistId, "artist-1");
   assert.equal(recordingDraftIsDirty(state), true);
 });
 
@@ -108,11 +109,10 @@ test("maps the complete Recording draft to the presence-aware RPC payload", () =
       },
       attribution: [
         {
-          name: "Bill & Jane",
+          type: "existing",
+          artist_id: "artist-1",
           credited_as: "Bill & Jane",
           join_phrase: "",
-          kind: "group",
-          musicbrainz_artist_id: "artist-mbid",
         },
       ],
       performers: [
@@ -166,6 +166,16 @@ test("serializes cleared optional fields explicitly", () => {
   assert.deepEqual(payload.private.tags, []);
 });
 
+test("keeps Attribution Fallback editable when structured Attribution is cleared", () => {
+  const recording = recordingFixture();
+  const { draft } = recordingToEditorState(recording);
+
+  assert.equal(draft.artist, "Bill & Jane");
+  const payload = recordingDraftToPayload(recording, { ...draft, attribution: [] });
+  assert.equal(payload.shared.artist, "Bill & Jane");
+  assert.deepEqual(payload.shared.attribution, []);
+});
+
 test("unlinking MusicBrainz clears source-only Personnel but retains Attribution", () => {
   const { draft } = recordingToEditorState(recordingFixture());
   const unlinked = recordingDraftWithoutMusicBrainzMatch(draft);
@@ -190,14 +200,18 @@ test("a resolved MusicBrainz match replaces the complete Attribution draft only 
     recordingLocation: null,
     attribution: [
       {
+        artistId: null,
         musicbrainzArtistId: "ella-mbid",
+        providerUnmatchedConfirmed: false,
         name: "Ella Fitzgerald",
         creditedAs: "Ella Fitzgerald",
         joinPhrase: " with ",
         kind: "person",
       },
       {
+        artistId: null,
         musicbrainzArtistId: "louis-mbid",
+        providerUnmatchedConfirmed: false,
         name: "Louis Armstrong",
         creditedAs: "Louis Armstrong",
         joinPhrase: "",
@@ -223,17 +237,25 @@ test("a failed MusicBrainz lookup preserves the current Attribution draft", () =
   assert.equal(recordingDraftAfterMusicBrainzLookup(draft, null), draft);
 });
 
-test("keeps edits made during an in-flight save dirty", () => {
+test("rehydrates saved canonical Artist IDs while preserving newer in-flight edits", () => {
   const initial = recordingToEditorState(recordingFixture());
-  const savedDraft = { ...initial.draft, notes: "Sent to the server" };
   const current = {
     baseline: initial.baseline,
-    draft: { ...savedDraft, notes: "Typed while saving" },
+    draft: { ...initial.draft, notes: "Typed while saving" },
   };
 
-  const afterSave = recordingDraftDidSave(current, savedDraft);
+  const afterSave = recordingEditorStateAfterSave(
+    current,
+    recordingFixture(),
+    false,
+  );
 
-  assert.equal(afterSave.baseline.notes, "Sent to the server");
+  assert.equal(afterSave.baseline.notes, "Practice the bridge");
   assert.equal(afterSave.draft.notes, "Typed while saving");
   assert.equal(recordingDraftIsDirty(afterSave), true);
+  assert.equal(
+    recordingEditorStateAfterSave(initial, recordingFixture(), true)
+      .draft.attribution[0]?.artistId,
+    "artist-1",
+  );
 });

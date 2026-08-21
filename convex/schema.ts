@@ -73,6 +73,7 @@ export default defineSchema({
     legacySupabaseId: nullableString,
   })
     .index("by_musicbrainzArtistId", ["musicbrainzArtistId"])
+    .searchIndex("search_name", { searchField: "name" })
     .index("by_legacySupabaseId", ["legacySupabaseId"]),
 
   artistUserData: defineTable({

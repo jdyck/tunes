@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -26,9 +25,9 @@ import DeleteButton from "@/components/ui/DeleteButton";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import { useRecordingDetail } from "@/hooks/useRecordingDetail";
 import { RecordingKind } from "@/types/types";
-import { formatRecordingAttribution } from "@/utils/recordingAttribution";
 import type { RecordingDraft } from "@/utils/recordingDraft";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
+import RecordingAttributionEditor from "@/components/recording/RecordingAttributionEditor";
 
 type RecordingDraftTextField =
   | "name"
@@ -99,18 +98,6 @@ export default function RecordingDetailContent({
   const notes = draft?.notes ?? "";
   const artist = draft?.artist ?? "";
   const attribution = draft?.attribution ?? [];
-  const attributionText = formatRecordingAttribution(
-    attribution.map((part, sortOrder) => ({
-      credited_as: part.creditedAs,
-      join_phrase: part.joinPhrase,
-      sort_order: sortOrder,
-    })),
-  );
-  const savedAttributionByMusicBrainzId = new Map(
-    (recording?.recording_artist_attributions ?? [])
-      .filter((part) => part.artists?.musicbrainz_artist_id)
-      .map((part) => [part.artists!.musicbrainz_artist_id!, part]),
-  );
   const album = draft?.album ?? "";
   const year = draft?.year ?? "";
   const recordingDateStart = draft?.recordingDateStart ?? "";
@@ -220,38 +207,24 @@ export default function RecordingDetailContent({
         </div>
 
         <div className="mb-4">
-          {attribution.length > 0 && (
-            <div className="mb-4">
-              <span className="block text-xs text-ink-600">Attribution</span>
-              <p className="p-1.5" aria-label={attributionText ?? undefined}>
-                {attribution.map((part, index) => {
-                  const savedPart = savedAttributionByMusicBrainzId.get(
-                    part.musicbrainzArtistId,
-                  );
-                  return (
-                    <span key={`${part.musicbrainzArtistId}-${index}`}>
-                      {savedPart?.artists ? (
-                        <Link
-                          href={`/artist/${savedPart.artists.id}`}
-                          className="hover:text-azure-600"
-                        >
-                          {part.creditedAs}
-                        </Link>
-                      ) : (
-                        part.creditedAs
-                      )}
-                      {part.joinPhrase}
-                    </span>
-                  );
-                })}
-              </p>
-            </div>
-          )}
+          <RecordingAttributionEditor
+            value={attribution}
+            onChange={(next) => patchDraft({ attribution: next })}
+          />
           <FormField
-            label={attribution.length > 0 ? "Attribution fallback" : "Artist"}
+            label="Attribution fallback"
             value={artist}
             onChange={handleDraftTextChange("artist")}
           />
+          {artist && (
+            <button
+              type="button"
+              onClick={() => patchDraft({ artist: "" })}
+              className="mt-1 text-xs text-vermillion-600 underline"
+            >
+              Clear attribution fallback
+            </button>
+          )}
         </div>
         <label className="block mb-4">
           <span className="block text-xs text-ink-600">Recording kind</span>

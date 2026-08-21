@@ -120,6 +120,21 @@ export const getIdentity = query({
   },
 });
 
+export const search = query({
+  args: { query: v.string() },
+  returns: v.array(artistIdentityViewValidator),
+  handler: async (ctx, { query: searchQuery }) => {
+    await getCurrentUser(ctx);
+    const term = searchQuery.trim();
+    if (!term) return [];
+    const artists = await ctx.db
+      .query("artists")
+      .withSearchIndex("search_name", (index) => index.search("name", term))
+      .take(25);
+    return artists.map(toArtistIdentityView);
+  },
+});
+
 export const getMine = query({
   args: { artistId: v.id("artists") },
   returns: v.union(
