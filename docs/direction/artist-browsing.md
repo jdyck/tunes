@@ -3,9 +3,9 @@
 The Artists destination follows the Songs-pane pattern: a searchable, sortable
 list on the left and the selected Artist in the parallel detail pane. It brings
 together Songs on which the Artist has a writer credit, saved Recordings on
-which the Artist has a structured performer credit, and Release Group
-Attributions reached through the User's saved Recordings. Artist kind and a
-direct MusicBrainz link appear when that canonical metadata is available.
+which the Artist has a structured Recording Attribution or Personnel credit.
+Artist kind and a direct MusicBrainz link appear when that canonical metadata
+is available.
 
 ## Remaining detail enrichment
 
@@ -23,9 +23,10 @@ Per [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md), Ar
 
 The schema exposes `artists` as the single shared canonical identity, private
 notes/tags in `artistUserData` (at most one row per User/Artist), and
-role-bearing `songArtistCredits` / `recordingArtistCredits` relationships.
-Build browsing on those Artist-backed surfaces; do not reintroduce a separate
-Person identity for Song writers.
+role-bearing `songArtistCredits` / `recordingArtistCredits` relationships,
+plus identity-bearing `recordingArtistAttributions`. Build browsing on those
+Artist-backed surfaces; do not reintroduce a separate Person identity for Song
+writers.
 
 The product distinguishes a Recording's structured Attribution from its
 structured Personnel relationships. Both use the same canonical Artist
@@ -37,29 +38,33 @@ relationship. Do not infer group members or performers from either the
 Attribution or its fallback. A group credit does not stand in for its members;
 both can be represented when the evidence supports both relationships.
 
-A Release Group Attribution is another structured Artist-backed surface, not a
-Song Credit or Recording Personnel evidence. When a User has saved a Recording
-from that Release Group, its attributed Artists are reachable in the User's
-Artists view and link to their local Artist detail. Artist detail must describe
-that Release Group path rather than implying authorship of the Song or a
-performance relationship to the Recording.
-
 Artist detail presents each reachable saved Recording as its own row rather
-than introducing a Release Group detail page. A Release Group-derived row names
-the album-credit provenance and Release Group title. If the same Artist is also
-connected to that Recording through Recording Attribution or Personnel, keep
-one Recording row and show its several reasons rather than duplicating it.
-The Artists-list Recording count likewise counts distinct saved Recordings
-across all three paths, not relationships or Release Groups.
+than one row per relationship. The row identifies whether the Artist is related
+through Recording Attribution, Personnel, or both. The Artists-list Recording
+count likewise counts distinct saved Recordings across those two paths, not
+relationship rows.
 
-The Artists pane lists all Artist kinds rather than silently filtering out groups. Kind can be shown only when useful for disambiguation or filtering; it does not need to clutter every row. Compositions come from Song-to-Artist credits whose role is composer, lyricist, or writer. Recordings come from structured Recording-to-Artist credits.
+A Release Group Attribution is a future structured Artist-backed surface, not
+a Song Credit or Recording Personnel evidence. When it is introduced, a saved
+Recording may make its attributed Artists reachable, but Artist detail must
+describe that album-credit path without implying authorship of the Song or a
+performance relationship to the Recording. It must extend the existing
+deduplicated Recording row rather than introduce a Release Group detail page.
+
+The Artists pane lists all Artist kinds rather than silently filtering out
+groups. Kind can be shown only when useful for disambiguation or filtering; it
+does not need to clutter every row. Compositions come from Song-to-Artist
+credits whose role is composer, lyricist, or writer. Recordings come from
+structured Recording Attribution and Personnel credits.
 
 Convex composes this User-specific browsing view on the backend. `artists:listMine`
 counts each Artist once per owned Song and once per saved Recording, even when
-several structured credits point to the same Artist. `artists:getMine` returns
-the canonical identity together with only the current User's Songs, saved
-Recordings, Recording Song titles, and optional private Artist row. React does
-not rebuild these joins from unrelated global queries.
+several structured credits point to the same Artist. `artists:getMine` begins
+Recording traversal with the current User's saved-recording memberships and
+returns the canonical identity together with only the current User's Songs,
+saved Recordings (including their relationship reasons), Recording Song titles,
+and optional private Artist row. React does not rebuild these joins from
+unrelated global queries.
 
 Structured Recording performer credits are populated when a User confirms a
 MusicBrainz Recording match. Their absence remains an ordinary empty state

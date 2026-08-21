@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { getCurrentUser, requireAdmin } from "./model/auth";
 import {
@@ -15,6 +16,36 @@ import {
 
 const nullableString = v.union(v.string(), v.null());
 const repertoireLimit = 500;
+const recordingRelationshipReasonValidator = v.union(
+  v.literal("attribution"),
+  v.literal("personnel"),
+);
+const artistRecordingViewValidator = savedRecordingViewValidator.extend({
+  relationship_reasons: v.array(recordingRelationshipReasonValidator),
+});
+
+const loadRecordingArtistRelationships = async (
+  ctx: Pick<QueryCtx, "db">,
+  recordingId: Id<"recordings">,
+) => {
+  const [personnel, attribution] = await Promise.all([
+    ctx.db
+      .query("recordingArtistCredits")
+      .withIndex("by_recordingId", (index) => index.eq("recordingId", recordingId))
+      .take(101),
+    ctx.db
+      .query("recordingArtistAttributions")
+      .withIndex("by_recordingId", (index) => index.eq("recordingId", recordingId))
+      .take(101),
+  ]);
+  if (personnel.length > 100) {
+    throw new Error("Recording Personnel exceeds 100 credits");
+  }
+  if (attribution.length > 100) {
+    throw new Error("Recording Attribution exceeds 100 parts");
+  }
+  return { personnel, attribution };
+};
 
 const takeRepertoire = async <Value>(load: (limit: number) => Promise<Value[]>) => {
   const values = await load(repertoireLimit + 1);
@@ -72,23 +103,10 @@ export const listMine = query({
       addCounts(new Set(credits.map((credit) => credit.artistId)), "songCount");
     }
     for (const membership of recordingMemberships) {
-      const [personnel, attribution] = await Promise.all([
-        ctx.db
-          .query("recordingArtistCredits")
-          .withIndex("by_recordingId", (index) =>
-            index.eq("recordingId", membership.recordingId),
-          )
-          .take(100),
-        ctx.db
-          .query("recordingArtistAttributions")
-          .withIndex("by_recordingId", (index) =>
-            index.eq("recordingId", membership.recordingId),
-          )
-          .take(101),
-      ]);
-      if (attribution.length > 100) {
-        throw new Error("Recording Attribution exceeds 100 parts");
-      }
+      const { personnel, attribution } = await loadRecordingArtistRelationships(
+        ctx,
+        membership.recordingId,
+      );
       addCounts(
         new Set([...personnel, ...attribution].map((credit) => credit.artistId)),
         "recordingCount",
@@ -150,7 +168,7 @@ export const getMine = query({
         v.null(),
       ),
       songs: v.array(ownedSongViewValidator),
-      recordings: v.array(savedRecordingViewValidator),
+      recordings: v.array(artistRecordingViewValidator),
       recording_song_titles: v.array(
         v.object({ song_id: v.id("songs"), title: v.string() }),
       ),
@@ -162,7 +180,7 @@ export const getMine = query({
     const artist = await ctx.db.get(artistId);
     if (!artist) return null;
 
-    const [privateData, songCredits, recordingCredits, attributionParts] = await Promise.all([
+    const [privateData, songCredits, recordingMemberships] = await Promise.all([
       ctx.db
         .query("artistUserData")
         .withIndex("by_userId_and_artistId", (index) =>
@@ -174,18 +192,13 @@ export const getMine = query({
         .withIndex("by_artistId", (index) => index.eq("artistId", artistId))
         .take(repertoireLimit + 1),
       ctx.db
-        .query("recordingArtistCredits")
-        .withIndex("by_artistId", (index) => index.eq("artistId", artistId))
-        .take(repertoireLimit + 1),
-      ctx.db
-        .query("recordingArtistAttributions")
-        .withIndex("by_artistId", (index) => index.eq("artistId", artistId))
+        .query("userRecordingData")
+        .withIndex("by_userId", (index) => index.eq("userId", user._id))
         .take(repertoireLimit + 1),
     ]);
     if (
       songCredits.length > repertoireLimit ||
-      recordingCredits.length > repertoireLimit ||
-      attributionParts.length > repertoireLimit
+      recordingMemberships.length > repertoireLimit
     ) {
       throw new Error("Artist detail supports up to 500 credited items");
     }
@@ -204,31 +217,49 @@ export const getMine = query({
       songs.push(await toOwnedSongView(ctx, song, membership));
     }
 
-    const recordings = [];
-    for (const recordingId of new Set(
-      [...recordingCredits, ...attributionParts].map(
-        (credit) => credit.recordingId,
-      ),
-    )) {
-      const membership = await ctx.db
-        .query("userRecordingData")
-        .withIndex("by_userId_and_recordingId", (index) =>
-          index.eq("userId", user._id).eq("recordingId", recordingId),
-        )
-        .unique();
-      if (!membership) continue;
-      const recording = await ctx.db.get(recordingId);
-      if (!recording) {
-        throw new Error("Artist credit references a missing Recording");
-      }
-      recordings.push(await toSavedRecordingView(ctx, recording, membership));
-    }
-    recordings.sort(
+    const recordings = await Promise.all(
+      [...new Map(
+        recordingMemberships.map((membership) => [
+          membership.recordingId,
+          membership,
+        ]),
+      ).values()].map(async (membership) => {
+        const [relationships, recording] = await Promise.all([
+          loadRecordingArtistRelationships(ctx, membership.recordingId),
+          ctx.db.get(membership.recordingId),
+        ]);
+        if (!recording) {
+          throw new Error("Saved Recording references a missing Recording");
+        }
+
+        const { personnel, attribution } = relationships;
+
+        const relationshipReasons = [
+          ...(attribution.some((part) => part.artistId === artistId)
+            ? ["attribution" as const]
+            : []),
+          ...(personnel.some((credit) => credit.artistId === artistId)
+            ? ["personnel" as const]
+            : []),
+        ];
+        if (relationshipReasons.length === 0) return null;
+
+        return {
+          ...(await toSavedRecordingView(ctx, recording, membership)),
+          relationship_reasons: relationshipReasons,
+        };
+      }),
+    );
+    const reachableRecordings = recordings.filter(
+      (recording): recording is NonNullable<typeof recording> =>
+        recording !== null,
+    );
+    reachableRecordings.sort(
       (left, right) => left.user_data.sort_order - right.user_data.sort_order,
     );
     const recordingSongTitles = [];
     for (const songId of new Set(
-      recordings.map((recording) => recording.song_id),
+      reachableRecordings.map((recording) => recording.song_id),
     )) {
       const [song, membership] = await Promise.all([
         ctx.db.get(songId),
@@ -259,7 +290,7 @@ export const getMine = query({
           }
         : null,
       songs,
-      recordings,
+      recordings: reachableRecordings,
       recording_song_titles: recordingSongTitles,
     };
   },
