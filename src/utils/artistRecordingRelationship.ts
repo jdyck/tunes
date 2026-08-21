@@ -1,7 +1,8 @@
-export type ArtistRecordingRelationshipReason = "attribution" | "personnel";
+export type ArtistRecordingRelationshipReason =
+  "release_group_attribution" | "attribution" | "personnel";
 
 const relationshipReasonLabels: Record<
-  ArtistRecordingRelationshipReason,
+  Exclude<ArtistRecordingRelationshipReason, "release_group_attribution">,
   string
 > = {
   attribution: "Recording Attribution",
@@ -10,7 +11,14 @@ const relationshipReasonLabels: Record<
 
 export const formatArtistRecordingRelationshipReasons = (
   reasons?: readonly ArtistRecordingRelationshipReason[],
+  releaseGroupTitle?: string | null,
 ) => {
-  const label = reasons?.map((reason) => relationshipReasonLabels[reason]).join(" · ");
+  const label = reasons
+    ?.map((reason) =>
+      reason === "release_group_attribution"
+        ? `Album credit${releaseGroupTitle ? `: ${releaseGroupTitle}` : ""}`
+        : relationshipReasonLabels[reason],
+    )
+    .join(" · ");
   return label || null;
 };

@@ -2,10 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import {
-  ChevronRightIcon,
-  PlayIcon,
-} from "@heroicons/react/20/solid";
+import { ChevronRightIcon, PlayIcon } from "@heroicons/react/20/solid";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import { usePlayer } from "@/components/player/GlobalPlayer";
 import RecordingListRow from "@/components/recording/RecordingListRow";
@@ -29,19 +26,14 @@ const kindLabels: Record<ArtistKind, string> = {
 
 export default function ArtistDetailContent({ id }: { id: string }) {
   const { play } = usePlayer();
-  const {
-    artist,
-    songs,
-    recordings,
-    recordingSongTitles,
-    loading,
-  } = useArtistDetail(id);
+  const { artist, songs, recordings, recordingSongTitles, loading } =
+    useArtistDetail(id);
 
   const artistSongs = useMemo(
     () =>
       songs
         .filter((song) =>
-          (song.song_artist_credits ?? []).some((c) => c.artists?.id === id)
+          (song.song_artist_credits ?? []).some((c) => c.artists?.id === id),
         )
         .map((song) => ({
           id: song.id,
@@ -49,7 +41,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
           year: song.year,
           credit: formatWriterCredit(song.song_artist_credits ?? []),
         })),
-    [songs, id]
+    [songs, id],
   );
 
   const songTitleById = useMemo(() => {
@@ -108,9 +100,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                   className="mt-1 block text-right text-xs text-azure-600 underline"
                 >
                   Image source
-                  {artist.image_license
-                    ? ` · ${artist.image_license}`
-                    : ""}
+                  {artist.image_license ? ` · ${artist.image_license}` : ""}
                 </a>
               )}
             </div>
@@ -191,6 +181,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                 const relationshipReasons =
                   formatArtistRecordingRelationshipReasons(
                     recording.relationship_reasons,
+                    recording.release_groups?.title,
                   );
                 return (
                   <li

@@ -19,6 +19,16 @@ test("formats several Artist Recording relationship reasons on one row", () => {
   );
 });
 
+test("labels an album-credit relationship with its Release Group title", () => {
+  assert.equal(
+    formatArtistRecordingRelationshipReasons(
+      ["release_group_attribution", "attribution", "personnel"],
+      "Ella and Louis",
+    ),
+    "Album credit: Ella and Louis · Recording Attribution · Personnel",
+  );
+});
+
 test("omits the relationship label for an older Artist Recording view", () => {
   assert.equal(
     formatArtistRecordingRelationshipReasons(

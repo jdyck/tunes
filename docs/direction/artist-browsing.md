@@ -3,7 +3,8 @@
 The Artists destination follows the Songs-pane pattern: a searchable, sortable
 list on the left and the selected Artist in the parallel detail pane. It brings
 together Songs on which the Artist has a writer credit, saved Recordings on
-which the Artist has a structured Recording Attribution or Personnel credit.
+which the Artist has a structured Recording Attribution, Release Group
+Attribution, or Personnel credit.
 Artist kind and a direct MusicBrainz link appear when that canonical metadata
 is available.
 
@@ -24,9 +25,9 @@ Per [ADR-0008](../adr/0008-provider-neutral-music-entities-and-user-data.md), Ar
 The schema exposes `artists` as the single shared canonical identity, private
 notes/tags in `artistUserData` (at most one row per User/Artist), and
 role-bearing `songArtistCredits` / `recordingArtistCredits` relationships,
-plus identity-bearing `recordingArtistAttributions`. Build browsing on those
-Artist-backed surfaces; do not reintroduce a separate Person identity for Song
-writers.
+plus identity-bearing `recordingArtistAttributions` and
+`releaseGroupArtistAttributions`. Build browsing on those Artist-backed
+surfaces; do not reintroduce a separate Person identity for Song writers.
 
 The product distinguishes a Recording's structured Attribution from its
 structured Personnel relationships. Both use the same canonical Artist
@@ -39,32 +40,30 @@ Attribution or its fallback. A group credit does not stand in for its members;
 both can be represented when the evidence supports both relationships.
 
 Artist detail presents each reachable saved Recording as its own row rather
-than one row per relationship. The row identifies whether the Artist is related
-through Recording Attribution, Personnel, or both. The Artists-list Recording
-count likewise counts distinct saved Recordings across those two paths, not
-relationship rows.
-
-Release Group Attribution is a structured Artist-backed album credit, not a
-Song Credit or Recording Personnel evidence. Artist browsing does not yet
-traverse that path; when it does, Artist detail must describe the album-credit
-path without implying authorship of the Song or a performance relationship to
-the Recording. It must extend the existing deduplicated Recording row rather
-than introduce a Release Group detail page.
+than one row per relationship. The row identifies every applicable path:
+Recording Attribution, Release Group Attribution, and/or Personnel. A
+Release Group path is labeled as an album credit with the Release Group title;
+it never implies Song authorship or a performance relationship. The
+Artists-list Recording count likewise counts distinct saved Recordings across
+all three paths, not relationship rows. No Release Group detail page is needed
+for this navigation.
 
 The Artists pane lists all Artist kinds rather than silently filtering out
 groups. Kind can be shown only when useful for disambiguation or filtering; it
 does not need to clutter every row. Compositions come from Song-to-Artist
 credits whose role is composer, lyricist, or writer. Recordings come from
-structured Recording Attribution and Personnel credits.
+structured Recording Attribution, Release Group Attribution, and Personnel
+credits.
 
 Convex composes this User-specific browsing view on the backend. `artists:listMine`
 counts each Artist once per owned Song and once per saved Recording, even when
-several structured credits point to the same Artist. `artists:getMine` begins
-Recording traversal with the current User's saved-recording memberships and
-returns the canonical identity together with only the current User's Songs,
-saved Recordings (including their relationship reasons), Recording Song titles,
-and optional private Artist row. React does not rebuild these joins from
-unrelated global queries.
+several structured credit paths point to the same Artist. `artists:getMine`
+begins Recording traversal with the current User's saved-recording memberships,
+then follows the Recording's Release Group when present. It returns the
+canonical identity together with only the current User's Songs, saved
+Recordings (including their relationship reasons and Release Group title),
+Recording Song titles, and optional private Artist row. React does not rebuild
+these joins from unrelated global queries.
 
 Structured Recording performer credits are populated when a User confirms a
 MusicBrainz Recording match. Their absence remains an ordinary empty state

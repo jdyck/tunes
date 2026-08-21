@@ -15,16 +15,18 @@ import {
 export default function RecordingAttributionEditor({
   value,
   onChange,
+  label = "Attribution",
+  description = "Add each credited Artist in order. Following text is preserved exactly.",
 }: {
   value: RecordingAttributionInput[];
   onChange: (next: RecordingAttributionInput[]) => void;
+  label?: string;
+  description?: string;
 }) {
   return (
     <fieldset className="mb-4">
-      <legend className="block text-xs text-ink-600">Attribution</legend>
-      <p className="mb-2 text-xs text-ink-600">
-        Add each credited Artist in order. Following text is preserved exactly.
-      </p>
+      <legend className="block text-xs text-ink-600">{label}</legend>
+      <p className="mb-2 text-xs text-ink-600">{description}</p>
       <div className="space-y-3">
         {value.map((part, index) => (
           <AttributionPartEditor
@@ -34,9 +36,11 @@ export default function RecordingAttributionEditor({
             canMoveUp={index > 0}
             canMoveDown={index < value.length - 1}
             onChange={(next) =>
-              onChange(value.map((current, currentIndex) =>
-                currentIndex === index ? next : current,
-              ))
+              onChange(
+                value.map((current, currentIndex) =>
+                  currentIndex === index ? next : current,
+                ),
+              )
             }
             onMove={(to) => onChange(moveAttributionPart(value, index, to))}
             onRemove={() => onChange(removeAttributionPart(value, index))}
@@ -105,9 +109,13 @@ function AttributionPartEditor({
           ))}
         </div>
       )}
-      {!part.artistId && !part.musicbrainzArtistId && part.name.trim() && (
-        matchingArtists === undefined ? (
-          <p className="mt-1 text-xs text-ink-600">Searching existing Artists…</p>
+      {!part.artistId &&
+        !part.musicbrainzArtistId &&
+        part.name.trim() &&
+        (matchingArtists === undefined ? (
+          <p className="mt-1 text-xs text-ink-600">
+            Searching existing Artists…
+          </p>
         ) : part.providerUnmatchedConfirmed ? (
           <p className="mt-1 text-xs text-ink-600">
             A provider-unmatched Artist will be created when you save.
@@ -120,13 +128,14 @@ function AttributionPartEditor({
           >
             None of these match — create a provider-unmatched Artist
           </button>
-        )
-      )}
+        ))}
       <label className="mt-2 block">
         <span className="block text-xs text-ink-600">Credited as</span>
         <input
           value={part.creditedAs}
-          onChange={(event) => onChange({ ...part, creditedAs: event.target.value })}
+          onChange={(event) =>
+            onChange({ ...part, creditedAs: event.target.value })
+          }
           required
           className="block w-full p-1.5 rounded-md border border-paper-600"
         />
@@ -135,7 +144,9 @@ function AttributionPartEditor({
         <span className="block text-xs text-ink-600">Following text</span>
         <input
           value={part.joinPhrase}
-          onChange={(event) => onChange({ ...part, joinPhrase: event.target.value })}
+          onChange={(event) =>
+            onChange({ ...part, joinPhrase: event.target.value })
+          }
           className="block w-full p-1.5 rounded-md border border-paper-600 font-mono"
           placeholder="For example:  with "
         />
@@ -157,7 +168,11 @@ function AttributionPartEditor({
         >
           Move down
         </button>
-        <button type="button" onClick={onRemove} className="text-vermillion-600 underline">
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-vermillion-600 underline"
+        >
           Remove
         </button>
       </div>

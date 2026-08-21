@@ -41,6 +41,49 @@ const youtubeInput = (songId: Id<"songs">) => ({
   metadataFetchedAt: "2026-08-17T00:00:00.000Z",
 });
 
+const recordingUpdateInput = (
+  recordingId: Id<"recordings">,
+  name: string,
+  notes: string,
+) => ({
+  recordingId,
+  shared: {
+    name,
+    kind: "released" as const,
+    artist: "Example Artist",
+    album: "Example Album",
+    year: "1958",
+    duration: "3:05",
+    musicbrainz_recording_id: "mb-recording-id",
+    musicbrainz_release_id: "mb-release-id",
+    recording_date_start: "1958-03",
+    recording_date_end: null,
+    recording_location: "New York",
+    release_group: null as {
+      title: string;
+      musicbrainz_release_group_id: string;
+      attribution: {
+        type: "musicbrainz";
+        name: string;
+        credited_as: string;
+        join_phrase: string;
+        kind: "person";
+        musicbrainz_artist_id: string;
+      }[];
+    } | null,
+    attribution: [],
+    performers: [],
+  },
+  privateData: {
+    key: null,
+    tempo: null,
+    notes,
+    rating: null,
+    sort_order: null,
+    tags: [],
+  },
+});
+
 test("requires authentication for Artist browsing", async () => {
   const t = convexTest({ schema, modules });
   await expect(t.query(api.artists.listMine, {})).rejects.toThrow(
@@ -58,23 +101,29 @@ test("searches existing canonical Artists for authenticated Users", async () => 
   await owner.mutation(api.songs.create, {
     requestId: "artist-search-song",
     shared: songInput("How High the Moon"),
-    writers: [{
-      artistId: null,
-      canonicalName: "Ella Fitzgerald",
-      creditedAs: "Ella Fitzgerald",
-      role: "composer",
-      artistKind: "person",
-      musicbrainzArtistId: "mb-ella-fitzgerald",
-    }],
+    writers: [
+      {
+        artistId: null,
+        canonicalName: "Ella Fitzgerald",
+        creditedAs: "Ella Fitzgerald",
+        role: "composer",
+        artistKind: "person",
+        musicbrainzArtistId: "mb-ella-fitzgerald",
+      },
+    ],
   });
 
-  await expect(owner.query(api.artists.search, { query: "Ella" })).resolves.toEqual([
+  await expect(
+    owner.query(api.artists.search, { query: "Ella" }),
+  ).resolves.toEqual([
     expect.objectContaining({
       name: "Ella Fitzgerald",
       musicbrainz_artist_id: "mb-ella-fitzgerald",
     }),
   ]);
-  await expect(owner.query(api.artists.search, { query: " " })).resolves.toEqual([]);
+  await expect(
+    owner.query(api.artists.search, { query: " " }),
+  ).resolves.toEqual([]);
 });
 
 test("counts only the current User's Songs and saved Recordings", async () => {
@@ -124,7 +173,28 @@ test("counts only the current User's Songs and saved Recordings", async () => {
       recording_date_start: "1954",
       recording_date_end: null,
       recording_location: null,
-      release_group: null,
+      release_group: {
+        title: "Ella and Louis",
+        musicbrainz_release_group_id: "ella-and-louis",
+        attribution: [
+          {
+            type: "musicbrainz" as const,
+            name: "Ella Fitzgerald",
+            credited_as: "Ella Fitzgerald",
+            join_phrase: " & ",
+            kind: "person" as const,
+            musicbrainz_artist_id: "mb-ella-fitzgerald",
+          },
+          {
+            type: "musicbrainz" as const,
+            name: "Sarah Vaughan",
+            credited_as: "Sarah Vaughan",
+            join_phrase: "",
+            kind: "person" as const,
+            musicbrainz_artist_id: "mb-sarah-vaughan",
+          },
+        ],
+      },
       attribution: [
         {
           type: "musicbrainz" as const,
@@ -190,6 +260,11 @@ test("counts only the current User's Songs and saved Recordings", async () => {
         songCount: 0,
         recordingCount: 1,
       }),
+      expect.objectContaining({
+        name: "Ella Fitzgerald",
+        songCount: 0,
+        recordingCount: 1,
+      }),
     ]),
   );
   const otherArtists = await other.query(api.artists.listMine, {});
@@ -214,6 +289,7 @@ test("counts only the current User's Songs and saved Recordings", async () => {
   expect(ownerDetail?.recordings).toHaveLength(1);
   expect(ownerDetail?.recordings[0].user_data.notes).toBe("Owner only");
   expect(ownerDetail?.recordings[0].relationship_reasons).toEqual([
+    "release_group_attribution",
     "attribution",
     "personnel",
   ]);
@@ -240,6 +316,136 @@ test("counts only the current User's Songs and saved Recordings", async () => {
   await expect(
     other.query(api.artists.getMine, { artistId: attributionArtist.id }),
   ).resolves.toMatchObject({ recordings: [] });
+
+  const releaseGroupArtist = ownerArtists.find(
+    (artist) => artist.name === "Ella Fitzgerald",
+  );
+  if (!releaseGroupArtist)
+    throw new Error("Expected Release Group Attribution Artist");
+  await expect(
+    owner.query(api.artists.getMine, { artistId: releaseGroupArtist.id }),
+  ).resolves.toMatchObject({
+    recordings: [
+      {
+        id: recordingId,
+        release_groups: { title: "Ella and Louis" },
+        relationship_reasons: ["release_group_attribution"],
+        user_data: { notes: "Owner only" },
+      },
+    ],
+  });
+  await expect(
+    other.query(api.artists.getMine, { artistId: releaseGroupArtist.id }),
+  ).resolves.toMatchObject({ recordings: [] });
+});
+
+test("browses each User's saved Recordings through one shared Release Group", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("album-credit-owner"));
+  const other = t.withIdentity(identity("album-credit-other"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  await other.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "album-credit-song",
+    shared: songInput("A Foggy Day"),
+    writers: [],
+  });
+  const firstRecordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId),
+  );
+  const secondRecordingId = await owner.mutation(api.recordings.saveYoutube, {
+    ...youtubeInput(songId),
+    videoId: "lmnopqrstuv",
+  });
+  const releaseGroupAttribution = [
+    {
+      type: "musicbrainz" as const,
+      name: "Ella Fitzgerald",
+      credited_as: "Ella Fitzgerald",
+      join_phrase: "",
+      kind: "person" as const,
+      musicbrainz_artist_id: "mb-ella-fitzgerald",
+    },
+  ];
+  const firstInput = recordingUpdateInput(
+    firstRecordingId,
+    "A Foggy Day",
+    "Owner first",
+  );
+  const secondInput = recordingUpdateInput(
+    secondRecordingId,
+    "A Foggy Day (alternate)",
+    "Owner second",
+  );
+  for (const input of [firstInput, secondInput]) {
+    input.shared.release_group = {
+      title: "Ella and Louis",
+      musicbrainz_release_group_id: "ella-and-louis",
+      attribution: releaseGroupAttribution,
+    };
+    input.shared.attribution = [];
+    input.shared.performers = [];
+    await owner.mutation(api.recordings.update, input);
+  }
+
+  await t.mutation(internal.users.setRole, {
+    clerkSubject: "album-credit-owner",
+    role: "admin",
+  });
+  await owner.mutation(api.songs.setDiscoverability, {
+    songId,
+    isDiscoverable: true,
+  });
+  await other.mutation(api.songs.addDiscoverable, { songId });
+  const otherRecordingId = await other.mutation(api.recordings.saveYoutube, {
+    ...youtubeInput(songId),
+    videoId: "lmnopqrstuv",
+  });
+  expect(otherRecordingId).toBe(secondRecordingId);
+
+  const ownerArtist = (await owner.query(api.artists.listMine, {})).find(
+    (artist) => artist.name === "Ella Fitzgerald",
+  );
+  const otherArtist = (await other.query(api.artists.listMine, {})).find(
+    (artist) => artist.name === "Ella Fitzgerald",
+  );
+  expect(ownerArtist?.recordingCount).toBe(2);
+  expect(otherArtist?.recordingCount).toBe(1);
+  if (!ownerArtist || !otherArtist) {
+    throw new Error("Expected the Release Group Attribution Artist");
+  }
+
+  await expect(
+    owner.query(api.artists.getMine, { artistId: ownerArtist.id }),
+  ).resolves.toMatchObject({
+    recordings: [
+      {
+        id: firstRecordingId,
+        release_groups: { title: "Ella and Louis" },
+        relationship_reasons: ["release_group_attribution"],
+        user_data: { notes: "Owner first" },
+      },
+      {
+        id: secondRecordingId,
+        release_groups: { title: "Ella and Louis" },
+        relationship_reasons: ["release_group_attribution"],
+        user_data: { notes: "Owner second" },
+      },
+    ],
+  });
+  await expect(
+    other.query(api.artists.getMine, { artistId: otherArtist.id }),
+  ).resolves.toMatchObject({
+    recordings: [
+      {
+        id: secondRecordingId,
+        release_groups: { title: "Ella and Louis" },
+        relationship_reasons: ["release_group_attribution"],
+        user_data: { notes: null },
+      },
+    ],
+  });
 });
 
 test("only an admin can cache constrained shared Artist image metadata", async () => {
