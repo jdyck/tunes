@@ -44,12 +44,12 @@ through Recording Attribution, Personnel, or both. The Artists-list Recording
 count likewise counts distinct saved Recordings across those two paths, not
 relationship rows.
 
-A Release Group Attribution is a future structured Artist-backed surface, not
-a Song Credit or Recording Personnel evidence. When it is introduced, a saved
-Recording may make its attributed Artists reachable, but Artist detail must
-describe that album-credit path without implying authorship of the Song or a
-performance relationship to the Recording. It must extend the existing
-deduplicated Recording row rather than introduce a Release Group detail page.
+Release Group Attribution is a structured Artist-backed album credit, not a
+Song Credit or Recording Personnel evidence. Artist browsing does not yet
+traverse that path; when it does, Artist detail must describe the album-credit
+path without implying authorship of the Song or a performance relationship to
+the Recording. It must extend the existing deduplicated Recording row rather
+than introduce a Release Group detail page.
 
 The Artists pane lists all Artist kinds rather than silently filtering out
 groups. Kind can be shown only when useful for disambiguation or filtering; it

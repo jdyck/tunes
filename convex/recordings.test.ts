@@ -63,6 +63,7 @@ const updateInput = (
     release_group: {
       title: "Example Album",
       musicbrainz_release_group_id: "mb-release-group-id",
+      attribution: [] as AttributionInput[],
     },
     attribution: [
       {
@@ -445,4 +446,99 @@ test("rejects an oversized Attribution before replacing stored parts", async () 
   expect(afterRejectedSave?.recording_artist_attributions).toMatchObject([
     { credited_as: "Example Artist" },
   ]);
+});
+
+test("replaces shared Release Group Attribution atomically and exposes it to every saved member", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("release-group-owner"));
+  const other = t.withIdentity(identity("release-group-other"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  await other.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "release-group-attribution-song",
+    shared: songInput("Autumn Leaves"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Autumn Leaves", null);
+  if (!input.shared.release_group) throw new Error("Expected a Release Group");
+  input.shared.release_group.attribution = [
+    {
+      type: "musicbrainz",
+      name: "Ella Fitzgerald",
+      credited_as: "Ella Fitzgerald",
+      join_phrase: " & ",
+      kind: "person",
+      musicbrainz_artist_id: "ella-fitzgerald",
+    },
+    {
+      type: "musicbrainz",
+      name: "Louis Armstrong",
+      credited_as: "Louis Armstrong",
+      join_phrase: "",
+      kind: "person",
+      musicbrainz_artist_id: "louis-armstrong",
+    },
+  ];
+  await owner.mutation(api.recordings.update, input);
+
+  await t.mutation(internal.users.setRole, {
+    clerkSubject: "release-group-owner",
+    role: "admin",
+  });
+  await owner.mutation(api.songs.setDiscoverability, {
+    songId,
+    isDiscoverable: true,
+  });
+  await other.mutation(api.songs.addDiscoverable, { songId });
+  await other.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+
+  const sharedView = await other.query(api.recordings.getMine, { recordingId });
+  expect(sharedView?.release_groups?.artist_attributions).toMatchObject([
+    { credited_as: "Ella Fitzgerald", join_phrase: " & " },
+    { credited_as: "Louis Armstrong", join_phrase: "" },
+  ]);
+
+  input.shared.release_group.attribution = [{
+    type: "musicbrainz",
+    name: "Bill Evans",
+    credited_as: "Bill Evans Trio",
+    join_phrase: "",
+    kind: "group",
+    musicbrainz_artist_id: "bill-evans-trio",
+  }];
+  await owner.mutation(api.recordings.update, input);
+  expect(
+    (await other.query(api.recordings.getMine, { recordingId }))
+      ?.release_groups?.artist_attributions,
+  ).toMatchObject([{ credited_as: "Bill Evans Trio", join_phrase: "" }]);
+
+  input.shared.release_group.attribution = Array.from({ length: 101 }, (_, index) => ({
+    type: "musicbrainz" as const,
+    name: `Artist ${index}`,
+    credited_as: `Artist ${index}`,
+    join_phrase: "",
+    kind: "person" as const,
+    musicbrainz_artist_id: `release-group-artist-${index}`,
+  }));
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "Release Group cannot have more than 100 Attribution parts",
+  );
+  expect(
+    (await owner.query(api.recordings.getMine, { recordingId }))
+      ?.release_groups?.artist_attributions,
+  ).toMatchObject([{ credited_as: "Bill Evans Trio" }]);
+
+  input.shared.release_group.attribution = [];
+  await owner.mutation(api.recordings.update, input);
+  expect(
+    (await other.query(api.recordings.getMine, { recordingId }))
+      ?.release_groups?.artist_attributions,
+  ).toEqual([]);
 });

@@ -19,6 +19,7 @@ import {
 export interface RecordingDraftReleaseGroup {
   title: string;
   musicbrainzReleaseGroupId: string;
+  attribution: RecordingAttributionInput[];
 }
 
 export interface RecordingDraft {
@@ -63,6 +64,7 @@ export interface RecordingSavePayload {
     release_group: {
       title: string;
       musicbrainz_release_group_id: string;
+      attribution: RecordingAttributionPayload[];
     } | null;
     attribution: RecordingAttributionPayload[];
     performers: RecordingPerformerPayload[];
@@ -106,6 +108,9 @@ const loadedDraft = (recording: SavedRecording): RecordingDraft => ({
         title: recording.release_groups.title,
         musicbrainzReleaseGroupId:
           recording.release_groups.musicbrainz_release_group_id,
+        attribution: attributionCreditsToDraft(
+          recording.release_groups.artist_attributions ?? [],
+        ),
       }
     : null,
   attribution: attributionCreditsToDraft(
@@ -215,6 +220,9 @@ export const recordingDraftToPayload = (
           title: draft.releaseGroup.title,
           musicbrainz_release_group_id:
             draft.releaseGroup.musicbrainzReleaseGroupId,
+          attribution: attributionsToSavePayload(
+            draft.releaseGroup.attribution,
+          ),
         }
       : null,
     attribution: attributionsToSavePayload(draft.attribution),

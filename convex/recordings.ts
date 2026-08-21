@@ -13,6 +13,7 @@ import {
   recordingKindValidator,
   replaceAttribution,
   replacePerformers,
+  replaceReleaseGroupAttribution,
   savedRecordingViewValidator,
   sharedRecordingInputValidator,
   toSavedRecordingView,
@@ -113,6 +114,7 @@ const resolveReleaseGroup = async (
   input: {
     title: string;
     musicbrainz_release_group_id: string;
+    attribution: Parameters<typeof replaceReleaseGroupAttribution>[2];
   } | null,
 ) => {
   if (!input) return null;
@@ -131,13 +133,15 @@ const resolveReleaseGroup = async (
       index.eq("musicbrainzReleaseGroupId", musicbrainzReleaseGroupId),
     )
     .unique();
-  if (existing) return existing._id;
-
-  return ctx.db.insert("releaseGroups", {
-    title,
-    musicbrainzReleaseGroupId,
-    legacySupabaseId: null,
-  });
+  const releaseGroupId = existing
+    ? existing._id
+    : await ctx.db.insert("releaseGroups", {
+        title,
+        musicbrainzReleaseGroupId,
+        legacySupabaseId: null,
+      });
+  await replaceReleaseGroupAttribution(ctx, releaseGroupId, input.attribution);
+  return releaseGroupId;
 };
 
 export const listMine = query({

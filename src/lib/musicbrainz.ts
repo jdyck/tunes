@@ -13,6 +13,7 @@ import {
   musicBrainzRecordingAttribution,
   type RecordingAttributionInput,
 } from "../utils/musicbrainzRecordingAttribution.ts";
+import { musicBrainzReleaseGroupAttribution } from "../utils/musicbrainzReleaseGroupAttribution.ts";
 import type {
   MusicBrainzArtistRelation,
   MusicBrainzSongArtistCredit,
@@ -164,6 +165,11 @@ interface MusicBrainzReleaseGroup {
   title: string;
   "primary-type"?: string | null;
   "secondary-types"?: string[];
+  "artist-credit"?: {
+    name?: string;
+    joinphrase?: string;
+    artist?: { id?: string; name?: string; type?: string | null };
+  }[];
 }
 
 interface MusicBrainzRelease {
@@ -278,7 +284,11 @@ export interface ResolvedRecordingMatch {
   recordingLocation: string | null;
   attribution: RecordingAttributionInput[];
   performers: RecordingPerformer[];
-  releaseGroup: { title: string; musicbrainzReleaseGroupId: string } | null;
+  releaseGroup: {
+    title: string;
+    musicbrainzReleaseGroupId: string;
+    attribution: RecordingAttributionInput[];
+  } | null;
   representativeReleaseId: string | null;
 }
 
@@ -351,6 +361,16 @@ const fetchWorkRecordingIds = async (workId: string): Promise<Set<string>> => {
       .map((relation) => relation.recording?.id)
       .filter((id): id is string => Boolean(id))
   );
+};
+
+const fetchReleaseGroupAttribution = async (releaseGroupId: string) => {
+  const url = new URL(
+    `https://musicbrainz.org/ws/2/release-group/${releaseGroupId}`,
+  );
+  url.searchParams.set("fmt", "json");
+  url.searchParams.set("inc", "artist-credits");
+  const releaseGroup = await fetchMusicBrainzJson<MusicBrainzReleaseGroup>(url);
+  return musicBrainzReleaseGroupAttribution(releaseGroup["artist-credit"] ?? []);
 };
 
 // Searches MusicBrainz Recordings (a specific recorded performance --
@@ -503,6 +523,9 @@ export const fetchRecordingMatch = async (
       groups.set(group.id, current);
     }
     const selected = selectReleaseGroups([...groups.values()]);
+    const releaseGroupAttribution = selected.releaseGroupId
+      ? await fetchReleaseGroupAttribution(selected.releaseGroupId)
+      : [];
     return {
       recordingId: recording.id,
       title: decodeHtmlEntities(recording.title),
@@ -520,7 +543,11 @@ export const fetchRecordingMatch = async (
       attribution,
       performers,
       releaseGroup: selected.releaseGroupId && selected.title
-        ? { title: selected.title, musicbrainzReleaseGroupId: selected.releaseGroupId }
+        ? {
+            title: selected.title,
+            musicbrainzReleaseGroupId: selected.releaseGroupId,
+            attribution: releaseGroupAttribution,
+          }
         : null,
       representativeReleaseId: selected.representativeReleaseId,
     };

@@ -126,6 +126,17 @@ export interface ReleaseGroup {
   id: string;
   title: string;
   musicbrainz_release_group_id: string;
+  artist_attributions?: ReleaseGroupAttributionPart[];
+}
+
+export interface ReleaseGroupAttributionPart {
+  id?: string;
+  release_group_id: string;
+  artist_id: string;
+  credited_as: string;
+  join_phrase: string;
+  sort_order?: number | null;
+  artists?: Artist | null;
 }
 
 export interface UserRecordingData {

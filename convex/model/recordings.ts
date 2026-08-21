@@ -23,11 +23,6 @@ export const youtubeDiscoverySourceValidator = v.union(
   v.literal("legacy_recording_url"),
 );
 
-export const releaseGroupInputValidator = v.object({
-  title: v.string(),
-  musicbrainz_release_group_id: v.string(),
-});
-
 export const performerInputValidator = v.object({
   name: v.string(),
   credited_as: v.string(),
@@ -65,6 +60,12 @@ export const attributionInputValidator = v.union(
 
 export type AttributionInput = Infer<typeof attributionInputValidator>;
 
+export const releaseGroupInputValidator = v.object({
+  title: v.string(),
+  musicbrainz_release_group_id: v.string(),
+  attribution: v.array(attributionInputValidator),
+});
+
 export const sharedRecordingInputValidator = v.object({
   name: v.string(),
   kind: recordingKindValidator,
@@ -91,12 +92,6 @@ export const privateRecordingInputValidator = v.object({
   tags: v.array(v.string()),
 });
 
-const releaseGroupViewValidator = v.object({
-  id: v.id("releaseGroups"),
-  title: v.string(),
-  musicbrainz_release_group_id: v.string(),
-});
-
 const recordingArtistCreditViewValidator = v.object({
   id: v.id("recordingArtistCredits"),
   recording_id: v.id("recordings"),
@@ -115,6 +110,22 @@ const recordingAttributionViewValidator = v.object({
   join_phrase: v.string(),
   sort_order: v.number(),
   artists: artistViewValidator,
+});
+
+const releaseGroupAttributionViewValidator = v.object({
+  release_group_id: v.id("releaseGroups"),
+  artist_id: v.id("artists"),
+  credited_as: v.string(),
+  join_phrase: v.string(),
+  sort_order: v.number(),
+  artists: artistViewValidator,
+});
+
+const releaseGroupViewValidator = v.object({
+  id: v.id("releaseGroups"),
+  title: v.string(),
+  musicbrainz_release_group_id: v.string(),
+  artist_attributions: v.array(releaseGroupAttributionViewValidator),
 });
 
 const youtubeItemViewValidator = v.object({
@@ -200,12 +211,51 @@ const loadReleaseGroup = async (
   if (!releaseGroup.musicbrainzReleaseGroupId) {
     throw new Error("Saved Release Group is missing its provider identity");
   }
+  const attribution = await loadReleaseGroupAttribution(ctx, releaseGroup._id);
   return {
     id: releaseGroup._id,
     title: releaseGroup.title,
     musicbrainz_release_group_id:
       releaseGroup.musicbrainzReleaseGroupId,
+    artist_attributions: attribution,
   };
+};
+
+const loadReleaseGroupAttribution = async (
+  ctx: ReadContext,
+  releaseGroupId: Id<"releaseGroups">,
+) => {
+  const parts = await ctx.db
+    .query("releaseGroupArtistAttributions")
+    .withIndex("by_releaseGroupId_and_sortOrder", (query) =>
+      query.eq("releaseGroupId", releaseGroupId),
+    )
+    .take(101);
+  if (parts.length > 100) {
+    throw new Error("Release Group Attribution exceeds 100 parts");
+  }
+
+  return Promise.all(
+    parts.map(async (part) => {
+      const artist = await ctx.db.get(part.artistId);
+      if (!artist) {
+        throw new Error("Release Group Attribution references a missing Artist");
+      }
+      return {
+        release_group_id: releaseGroupId,
+        artist_id: artist._id,
+        credited_as: part.creditedAs,
+        join_phrase: part.joinPhrase,
+        sort_order: part.sortOrder,
+        artists: {
+          id: artist._id,
+          name: artist.name,
+          kind: artist.kind,
+          musicbrainz_artist_id: artist.musicbrainzArtistId,
+        },
+      };
+    }),
+  );
 };
 
 const loadPerformerCredits = async (
@@ -474,27 +524,7 @@ export const replaceAttribution = async (
   recordingId: Id<"recordings">,
   attribution: AttributionInput[],
 ) => {
-  if (attribution.length > 100) {
-    throw new Error("A Recording cannot have more than 100 Attribution parts");
-  }
-  for (const part of attribution) {
-    if (!part.credited_as.trim()) {
-      throw new Error(
-        "An Attribution part requires credited-as text",
-      );
-    }
-    if (
-      (part.type === "musicbrainz" || part.type === "provider_unmatched") &&
-      !part.name.trim()
-    ) {
-      throw new Error("An Attribution part requires an Artist name");
-    }
-    if (part.type === "musicbrainz" && !part.musicbrainz_artist_id.trim()) {
-      throw new Error(
-        "A MusicBrainz Attribution part requires a MusicBrainz Artist ID",
-      );
-    }
-  }
+  validateAttribution(attribution, "Recording");
 
   const existing = await ctx.db
     .query("recordingArtistAttributions")
@@ -508,17 +538,7 @@ export const replaceAttribution = async (
   await Promise.all(existing.map((part) => ctx.db.delete(part._id)));
 
   for (const [sortOrder, part] of attribution.entries()) {
-    const artistId =
-      part.type === "existing"
-        ? await resolveExistingArtist(ctx, part.artist_id)
-        : part.type === "musicbrainz"
-          ? await resolveArtist(ctx, {
-              name: part.name,
-              credited_as: part.credited_as,
-              kind: part.kind,
-              musicbrainz_artist_id: part.musicbrainz_artist_id,
-            })
-          : await createProviderUnmatchedArtist(ctx, part);
+    const artistId = await resolveAttributionArtist(ctx, part);
     await ctx.db.insert("recordingArtistAttributions", {
       recordingId,
       artistId,
@@ -529,6 +549,73 @@ export const replaceAttribution = async (
     });
   }
 };
+
+export const replaceReleaseGroupAttribution = async (
+  ctx: MutationCtx,
+  releaseGroupId: Id<"releaseGroups">,
+  attribution: AttributionInput[],
+) => {
+  validateAttribution(attribution, "Release Group");
+  const existing = await ctx.db
+    .query("releaseGroupArtistAttributions")
+    .withIndex("by_releaseGroupId", (query) =>
+      query.eq("releaseGroupId", releaseGroupId),
+    )
+    .take(101);
+  if (existing.length > 100) {
+    throw new Error("Release Group Attribution exceeds 100 parts");
+  }
+  await Promise.all(existing.map((part) => ctx.db.delete(part._id)));
+
+  for (const [sortOrder, part] of attribution.entries()) {
+    await ctx.db.insert("releaseGroupArtistAttributions", {
+      releaseGroupId,
+      artistId: await resolveAttributionArtist(ctx, part),
+      creditedAs: part.credited_as,
+      joinPhrase: part.join_phrase,
+      sortOrder,
+      legacySupabaseId: null,
+    });
+  }
+};
+
+const validateAttribution = (
+  attribution: AttributionInput[],
+  subject: "Recording" | "Release Group",
+) => {
+  if (attribution.length > 100) {
+    throw new Error(`A ${subject} cannot have more than 100 Attribution parts`);
+  }
+  for (const part of attribution) {
+    if (!part.credited_as.trim()) {
+      throw new Error("An Attribution part requires credited-as text");
+    }
+    if (
+      (part.type === "musicbrainz" || part.type === "provider_unmatched") &&
+      !part.name.trim()
+    ) {
+      throw new Error("An Attribution part requires an Artist name");
+    }
+    if (part.type === "musicbrainz" && !part.musicbrainz_artist_id.trim()) {
+      throw new Error("A MusicBrainz Attribution part requires a MusicBrainz Artist ID");
+    }
+  }
+};
+
+const resolveAttributionArtist = async (
+  ctx: MutationCtx,
+  part: AttributionInput,
+) =>
+  part.type === "existing"
+    ? resolveExistingArtist(ctx, part.artist_id)
+    : part.type === "musicbrainz"
+      ? resolveArtist(ctx, {
+          name: part.name,
+          credited_as: part.credited_as,
+          kind: part.kind,
+          musicbrainz_artist_id: part.musicbrainz_artist_id,
+        })
+      : createProviderUnmatchedArtist(ctx, part);
 
 const resolveExistingArtist = async (
   ctx: MutationCtx,

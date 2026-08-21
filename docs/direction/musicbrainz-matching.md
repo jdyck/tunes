@@ -161,6 +161,12 @@ can therefore link to one canonical Artist while retaining a Release
 Group-specific credited name such as “Nat ‘King’ Cole and His Trio.” This
 Attribution never overwrites a contained Recording's Attribution.
 
+Recording detail and a populated match/refresh draft show the Release Group
+title with this album credit beside it. Stored credited Artists link to their
+local Artist detail; a newly fetched draft shows the same faithfully formatted
+text before Save resolves its local Artist identities. A missing Attribution is
+an ordinary empty state, not a failed match.
+
 An explicit successful match or refresh replaces the complete shared Release
 Group Attribution atomically when the User saves the draft, including clearing
 the list when MusicBrainz successfully returns none. A failed lookup preserves

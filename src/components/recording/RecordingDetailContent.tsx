@@ -28,6 +28,7 @@ import { RecordingKind } from "@/types/types";
 import type { RecordingDraft } from "@/utils/recordingDraft";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 import RecordingAttributionEditor from "@/components/recording/RecordingAttributionEditor";
+import ReleaseGroupAttribution from "@/components/recording/ReleaseGroupAttribution";
 
 type RecordingDraftTextField =
   | "name"
@@ -245,6 +246,13 @@ export default function RecordingDetailContent({
             value={album}
             onChange={handleDraftTextChange("album")}
           />
+          {releaseGroup && releaseGroup.attribution.length > 0 && (
+            <p className="mt-1 text-xs text-ink-600">
+              <span className="font-medium">{releaseGroup.title}</span>
+              {": "}
+              <ReleaseGroupAttribution attribution={releaseGroup.attribution} />
+            </p>
+          )}
         </div>
         <div className="mb-4">
           <FormField

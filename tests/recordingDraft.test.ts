@@ -31,6 +31,21 @@ const recordingFixture = (): SavedRecording => ({
     id: "release-group-1",
     title: "Album &amp; Context",
     musicbrainz_release_group_id: "release-group-mbid",
+    artist_attributions: [
+      {
+        release_group_id: "release-group-1",
+        artist_id: "artist-1",
+        credited_as: "Bill & Jane",
+        join_phrase: "",
+        sort_order: 0,
+        artists: {
+          id: "artist-1",
+          name: "Bill & Jane",
+          kind: "group",
+          musicbrainz_artist_id: "artist-mbid",
+        },
+      },
+    ],
   },
   recording_artist_credits: [
     {
@@ -105,7 +120,15 @@ test("maps the complete Recording draft to the presence-aware RPC payload", () =
       recording_location: "Chicago",
       release_group: {
         title: "Album &amp; Context",
-        musicbrainz_release_group_id: "release-group-mbid",
+      musicbrainz_release_group_id: "release-group-mbid",
+      attribution: [
+        {
+          type: "existing",
+          artist_id: "artist-1",
+          credited_as: "Bill & Jane",
+          join_phrase: "",
+        },
+      ],
       },
       attribution: [
         {
@@ -219,7 +242,30 @@ test("a resolved MusicBrainz match replaces the complete Attribution draft only 
       },
     ],
     performers: [],
-    releaseGroup: null,
+    releaseGroup: {
+      title: "Ella and Louis",
+      musicbrainzReleaseGroupId: "ella-and-louis-mbid",
+      attribution: [
+        {
+          artistId: null,
+          musicbrainzArtistId: "ella-mbid",
+          providerUnmatchedConfirmed: false,
+          name: "Ella Fitzgerald",
+          creditedAs: "Ella Fitzgerald",
+          joinPhrase: " & ",
+          kind: "person",
+        },
+        {
+          artistId: null,
+          musicbrainzArtistId: "louis-mbid",
+          providerUnmatchedConfirmed: false,
+          name: "Louis Armstrong",
+          creditedAs: "Louis Armstrong",
+          joinPhrase: "",
+          kind: "person",
+        },
+      ],
+    },
     representativeReleaseId: null,
   });
 
@@ -229,6 +275,7 @@ test("a resolved MusicBrainz match replaces the complete Attribution draft only 
     [" with ", ""],
   );
   assert.equal(matched.musicbrainzRecordingId, "new-recording-mbid");
+  assert.equal(matched.releaseGroup?.attribution[0]?.joinPhrase, " & ");
 });
 
 test("a failed MusicBrainz lookup preserves the current Attribution draft", () => {
