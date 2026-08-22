@@ -23,19 +23,48 @@ export const youtubeDiscoverySourceValidator = v.union(
   v.literal("legacy_recording_url"),
 );
 
-export const releaseGroupInputValidator = v.object({
-  title: v.string(),
-  musicbrainz_release_group_id: v.string(),
+export const personnelRelationshipTypeValidator = v.union(
+  v.literal("instrument"),
+  v.literal("vocal"),
+  v.literal("performer"),
+  v.literal("conductor"),
+  v.literal("orchestra"),
+);
+
+export const personnelDetailValidator = v.object({
+  canonical: v.string(),
+  credited_as: nullableString,
 });
 
-export const performerInputValidator = v.object({
-  name: v.string(),
+export const personnelRelationshipValidator = v.object({
+  type: personnelRelationshipTypeValidator,
+  details: v.array(personnelDetailValidator),
+});
+
+const personnelCreditFields = {
   credited_as: v.string(),
-  kind: artistKindValidator,
-  musicbrainz_artist_id: v.string(),
-});
+  relationships: v.array(personnelRelationshipValidator),
+};
 
-export type PerformerInput = Infer<typeof performerInputValidator>;
+export const personnelInputValidator = v.union(
+  v.object({
+    type: v.literal("existing"),
+    artist_id: v.id("artists"),
+    ...personnelCreditFields,
+  }),
+  v.object({
+    type: v.literal("musicbrainz"),
+    name: v.string(),
+    kind: artistKindValidator,
+    musicbrainz_artist_id: v.string(),
+    ...personnelCreditFields,
+  }),
+);
+
+export type PersonnelInput = Infer<typeof personnelInputValidator>;
+
+export const normalizePersonnelText = (value: string) =>
+  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 
 const attributionCreditFields = {
   credited_as: v.string(),
@@ -65,6 +94,12 @@ export const attributionInputValidator = v.union(
 
 export type AttributionInput = Infer<typeof attributionInputValidator>;
 
+export const releaseGroupInputValidator = v.object({
+  title: v.string(),
+  musicbrainz_release_group_id: v.string(),
+  attribution: v.array(attributionInputValidator),
+});
+
 export const sharedRecordingInputValidator = v.object({
   name: v.string(),
   kind: recordingKindValidator,
@@ -79,7 +114,7 @@ export const sharedRecordingInputValidator = v.object({
   recording_location: nullableString,
   release_group: v.union(releaseGroupInputValidator, v.null()),
   attribution: v.array(attributionInputValidator),
-  performers: v.array(performerInputValidator),
+  personnel: v.array(personnelInputValidator),
 });
 
 export const privateRecordingInputValidator = v.object({
@@ -91,19 +126,22 @@ export const privateRecordingInputValidator = v.object({
   tags: v.array(v.string()),
 });
 
-const releaseGroupViewValidator = v.object({
-  id: v.id("releaseGroups"),
-  title: v.string(),
-  musicbrainz_release_group_id: v.string(),
+const personnelRelationshipViewValidator = v.object({
+  type: personnelRelationshipTypeValidator,
+  details: v.array(
+    v.object({
+      canonical: v.string(),
+      credited_as: nullableString,
+    }),
+  ),
 });
 
-const recordingArtistCreditViewValidator = v.object({
-  id: v.id("recordingArtistCredits"),
+const recordingPersonnelViewValidator = v.object({
   recording_id: v.id("recordings"),
   artist_id: v.id("artists"),
-  role: v.literal("performer"),
   credited_as: v.string(),
   sort_order: v.number(),
+  relationships: v.array(personnelRelationshipViewValidator),
   artists: artistViewValidator,
 });
 
@@ -115,6 +153,22 @@ const recordingAttributionViewValidator = v.object({
   join_phrase: v.string(),
   sort_order: v.number(),
   artists: artistViewValidator,
+});
+
+const releaseGroupAttributionViewValidator = v.object({
+  release_group_id: v.id("releaseGroups"),
+  artist_id: v.id("artists"),
+  credited_as: v.string(),
+  join_phrase: v.string(),
+  sort_order: v.number(),
+  artists: artistViewValidator,
+});
+
+const releaseGroupViewValidator = v.object({
+  id: v.id("releaseGroups"),
+  title: v.string(),
+  musicbrainz_release_group_id: v.string(),
+  artist_attributions: v.array(releaseGroupAttributionViewValidator),
 });
 
 const youtubeItemViewValidator = v.object({
@@ -149,7 +203,7 @@ export const savedRecordingViewValidator = v.object({
   recording_location: nullableString,
   release_group_id: v.union(v.id("releaseGroups"), v.null()),
   release_groups: v.union(releaseGroupViewValidator, v.null()),
-  recording_artist_credits: v.array(recordingArtistCreditViewValidator),
+  personnel: v.array(recordingPersonnelViewValidator),
   recording_artist_attributions: v.array(recordingAttributionViewValidator),
   user_data: v.object({
     user_id: v.id("users"),
@@ -200,38 +254,85 @@ const loadReleaseGroup = async (
   if (!releaseGroup.musicbrainzReleaseGroupId) {
     throw new Error("Saved Release Group is missing its provider identity");
   }
+  const attribution = await loadReleaseGroupAttribution(ctx, releaseGroup._id);
   return {
     id: releaseGroup._id,
     title: releaseGroup.title,
     musicbrainz_release_group_id:
       releaseGroup.musicbrainzReleaseGroupId,
+    artist_attributions: attribution,
   };
 };
 
-const loadPerformerCredits = async (
+const loadReleaseGroupAttribution = async (
+  ctx: ReadContext,
+  releaseGroupId: Id<"releaseGroups">,
+) => {
+  const parts = await ctx.db
+    .query("releaseGroupArtistAttributions")
+    .withIndex("by_releaseGroupId_and_sortOrder", (query) =>
+      query.eq("releaseGroupId", releaseGroupId),
+    )
+    .take(101);
+  if (parts.length > 100) {
+    throw new Error("Release Group Attribution exceeds 100 parts");
+  }
+
+  return Promise.all(
+    parts.map(async (part) => {
+      const artist = await ctx.db.get(part.artistId);
+      if (!artist) {
+        throw new Error("Release Group Attribution references a missing Artist");
+      }
+      return {
+        release_group_id: releaseGroupId,
+        artist_id: artist._id,
+        credited_as: part.creditedAs,
+        join_phrase: part.joinPhrase,
+        sort_order: part.sortOrder,
+        artists: {
+          id: artist._id,
+          name: artist.name,
+          kind: artist.kind,
+          musicbrainz_artist_id: artist.musicbrainzArtistId,
+        },
+      };
+    }),
+  );
+};
+
+export const loadPersonnel = async (
   ctx: ReadContext,
   recordingId: Id<"recordings">,
 ) => {
-  const credits = await ctx.db
-    .query("recordingArtistCredits")
+  const personnel = await ctx.db
+    .query("recordingPersonnel")
     .withIndex("by_recordingId_and_sortOrder", (query) =>
       query.eq("recordingId", recordingId),
     )
-    .take(100);
+    .take(101);
+  if (personnel.length > 100) {
+    throw new Error("Recording Personnel exceeds 100 Artists");
+  }
 
   return Promise.all(
-    credits.map(async (credit) => {
-      const artist = await ctx.db.get(credit.artistId);
+    personnel.map(async (entry) => {
+      const artist = await ctx.db.get(entry.artistId);
       if (!artist) {
-        throw new Error("Recording credit references a missing Artist");
+        throw new Error("Recording Personnel references a missing Artist");
       }
       return {
-        id: credit._id,
         recording_id: recordingId,
         artist_id: artist._id,
-        role: credit.role,
-        credited_as: credit.creditedAs,
-        sort_order: credit.sortOrder,
+        credited_as: entry.creditedAs,
+        sort_order: entry.sortOrder,
+        relationships: entry.relationships.map((relationship) => ({
+          type: relationship.type,
+          details: relationship.details.map((detail) => ({
+            canonical: detail.canonical,
+            credited_as: detail.creditedAs,
+          })),
+        })),
         artists: {
           id: artist._id,
           name: artist.name,
@@ -330,9 +431,9 @@ export const toSavedRecordingView = async (
   recording: Doc<"recordings">,
   userData: Doc<"userRecordingData">,
 ) => {
-  const [releaseGroup, performers, attribution, youtubeItems] = await Promise.all([
+  const [releaseGroup, personnel, attribution, youtubeItems] = await Promise.all([
     loadReleaseGroup(ctx, recording.releaseGroupId),
-    loadPerformerCredits(ctx, recording._id),
+    loadPersonnel(ctx, recording._id),
     loadAttribution(ctx, recording._id),
     loadYouTubeItems(ctx, recording._id),
   ]);
@@ -362,7 +463,7 @@ export const toSavedRecordingView = async (
     recording_location: recording.recordingLocation,
     release_group_id: recording.releaseGroupId,
     release_groups: releaseGroup,
-    recording_artist_credits: performers,
+    personnel,
     recording_artist_attributions: attribution,
     user_data: {
       user_id: userData.userId,
@@ -401,10 +502,12 @@ export const toRecordingArtworkView = async (
   };
 };
 
-type ArtistIdentityCreditInput = Pick<
-  PerformerInput,
-  "name" | "credited_as" | "kind" | "musicbrainz_artist_id"
->;
+type ArtistIdentityCreditInput = {
+  name: string;
+  credited_as: string;
+  kind: Infer<typeof artistKindValidator>;
+  musicbrainz_artist_id: string;
+};
 
 const resolveArtist = async (
   ctx: MutationCtx,
@@ -439,34 +542,120 @@ const resolveArtist = async (
   });
 };
 
-export const replacePerformers = async (
+const normalizePersonnel = (personnel: PersonnelInput[]) => {
+  if (personnel.length > 100) {
+    throw new Error("A Recording cannot have more than 100 Personnel Artists");
+  }
+
+  let detailCount = 0;
+  const normalized = personnel.map((entry) => {
+    const creditedAs = entry.credited_as.trim();
+    if (!creditedAs) {
+      throw new Error("Recording Personnel requires credited-as Artist text");
+    }
+    if (entry.relationships.length === 0) {
+      throw new Error("Recording Personnel requires at least one relationship");
+    }
+
+    const relationshipTypes = new Set<string>();
+    const relationships = entry.relationships.map((relationship) => {
+      if (relationshipTypes.has(relationship.type)) {
+        throw new Error("Recording Personnel relationship types must be unique per Artist");
+      }
+      relationshipTypes.add(relationship.type);
+      if (
+        !["instrument", "vocal"].includes(relationship.type) &&
+        relationship.details.length > 0
+      ) {
+        throw new Error(`${relationship.type} Personnel cannot have details`);
+      }
+
+      detailCount += Math.max(relationship.details.length, 1);
+      const detailKeys = new Set<string>();
+      const details = relationship.details.map((detail) => {
+        const canonical = detail.canonical.trim();
+        const creditedAs = detail.credited_as?.trim() || null;
+        if (!canonical) {
+          throw new Error("Recording Personnel detail requires canonical text");
+        }
+        const key = `${normalizePersonnelText(canonical)}\u0000${
+          creditedAs ? normalizePersonnelText(creditedAs) : ""
+        }`;
+        if (detailKeys.has(key)) {
+          throw new Error("Recording Personnel contains a duplicate relationship detail");
+        }
+        detailKeys.add(key);
+        return { canonical, creditedAs };
+      });
+      return { type: relationship.type, details };
+    });
+    if (relationshipTypes.has("performer") && relationshipTypes.size > 1) {
+      throw new Error(
+        "Recording Personnel cannot combine generic performer with specific evidence",
+      );
+    }
+
+    return { entry, creditedAs, relationships };
+  });
+  if (detailCount > 500) {
+    throw new Error("A Recording cannot have more than 500 Personnel details");
+  }
+  return normalized;
+};
+
+const resolvePersonnelArtist = async (
+  ctx: MutationCtx,
+  entry: PersonnelInput,
+) => {
+  if (entry.type === "existing") {
+    const artist = await ctx.db.get(entry.artist_id);
+    if (!artist) throw new Error("Recording Personnel references a missing Artist");
+    return artist._id;
+  }
+  return resolveArtist(ctx, entry);
+};
+
+export const replacePersonnel = async (
   ctx: MutationCtx,
   recordingId: Id<"recordings">,
-  performers: PerformerInput[],
+  personnel: PersonnelInput[],
 ) => {
-  if (performers.length > 100) {
-    throw new Error("A Recording cannot have more than 100 performer credits");
+  const normalized = normalizePersonnel(personnel);
+  const resolved = [];
+  const artistIds = new Set<Id<"artists">>();
+  for (const entry of normalized) {
+    const artistId = await resolvePersonnelArtist(ctx, entry.entry);
+    if (artistIds.has(artistId)) {
+      throw new Error("Recording Personnel cannot repeat an Artist");
+    }
+    artistIds.add(artistId);
+    resolved.push({ ...entry, artistId });
   }
 
   const existing = await ctx.db
-    .query("recordingArtistCredits")
+    .query("recordingPersonnel")
     .withIndex("by_recordingId", (query) =>
       query.eq("recordingId", recordingId),
     )
-    .take(100);
-  await Promise.all(existing.map((credit) => ctx.db.delete(credit._id)));
+    .take(101);
+  if (existing.length > 100) {
+    throw new Error("Stored Recording Personnel exceeds 100 Artists");
+  }
+  await Promise.all(existing.map((entry) => ctx.db.delete(entry._id)));
 
-  for (const [sortOrder, performer] of performers.entries()) {
-    const artistId = await resolveArtist(ctx, performer);
-    await ctx.db.insert("recordingArtistCredits", {
+  for (const [sortOrder, entry] of resolved.entries()) {
+    await ctx.db.insert("recordingPersonnel", {
       recordingId,
-      artistId,
-      role: "performer",
-      creditedAs: performer.credited_as.trim(),
+      artistId: entry.artistId,
+      creditedAs: entry.creditedAs,
       sortOrder,
-      legacySupabaseId: null,
+      relationships: entry.relationships,
     });
   }
+  await ctx.db.patch(recordingId, {
+    personnelMigrated: true,
+    personnelMigrationKind: "saved",
+  });
 };
 
 export const replaceAttribution = async (
@@ -474,27 +663,7 @@ export const replaceAttribution = async (
   recordingId: Id<"recordings">,
   attribution: AttributionInput[],
 ) => {
-  if (attribution.length > 100) {
-    throw new Error("A Recording cannot have more than 100 Attribution parts");
-  }
-  for (const part of attribution) {
-    if (!part.credited_as.trim()) {
-      throw new Error(
-        "An Attribution part requires credited-as text",
-      );
-    }
-    if (
-      (part.type === "musicbrainz" || part.type === "provider_unmatched") &&
-      !part.name.trim()
-    ) {
-      throw new Error("An Attribution part requires an Artist name");
-    }
-    if (part.type === "musicbrainz" && !part.musicbrainz_artist_id.trim()) {
-      throw new Error(
-        "A MusicBrainz Attribution part requires a MusicBrainz Artist ID",
-      );
-    }
-  }
+  validateAttribution(attribution, "Recording");
 
   const existing = await ctx.db
     .query("recordingArtistAttributions")
@@ -508,17 +677,7 @@ export const replaceAttribution = async (
   await Promise.all(existing.map((part) => ctx.db.delete(part._id)));
 
   for (const [sortOrder, part] of attribution.entries()) {
-    const artistId =
-      part.type === "existing"
-        ? await resolveExistingArtist(ctx, part.artist_id)
-        : part.type === "musicbrainz"
-          ? await resolveArtist(ctx, {
-              name: part.name,
-              credited_as: part.credited_as,
-              kind: part.kind,
-              musicbrainz_artist_id: part.musicbrainz_artist_id,
-            })
-          : await createProviderUnmatchedArtist(ctx, part);
+    const artistId = await resolveAttributionArtist(ctx, part);
     await ctx.db.insert("recordingArtistAttributions", {
       recordingId,
       artistId,
@@ -529,6 +688,73 @@ export const replaceAttribution = async (
     });
   }
 };
+
+export const replaceReleaseGroupAttribution = async (
+  ctx: MutationCtx,
+  releaseGroupId: Id<"releaseGroups">,
+  attribution: AttributionInput[],
+) => {
+  validateAttribution(attribution, "Release Group");
+  const existing = await ctx.db
+    .query("releaseGroupArtistAttributions")
+    .withIndex("by_releaseGroupId", (query) =>
+      query.eq("releaseGroupId", releaseGroupId),
+    )
+    .take(101);
+  if (existing.length > 100) {
+    throw new Error("Release Group Attribution exceeds 100 parts");
+  }
+  await Promise.all(existing.map((part) => ctx.db.delete(part._id)));
+
+  for (const [sortOrder, part] of attribution.entries()) {
+    await ctx.db.insert("releaseGroupArtistAttributions", {
+      releaseGroupId,
+      artistId: await resolveAttributionArtist(ctx, part),
+      creditedAs: part.credited_as,
+      joinPhrase: part.join_phrase,
+      sortOrder,
+      legacySupabaseId: null,
+    });
+  }
+};
+
+const validateAttribution = (
+  attribution: AttributionInput[],
+  subject: "Recording" | "Release Group",
+) => {
+  if (attribution.length > 100) {
+    throw new Error(`A ${subject} cannot have more than 100 Attribution parts`);
+  }
+  for (const part of attribution) {
+    if (!part.credited_as.trim()) {
+      throw new Error("An Attribution part requires credited-as text");
+    }
+    if (
+      (part.type === "musicbrainz" || part.type === "provider_unmatched") &&
+      !part.name.trim()
+    ) {
+      throw new Error("An Attribution part requires an Artist name");
+    }
+    if (part.type === "musicbrainz" && !part.musicbrainz_artist_id.trim()) {
+      throw new Error("A MusicBrainz Attribution part requires a MusicBrainz Artist ID");
+    }
+  }
+};
+
+const resolveAttributionArtist = async (
+  ctx: MutationCtx,
+  part: AttributionInput,
+) =>
+  part.type === "existing"
+    ? resolveExistingArtist(ctx, part.artist_id)
+    : part.type === "musicbrainz"
+      ? resolveArtist(ctx, {
+          name: part.name,
+          credited_as: part.credited_as,
+          kind: part.kind,
+          musicbrainz_artist_id: part.musicbrainz_artist_id,
+        })
+      : createProviderUnmatchedArtist(ctx, part);
 
 const resolveExistingArtist = async (
   ctx: MutationCtx,

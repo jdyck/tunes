@@ -6,13 +6,14 @@
 // directly from a component.
 
 import { decodeHtmlEntities } from "../utils/htmlEntities.ts";
-import type { ArtistKind } from "../types/types.ts";
-import { musicBrainzRecordingPerformers } from "../utils/musicbrainzPerformers.ts";
+import { musicBrainzRecordingPersonnel } from "../utils/musicbrainzPersonnel.ts";
+import type { RecordingPersonnelDraftEntry } from "../utils/recordingPersonnel.ts";
 import {
   formatMusicBrainzRecordingCredit,
   musicBrainzRecordingAttribution,
   type RecordingAttributionInput,
 } from "../utils/musicbrainzRecordingAttribution.ts";
+import { musicBrainzReleaseGroupAttribution } from "../utils/musicbrainzReleaseGroupAttribution.ts";
 import type {
   MusicBrainzArtistRelation,
   MusicBrainzSongArtistCredit,
@@ -164,6 +165,11 @@ interface MusicBrainzReleaseGroup {
   title: string;
   "primary-type"?: string | null;
   "secondary-types"?: string[];
+  "artist-credit"?: {
+    name?: string;
+    joinphrase?: string;
+    artist?: { id?: string; name?: string; type?: string | null };
+  }[];
 }
 
 interface MusicBrainzRelease {
@@ -192,6 +198,8 @@ interface MusicBrainzRecordingRelation {
   artist?: { id: string; name: string; type?: string | null };
   place?: { name: string; disambiguation?: string };
   attributes?: string[];
+  "attribute-values"?: Record<string, string>;
+  "attribute-credits"?: Record<string, string>;
   "target-credit"?: string;
 }
 
@@ -261,13 +269,6 @@ export interface RecordingCandidateSet {
   ambiguousCandidateIds: string[];
 }
 
-export interface RecordingPerformer {
-  musicbrainzArtistId: string;
-  name: string;
-  creditedAs: string;
-  kind: ArtistKind | null;
-}
-
 export interface ResolvedRecordingMatch {
   recordingId: string;
   title: string;
@@ -277,8 +278,12 @@ export interface ResolvedRecordingMatch {
   recordingDateEnd: string | null;
   recordingLocation: string | null;
   attribution: RecordingAttributionInput[];
-  performers: RecordingPerformer[];
-  releaseGroup: { title: string; musicbrainzReleaseGroupId: string } | null;
+  personnel: RecordingPersonnelDraftEntry[];
+  releaseGroup: {
+    title: string;
+    musicbrainzReleaseGroupId: string;
+    attribution: RecordingAttributionInput[];
+  } | null;
   representativeReleaseId: string | null;
 }
 
@@ -351,6 +356,16 @@ const fetchWorkRecordingIds = async (workId: string): Promise<Set<string>> => {
       .map((relation) => relation.recording?.id)
       .filter((id): id is string => Boolean(id))
   );
+};
+
+const fetchReleaseGroupAttribution = async (releaseGroupId: string) => {
+  const url = new URL(
+    `https://musicbrainz.org/ws/2/release-group/${releaseGroupId}`,
+  );
+  url.searchParams.set("fmt", "json");
+  url.searchParams.set("inc", "artist-credits");
+  const releaseGroup = await fetchMusicBrainzJson<MusicBrainzReleaseGroup>(url);
+  return musicBrainzReleaseGroupAttribution(releaseGroup["artist-credit"] ?? []);
 };
 
 // Searches MusicBrainz Recordings (a specific recorded performance --
@@ -478,7 +493,7 @@ export const fetchRecordingMatch = async (
     const placeRelation = relations.find(
       (relation) => relation.place && ["recorded at", "recorded in"].includes(relation.type)
     );
-    const performers = musicBrainzRecordingPerformers(relations);
+    const personnel = musicBrainzRecordingPersonnel(relations);
     const attribution = musicBrainzRecordingAttribution(
       recording["artist-credit"] ?? [],
     );
@@ -503,6 +518,9 @@ export const fetchRecordingMatch = async (
       groups.set(group.id, current);
     }
     const selected = selectReleaseGroups([...groups.values()]);
+    const releaseGroupAttribution = selected.releaseGroupId
+      ? await fetchReleaseGroupAttribution(selected.releaseGroupId)
+      : [];
     return {
       recordingId: recording.id,
       title: decodeHtmlEntities(recording.title),
@@ -518,9 +536,13 @@ export const fetchRecordingMatch = async (
           )
         : null,
       attribution,
-      performers,
+      personnel,
       releaseGroup: selected.releaseGroupId && selected.title
-        ? { title: selected.title, musicbrainzReleaseGroupId: selected.releaseGroupId }
+        ? {
+            title: selected.title,
+            musicbrainzReleaseGroupId: selected.releaseGroupId,
+            attribution: releaseGroupAttribution,
+          }
         : null,
       representativeReleaseId: selected.representativeReleaseId,
     };

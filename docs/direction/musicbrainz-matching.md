@@ -161,6 +161,12 @@ can therefore link to one canonical Artist while retaining a Release
 Group-specific credited name such as “Nat ‘King’ Cole and His Trio.” This
 Attribution never overwrites a contained Recording's Attribution.
 
+Recording detail and a populated match/refresh draft show the Release Group
+title with this album credit beside it. Stored credited Artists link to their
+local Artist detail; a newly fetched draft shows the same faithfully formatted
+text before Save resolves its local Artist identities. A missing Attribution is
+an ordinary empty state, not a failed match.
+
 An explicit successful match or refresh replaces the complete shared Release
 Group Attribution atomically when the User saves the draft, including clearing
 the list when MusicBrainz successfully returns none. A failed lookup preserves
@@ -175,13 +181,20 @@ into recording date.
 
 ## Persistence boundary
 
-`release_groups` is authenticated-readable and has no direct client writes.
-The bounded `update_saved_recording(uuid, jsonb, jsonb)` RPC verifies that the
-caller saved the Recording, performs presence-aware partial updates, atomically
-inserts-or-gets a MusicBrainz-backed Release Group, and replaces confirmed
-performer credits. An absent JSON key preserves a field; a present null clears
-it. The legacy scalar overload remains temporarily for deployed-client
-compatibility.
+`releaseGroups` is authenticated-readable and has no direct client writes. The
+bounded `recordings:update` mutation verifies that the caller saved the
+Recording, atomically updates shared Recording facts and owner-scoped private
+data, resolves the MusicBrainz-backed Release Group, and replaces confirmed
+Attribution and Personnel. Personnel reads and writes use `recordingPersonnel`
+exclusively after the verified storage cutover.
+
+The repeatable `migrations:backfillRecordingPersonnel` migration converts
+legacy generic rows without a provider refetch, and
+`migrations:verifyRecordingPersonnel` checks grouped source coverage, target
+uniqueness, Artist references, relationship shape, required text, and bounds.
+Roll out the compatibility commits first, run and verify both migrations on the
+named deployment with the required consent, then deploy the new-only read
+cutover. Do not deploy the cutover before verification succeeds.
 
 Do not persist raw MusicBrainz JSON, search scores/evidence, relationship
 indexes, Release type/status/date copies, artwork URLs, or every edition.
@@ -209,9 +222,11 @@ honest partial-success message if media persistence or enrichment fails.
   multi-candidate route.
 - Tune the documented ±3-second/near-twin thresholds against more real
   fixtures without changing the truthful state contract.
-- Remove legacy `recordings.year` / `album` and the scalar save overload only
-  in a separately reviewed contract migration after deployed clients and
-  unmatched/manual editing paths have replacements.
+- Remove legacy `recordings.year` / `album` only in a separately reviewed
+  contract migration after unmatched/manual editing paths have replacements.
+- After the Recording Personnel cutover has been verified and its rollback
+  window has closed, remove `recordingArtistCredits` and the temporary migration
+  markers only with fresh, explicit destructive-cleanup authorization.
 - Add normalized parent-Work choices and the editable Song “Part of” field as
   its own metadata-field task.
 - Add explicit Work-family discovery and Recording matching for translated and

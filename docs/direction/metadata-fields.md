@@ -16,19 +16,15 @@
 - A selected YouTube/YouTube Music result retains its normalized provider snapshot in `youtube_items` and associates that item with the Recording; this includes accumulated source provenance plus nullable YouTube Music artist/album identities that cannot reliably be recovered from video-ID lookup. See [streaming-platform-links.md](streaming-platform-links.md).
 - The free-text `name` field is unaffected by any of this — it is still the Recording's own title/descriptor, separate from Attribution and Attribution Fallback.
 
-**Release Groups**: a Release Group has its own shared, editable Attribution,
-separate from every contained Recording's Attribution and from any one
-representative edition's artist credit. Model it as an ordered list of Artist
-references with a credited-as name and following join phrase for each item;
-derive the linked display text rather than storing links or character offsets
-inside one string. Every part references a canonical local Artist; manual
-Attribution may create or reuse an Artist without requiring a provider ID
-rather than falling back to an unlinked text part. MusicBrainz can initialize or refresh this structured
-Attribution, but it remains provider-neutral canonical metadata and Save—not a
-background lookup—persists the draft. The first UI slice shows it with the
-Release Group title in Recording detail and in the MusicBrainz match/refresh
-preview. Compact Recording rows and the player remain out of scope for that
-slice. Because the editor is reached through one Recording while changing a
-shared Release Group, label it clearly as **Album credit — shared across
-recordings**; the current trusted-development stage does not require a repeated
-confirmation modal.
+**Release Groups**: a Release Group has its own shared Attribution, separate
+from every contained Recording's Attribution and from any one representative
+edition's artist credit. It is an ordered list of Artist references with a
+credited-as name and following join phrase for each item; derive the linked
+display text rather than storing links or character offsets inside one string.
+Every part references a canonical local Artist. MusicBrainz initializes or
+refreshes this structured Attribution from the selected Release Group itself;
+the existing explicit Recording Save atomically replaces the shared credit,
+while a failed provider lookup leaves the stored credit alone. An explicitly
+successful empty provider credit clears it. Recording detail and the
+match/refresh draft show it with the Release Group title; compact Recording
+rows and the player remain unchanged.

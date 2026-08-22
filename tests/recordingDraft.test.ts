@@ -31,14 +31,29 @@ const recordingFixture = (): SavedRecording => ({
     id: "release-group-1",
     title: "Album &amp; Context",
     musicbrainz_release_group_id: "release-group-mbid",
+    artist_attributions: [
+      {
+        release_group_id: "release-group-1",
+        artist_id: "artist-1",
+        credited_as: "Bill & Jane",
+        join_phrase: "",
+        sort_order: 0,
+        artists: {
+          id: "artist-1",
+          name: "Bill & Jane",
+          kind: "group",
+          musicbrainz_artist_id: "artist-mbid",
+        },
+      },
+    ],
   },
-  recording_artist_credits: [
+  personnel: [
     {
       recording_id: "recording-1",
       artist_id: "artist-1",
-      role: "performer",
       credited_as: "Bill & Jane",
       sort_order: 0,
+      relationships: [{ type: "performer", details: [] }],
       artists: {
         id: "artist-1",
         name: "Bill & Jane",
@@ -105,7 +120,15 @@ test("maps the complete Recording draft to the presence-aware RPC payload", () =
       recording_location: "Chicago",
       release_group: {
         title: "Album &amp; Context",
-        musicbrainz_release_group_id: "release-group-mbid",
+      musicbrainz_release_group_id: "release-group-mbid",
+      attribution: [
+        {
+          type: "existing",
+          artist_id: "artist-1",
+          credited_as: "Bill & Jane",
+          join_phrase: "",
+        },
+      ],
       },
       attribution: [
         {
@@ -115,12 +138,12 @@ test("maps the complete Recording draft to the presence-aware RPC payload", () =
           join_phrase: "",
         },
       ],
-      performers: [
+      personnel: [
         {
-          name: "Bill & Jane",
+          type: "existing",
+          artist_id: "artist-1",
           credited_as: "Bill & Jane",
-          kind: "group",
-          musicbrainz_artist_id: "artist-mbid",
+          relationships: [{ type: "performer", details: [] }],
         },
       ],
     },
@@ -155,13 +178,13 @@ test("serializes cleared optional fields explicitly", () => {
     musicbrainzReleaseId: null,
     releaseGroup: null,
     attribution: [],
-    performers: [],
+    personnel: [],
   });
 
   assert.equal(payload.shared.artist, null);
   assert.equal(payload.shared.release_group, null);
   assert.deepEqual(payload.shared.attribution, []);
-  assert.deepEqual(payload.shared.performers, []);
+  assert.deepEqual(payload.shared.personnel, []);
   assert.equal(payload.private.notes, null);
   assert.deepEqual(payload.private.tags, []);
 });
@@ -183,7 +206,7 @@ test("unlinking MusicBrainz clears source-only Personnel but retains Attribution
   assert.equal(unlinked.musicbrainzRecordingId, null);
   assert.equal(unlinked.musicbrainzReleaseId, null);
   assert.equal(unlinked.releaseGroup, null);
-  assert.deepEqual(unlinked.performers, []);
+  assert.deepEqual(unlinked.personnel, []);
   assert.deepEqual(unlinked.attribution, draft.attribution);
   assert.equal(unlinked.artist, draft.artist);
 });
@@ -218,8 +241,45 @@ test("a resolved MusicBrainz match replaces the complete Attribution draft only 
         kind: "person",
       },
     ],
-    performers: [],
-    releaseGroup: null,
+    personnel: [
+      {
+        artistId: null,
+        musicbrainzArtistId: "barney-mbid",
+        name: "Barney Kessel",
+        creditedAs: "Barney Kessel",
+        kind: "person",
+        relationships: [
+          {
+            type: "instrument",
+            details: [{ canonical: "guitar", credited_as: null }],
+          },
+        ],
+      },
+    ],
+    releaseGroup: {
+      title: "Ella and Louis",
+      musicbrainzReleaseGroupId: "ella-and-louis-mbid",
+      attribution: [
+        {
+          artistId: null,
+          musicbrainzArtistId: "ella-mbid",
+          providerUnmatchedConfirmed: false,
+          name: "Ella Fitzgerald",
+          creditedAs: "Ella Fitzgerald",
+          joinPhrase: " & ",
+          kind: "person",
+        },
+        {
+          artistId: null,
+          musicbrainzArtistId: "louis-mbid",
+          providerUnmatchedConfirmed: false,
+          name: "Louis Armstrong",
+          creditedAs: "Louis Armstrong",
+          joinPhrase: "",
+          kind: "person",
+        },
+      ],
+    },
     representativeReleaseId: null,
   });
 
@@ -229,12 +289,44 @@ test("a resolved MusicBrainz match replaces the complete Attribution draft only 
     [" with ", ""],
   );
   assert.equal(matched.musicbrainzRecordingId, "new-recording-mbid");
+  assert.equal(matched.releaseGroup?.attribution[0]?.joinPhrase, " & ");
+  assert.deepEqual(matched.personnel[0]?.relationships, [
+    {
+      type: "instrument",
+      details: [{ canonical: "guitar", credited_as: null }],
+    },
+  ]);
+  assert.deepEqual(draft.personnel[0]?.relationships, [
+    { type: "performer", details: [] },
+  ]);
 });
 
 test("a failed MusicBrainz lookup preserves the current Attribution draft", () => {
   const { draft } = recordingToEditorState(recordingFixture());
 
   assert.equal(recordingDraftAfterMusicBrainzLookup(draft, null), draft);
+});
+
+test("a successful empty MusicBrainz response clears draft Personnel", () => {
+  const { draft } = recordingToEditorState(recordingFixture());
+  const refreshed = recordingDraftWithResolvedMatch(draft, {
+    recordingId: "recording-mbid",
+    title: "You and the Night and the Music",
+    artistCredit: "Bill & Jane",
+    duration: null,
+    recordingDateStart: null,
+    recordingDateEnd: null,
+    recordingLocation: null,
+    attribution: draft.attribution,
+    personnel: [],
+    releaseGroup: null,
+    representativeReleaseId: null,
+  });
+
+  assert.deepEqual(refreshed.personnel, []);
+  assert.deepEqual(draft.personnel[0]?.relationships, [
+    { type: "performer", details: [] },
+  ]);
 });
 
 test("rehydrates saved canonical Artist IDs while preserving newer in-flight edits", () => {

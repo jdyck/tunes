@@ -1,4 +1,4 @@
-import type { RecordingAttributionPart } from "../types/types.ts";
+import type { Artist } from "../types/types.ts";
 import type { Id } from "../../convex/_generated/dataModel.ts";
 import type { RecordingAttributionInput } from "./musicbrainzRecordingAttribution.ts";
 
@@ -26,7 +26,12 @@ export type RecordingAttributionPayload =
     };
 
 export const attributionCreditsToDraft = (
-  credits: readonly RecordingAttributionPart[],
+  credits: readonly {
+    artist_id: string;
+    credited_as: string;
+    join_phrase: string;
+    artists?: Artist | null;
+  }[],
 ): RecordingAttributionInput[] =>
   credits.flatMap((credit) => {
     const artist = credit.artists;

@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import type { AttributionInput } from "./model/recordings";
+import type { AttributionInput, PersonnelInput } from "./model/recordings";
 
 const modules = import.meta.glob("./**/*.ts");
 
@@ -63,6 +63,7 @@ const updateInput = (
     release_group: {
       title: "Example Album",
       musicbrainz_release_group_id: "mb-release-group-id",
+      attribution: [] as AttributionInput[],
     },
     attribution: [
       {
@@ -74,14 +75,16 @@ const updateInput = (
         musicbrainz_artist_id: "mb-artist-id",
       },
     ] as AttributionInput[],
-    performers: [
+    personnel: [
       {
+        type: "musicbrainz" as const,
         name: "Example Artist",
         credited_as: "Example Artist",
         kind: "person" as const,
         musicbrainz_artist_id: "mb-artist-id",
+        relationships: [{ type: "performer" as const, details: [] }],
       },
-    ],
+    ] as PersonnelInput[],
   },
   privateData: {
     key: "F",
@@ -199,7 +202,332 @@ test("reuses shared Recording identity while isolating each User's private data"
     tempo: "120",
   });
   expect(otherView.release_groups?.title).toBe("Example Album");
-  expect(otherView.recording_artist_credits).toHaveLength(1);
+  expect(otherView.personnel).toHaveLength(1);
+});
+
+test("ignores legacy generic rows after the Personnel storage cutover", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("personnel-compat-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "personnel-compat-song",
+    shared: songInput("Easy Living"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Easy Living", null);
+  await owner.mutation(api.recordings.update, input);
+
+  await t.run(async (ctx) => {
+    const recording = await ctx.db.get(recordingId);
+    if (!recording) throw new Error("Expected Recording");
+    const personnel = await ctx.db
+      .query("recordingPersonnel")
+      .withIndex("by_recordingId", (query) =>
+        query.eq("recordingId", recordingId),
+      )
+      .unique();
+    if (!personnel) throw new Error("Expected Personnel");
+    await ctx.db.insert("recordingArtistCredits", {
+      recordingId,
+      artistId: personnel.artistId,
+      role: "performer",
+      creditedAs: personnel.creditedAs,
+      sortOrder: personnel.sortOrder,
+      legacySupabaseId: null,
+    });
+    await ctx.db.delete(personnel._id);
+    const {
+      personnelMigrated: _marker,
+      personnelMigrationKind: _kind,
+      ...unmigrated
+    } = recording;
+    await ctx.db.replace(recordingId, unmigrated);
+  });
+
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({ personnel: [] });
+
+  input.shared.personnel = [];
+  await owner.mutation(api.recordings.update, input);
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({ personnel: [] });
+});
+
+test("rejects duplicate Personnel Artists without replacing the stored set", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("personnel-duplicate-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "personnel-duplicate-song",
+    shared: songInput("Moonlight in Vermont"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Moonlight in Vermont", null);
+  await owner.mutation(api.recordings.update, input);
+  input.shared.personnel = [
+    input.shared.personnel[0],
+    { ...input.shared.personnel[0], credited_as: "Duplicate" },
+  ];
+
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "cannot repeat an Artist",
+  );
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({
+    personnel: [{ credited_as: "Example Artist" }],
+  });
+});
+
+test("replaces detailed instrument Personnel and rejects duplicate details atomically", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("instrument-personnel-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "instrument-personnel-song",
+    shared: songInput("Lush Life"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Lush Life", null);
+  input.shared.personnel = [
+    {
+      type: "musicbrainz",
+      name: "Barney Kessel",
+      credited_as: "Barney Kessel",
+      kind: "person",
+      musicbrainz_artist_id: "mb-barney-kessel",
+      relationships: [
+        {
+          type: "instrument",
+          details: [
+            { canonical: "guitar", credited_as: null },
+            { canonical: "violin", credited_as: "1st violin" },
+          ],
+        },
+      ],
+    },
+  ];
+  await owner.mutation(api.recordings.update, input);
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({
+    personnel: [
+      {
+        credited_as: "Barney Kessel",
+        relationships: [
+          {
+            type: "instrument",
+            details: [
+              { canonical: "guitar", credited_as: null },
+              { canonical: "violin", credited_as: "1st violin" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  input.shared.personnel[0].relationships[0].details.push({
+    canonical: " GUITAR ",
+    credited_as: null,
+  });
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "duplicate relationship detail",
+  );
+  await expect(
+    owner.query(api.recordings.getMine, { recordingId }),
+  ).resolves.toMatchObject({
+    personnel: [
+      {
+        relationships: [
+          {
+            details: [
+              { canonical: "guitar", credited_as: null },
+              { canonical: "violin", credited_as: "1st violin" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+});
+
+test("persists all five Personnel relationship types and rejects malformed shapes", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("complete-personnel-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "complete-personnel-song",
+    shared: songInput("My Ship"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "My Ship", null);
+  input.shared.personnel = [
+    {
+      type: "musicbrainz",
+      name: "Nina Simone",
+      credited_as: "Nina Simone",
+      kind: "person",
+      musicbrainz_artist_id: "mb-nina-simone",
+      relationships: [
+        {
+          type: "instrument",
+          details: [{ canonical: "piano", credited_as: null }],
+        },
+        {
+          type: "vocal",
+          details: [{ canonical: "lead vocals", credited_as: "voice" }],
+        },
+      ],
+    },
+    {
+      type: "musicbrainz",
+      name: "Quincy Jones",
+      credited_as: "Quincy Jones",
+      kind: "person",
+      musicbrainz_artist_id: "mb-quincy-jones",
+      relationships: [{ type: "conductor", details: [] }],
+    },
+    {
+      type: "musicbrainz",
+      name: "Studio Orchestra",
+      credited_as: "Studio Orchestra",
+      kind: "orchestra",
+      musicbrainz_artist_id: "mb-studio-orchestra",
+      relationships: [{ type: "orchestra", details: [] }],
+    },
+    {
+      type: "musicbrainz",
+      name: "Unknown Performer",
+      credited_as: "Unknown Performer",
+      kind: null,
+      musicbrainz_artist_id: "mb-unknown-performer",
+      relationships: [{ type: "performer", details: [] }],
+    },
+  ];
+  await owner.mutation(api.recordings.update, input);
+  const saved = await owner.query(api.recordings.getMine, { recordingId });
+  expect(saved?.personnel.map((entry) => entry.relationships)).toEqual([
+    [
+      {
+        type: "instrument",
+        details: [{ canonical: "piano", credited_as: null }],
+      },
+      {
+        type: "vocal",
+        details: [{ canonical: "lead vocals", credited_as: "voice" }],
+      },
+    ],
+    [{ type: "conductor", details: [] }],
+    [{ type: "orchestra", details: [] }],
+    [{ type: "performer", details: [] }],
+  ]);
+
+  input.shared.personnel[1].relationships = [
+    {
+      type: "conductor",
+      details: [{ canonical: "guest", credited_as: null }],
+    },
+  ];
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "conductor Personnel cannot have details",
+  );
+  const afterMalformed = await owner.query(api.recordings.getMine, {
+    recordingId,
+  });
+  expect(afterMalformed?.personnel[1]).toMatchObject({
+    relationships: [{ type: "conductor", details: [] }],
+  });
+
+  input.shared.personnel[1].relationships = [
+    { type: "conductor", details: [] },
+  ];
+  input.shared.personnel[1].credited_as = " ";
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "requires credited-as Artist text",
+  );
+
+  input.shared.personnel[1] = {
+    type: "musicbrainz",
+    name: "Quincy Jones",
+    credited_as: "Quincy Jones",
+    kind: "person",
+    musicbrainz_artist_id: "mb-quincy-jones",
+    relationships: [
+      { type: "performer", details: [] },
+      { type: "conductor", details: [] },
+    ],
+  };
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "generic performer",
+  );
+});
+
+test("enforces Recording Personnel Artist and aggregate detail bounds", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("personnel-bounds-owner"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "personnel-bounds-song",
+    shared: songInput("Sophisticated Lady"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Sophisticated Lady", null);
+  input.shared.personnel = Array.from({ length: 101 }, (_, index) => ({
+    type: "musicbrainz" as const,
+    name: `Artist ${index}`,
+    credited_as: `Artist ${index}`,
+    kind: "person" as const,
+    musicbrainz_artist_id: `mb-artist-${index}`,
+    relationships: [{ type: "performer" as const, details: [] }],
+  }));
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "100 Personnel Artists",
+  );
+
+  input.shared.personnel = [
+    {
+      type: "musicbrainz",
+      name: "Many Instruments",
+      credited_as: "Many Instruments",
+      kind: "person",
+      musicbrainz_artist_id: "mb-many-instruments",
+      relationships: [
+        {
+          type: "instrument",
+          details: Array.from({ length: 501 }, (_, index) => ({
+            canonical: `instrument ${index}`,
+            credited_as: null,
+          })),
+        },
+      ],
+    },
+  ];
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "500 Personnel details",
+  );
 });
 
 test("reorders and unsaves only the current User's private relationships", async () => {
@@ -294,7 +622,7 @@ test("replaces Recording Attribution atomically, preserving repeated Artist part
     firstView?.recording_artist_attributions[1]?.artist_id,
   );
   expect(firstView?.recording_artist_attributions[0]?.artist_id).toBe(
-    firstView?.recording_artist_credits[0]?.artist_id,
+    firstView?.personnel[0]?.artist_id,
   );
 
   input.shared.attribution = [
@@ -320,13 +648,13 @@ test("replaces Recording Attribution atomically, preserving repeated Artist part
       musicbrainz_recording_id: null,
       musicbrainz_release_id: null,
       release_group: null,
-      performers: [],
+      personnel: [],
     },
   };
   await owner.mutation(api.recordings.update, unlinkInput);
   const unlinked = await owner.query(api.recordings.getMine, { recordingId });
   expect(unlinked?.musicbrainz_recording_id).toBeNull();
-  expect(unlinked?.recording_artist_credits).toEqual([]);
+  expect(unlinked?.personnel).toEqual([]);
   expect(unlinked?.recording_artist_attributions).toMatchObject([
     { credited_as: "Louis Armstrong" },
   ]);
@@ -445,4 +773,99 @@ test("rejects an oversized Attribution before replacing stored parts", async () 
   expect(afterRejectedSave?.recording_artist_attributions).toMatchObject([
     { credited_as: "Example Artist" },
   ]);
+});
+
+test("replaces shared Release Group Attribution atomically and exposes it to every saved member", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("release-group-owner"));
+  const other = t.withIdentity(identity("release-group-other"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  await other.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "release-group-attribution-song",
+    shared: songInput("Autumn Leaves"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+  const input = updateInput(recordingId, "Autumn Leaves", null);
+  if (!input.shared.release_group) throw new Error("Expected a Release Group");
+  input.shared.release_group.attribution = [
+    {
+      type: "musicbrainz",
+      name: "Ella Fitzgerald",
+      credited_as: "Ella Fitzgerald",
+      join_phrase: " & ",
+      kind: "person",
+      musicbrainz_artist_id: "ella-fitzgerald",
+    },
+    {
+      type: "musicbrainz",
+      name: "Louis Armstrong",
+      credited_as: "Louis Armstrong",
+      join_phrase: "",
+      kind: "person",
+      musicbrainz_artist_id: "louis-armstrong",
+    },
+  ];
+  await owner.mutation(api.recordings.update, input);
+
+  await t.mutation(internal.users.setRole, {
+    clerkSubject: "release-group-owner",
+    role: "admin",
+  });
+  await owner.mutation(api.songs.setDiscoverability, {
+    songId,
+    isDiscoverable: true,
+  });
+  await other.mutation(api.songs.addDiscoverable, { songId });
+  await other.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId, "abcdefghijk"),
+  );
+
+  const sharedView = await other.query(api.recordings.getMine, { recordingId });
+  expect(sharedView?.release_groups?.artist_attributions).toMatchObject([
+    { credited_as: "Ella Fitzgerald", join_phrase: " & " },
+    { credited_as: "Louis Armstrong", join_phrase: "" },
+  ]);
+
+  input.shared.release_group.attribution = [{
+    type: "musicbrainz",
+    name: "Bill Evans",
+    credited_as: "Bill Evans Trio",
+    join_phrase: "",
+    kind: "group",
+    musicbrainz_artist_id: "bill-evans-trio",
+  }];
+  await owner.mutation(api.recordings.update, input);
+  expect(
+    (await other.query(api.recordings.getMine, { recordingId }))
+      ?.release_groups?.artist_attributions,
+  ).toMatchObject([{ credited_as: "Bill Evans Trio", join_phrase: "" }]);
+
+  input.shared.release_group.attribution = Array.from({ length: 101 }, (_, index) => ({
+    type: "musicbrainz" as const,
+    name: `Artist ${index}`,
+    credited_as: `Artist ${index}`,
+    join_phrase: "",
+    kind: "person" as const,
+    musicbrainz_artist_id: `release-group-artist-${index}`,
+  }));
+  await expect(owner.mutation(api.recordings.update, input)).rejects.toThrow(
+    "Release Group cannot have more than 100 Attribution parts",
+  );
+  expect(
+    (await owner.query(api.recordings.getMine, { recordingId }))
+      ?.release_groups?.artist_attributions,
+  ).toMatchObject([{ credited_as: "Bill Evans Trio" }]);
+
+  input.shared.release_group.attribution = [];
+  await owner.mutation(api.recordings.update, input);
+  expect(
+    (await other.query(api.recordings.getMine, { recordingId }))
+      ?.release_groups?.artist_attributions,
+  ).toEqual([]);
 });

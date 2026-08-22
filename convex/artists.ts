@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { getCurrentUser, requireAdmin } from "./model/auth";
@@ -17,6 +17,7 @@ import {
 const nullableString = v.union(v.string(), v.null());
 const repertoireLimit = 500;
 const recordingRelationshipReasonValidator = v.union(
+  v.literal("release_group_attribution"),
   v.literal("attribution"),
   v.literal("personnel"),
 );
@@ -26,17 +27,29 @@ const artistRecordingViewValidator = savedRecordingViewValidator.extend({
 
 const loadRecordingArtistRelationships = async (
   ctx: Pick<QueryCtx, "db">,
-  recordingId: Id<"recordings">,
+  recording: Doc<"recordings">,
 ) => {
-  const [personnel, attribution] = await Promise.all([
+  const [personnel, attribution, releaseGroupAttribution] = await Promise.all([
     ctx.db
-      .query("recordingArtistCredits")
-      .withIndex("by_recordingId", (index) => index.eq("recordingId", recordingId))
+      .query("recordingPersonnel")
+      .withIndex("by_recordingId", (index) =>
+        index.eq("recordingId", recording._id),
+      )
       .take(101),
     ctx.db
       .query("recordingArtistAttributions")
-      .withIndex("by_recordingId", (index) => index.eq("recordingId", recordingId))
+      .withIndex("by_recordingId", (index) =>
+        index.eq("recordingId", recording._id),
+      )
       .take(101),
+    recording.releaseGroupId
+      ? ctx.db
+          .query("releaseGroupArtistAttributions")
+          .withIndex("by_releaseGroupId", (index) =>
+            index.eq("releaseGroupId", recording.releaseGroupId!),
+          )
+          .take(101)
+      : Promise.resolve([]),
   ]);
   if (personnel.length > 100) {
     throw new Error("Recording Personnel exceeds 100 credits");
@@ -44,10 +57,15 @@ const loadRecordingArtistRelationships = async (
   if (attribution.length > 100) {
     throw new Error("Recording Attribution exceeds 100 parts");
   }
-  return { personnel, attribution };
+  if (releaseGroupAttribution.length > 100) {
+    throw new Error("Release Group Attribution exceeds 100 parts");
+  }
+  return { personnel, attribution, releaseGroupAttribution };
 };
 
-const takeRepertoire = async <Value>(load: (limit: number) => Promise<Value[]>) => {
+const takeRepertoire = async <Value>(
+  load: (limit: number) => Promise<Value[]>,
+) => {
   const values = await load(repertoireLimit + 1);
   if (values.length > repertoireLimit) {
     throw new Error("Artist browsing supports up to 500 repertoire items");
@@ -103,12 +121,21 @@ export const listMine = query({
       addCounts(new Set(credits.map((credit) => credit.artistId)), "songCount");
     }
     for (const membership of recordingMemberships) {
-      const { personnel, attribution } = await loadRecordingArtistRelationships(
-        ctx,
-        membership.recordingId,
-      );
+      const recording = await ctx.db.get(membership.recordingId);
+      if (!recording) {
+        throw new Error("Saved Recording references a missing Recording");
+      }
+      const { personnel, attribution, releaseGroupAttribution } =
+        await loadRecordingArtistRelationships(
+          ctx,
+          recording,
+        );
       addCounts(
-        new Set([...personnel, ...attribution].map((credit) => credit.artistId)),
+        new Set(
+          [...personnel, ...attribution, ...releaseGroupAttribution].map(
+            (credit) => credit.artistId,
+          ),
+        ),
         "recordingCount",
       );
     }
@@ -218,23 +245,30 @@ export const getMine = query({
     }
 
     const recordings = await Promise.all(
-      [...new Map(
-        recordingMemberships.map((membership) => [
-          membership.recordingId,
-          membership,
-        ]),
-      ).values()].map(async (membership) => {
-        const [relationships, recording] = await Promise.all([
-          loadRecordingArtistRelationships(ctx, membership.recordingId),
-          ctx.db.get(membership.recordingId),
-        ]);
+      [
+        ...new Map(
+          recordingMemberships.map((membership) => [
+            membership.recordingId,
+            membership,
+          ]),
+        ).values(),
+      ].map(async (membership) => {
+        const recording = await ctx.db.get(membership.recordingId);
         if (!recording) {
           throw new Error("Saved Recording references a missing Recording");
         }
+        const relationships = await loadRecordingArtistRelationships(
+          ctx,
+          recording,
+        );
 
-        const { personnel, attribution } = relationships;
+        const { personnel, attribution, releaseGroupAttribution } =
+          relationships;
 
         const relationshipReasons = [
+          ...(releaseGroupAttribution.some((part) => part.artistId === artistId)
+            ? ["release_group_attribution" as const]
+            : []),
           ...(attribution.some((part) => part.artistId === artistId)
             ? ["attribution" as const]
             : []),
@@ -321,10 +355,7 @@ export const cacheImage = mutation({
     if (imageUrl && !imageUrl.startsWith("https://upload.wikimedia.org/")) {
       throw new Error("Invalid Wikimedia image URL");
     }
-    if (
-      sourceUrl &&
-      !sourceUrl.startsWith("https://commons.wikimedia.org/")
-    ) {
+    if (sourceUrl && !sourceUrl.startsWith("https://commons.wikimedia.org/")) {
       throw new Error("Invalid Wikimedia source URL");
     }
     if (imageUrl && !sourceUrl) {

@@ -76,15 +76,29 @@ export interface SongArtistCreditInput {
   musicbrainzArtistId?: string | null;
 }
 
-export type RecordingArtistCreditRole = "performer";
+export type RecordingPersonnelRelationshipType =
+  | "instrument"
+  | "vocal"
+  | "performer"
+  | "conductor"
+  | "orchestra";
 
-export interface RecordingArtistCredit {
-  id?: string;
+export interface RecordingPersonnelDetail {
+  canonical: string;
+  credited_as: string | null;
+}
+
+export interface RecordingPersonnelRelationship {
+  type: RecordingPersonnelRelationshipType;
+  details: RecordingPersonnelDetail[];
+}
+
+export interface RecordingPersonnelEntry {
   recording_id: string;
   artist_id: string;
-  role: RecordingArtistCreditRole;
   credited_as: string;
   sort_order?: number | null;
+  relationships: RecordingPersonnelRelationship[];
   artists?: Artist | null;
 }
 
@@ -116,8 +130,7 @@ export interface Recording {
   recording_location?: string | null;
   release_group_id?: string | null;
   release_groups?: ReleaseGroup | null;
-  /** Derived from structured Attribution, then the transitional fallback. */
-  recording_artist_credits?: RecordingArtistCredit[];
+  personnel?: RecordingPersonnelEntry[];
   artist_attribution_fallback?: string | null;
   recording_artist_attributions?: RecordingAttributionPart[];
 }
@@ -126,6 +139,17 @@ export interface ReleaseGroup {
   id: string;
   title: string;
   musicbrainz_release_group_id: string;
+  artist_attributions?: ReleaseGroupAttributionPart[];
+}
+
+export interface ReleaseGroupAttributionPart {
+  id?: string;
+  release_group_id: string;
+  artist_id: string;
+  credited_as: string;
+  join_phrase: string;
+  sort_order?: number | null;
+  artists?: Artist | null;
 }
 
 export interface UserRecordingData {

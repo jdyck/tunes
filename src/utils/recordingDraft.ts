@@ -1,15 +1,13 @@
-import type {
-  RecordingPerformer,
-  ResolvedRecordingMatch,
-} from "../lib/musicbrainz.ts";
+import type { ResolvedRecordingMatch } from "../lib/musicbrainz.ts";
 import type { RecordingAttributionInput } from "./musicbrainzRecordingAttribution.ts";
 import type { RecordingKind, SavedRecording } from "../types/types.ts";
 import { decodeHtmlEntities } from "./htmlEntities.ts";
 import {
-  performerCreditsToDraft,
-  performersToSavePayload,
-  type RecordingPerformerPayload,
-} from "./recordingPerformers.ts";
+  personnelEntriesToDraft,
+  personnelEntriesToSavePayload,
+  type RecordingPersonnelDraftEntry,
+  type RecordingPersonnelPayload,
+} from "./recordingPersonnel.ts";
 import {
   attributionCreditsToDraft,
   attributionsToSavePayload,
@@ -19,6 +17,7 @@ import {
 export interface RecordingDraftReleaseGroup {
   title: string;
   musicbrainzReleaseGroupId: string;
+  attribution: RecordingAttributionInput[];
 }
 
 export interface RecordingDraft {
@@ -39,7 +38,7 @@ export interface RecordingDraft {
   musicbrainzReleaseId: string | null;
   releaseGroup: RecordingDraftReleaseGroup | null;
   attribution: RecordingAttributionInput[];
-  performers: RecordingPerformer[];
+  personnel: RecordingPersonnelDraftEntry[];
 }
 
 export interface RecordingEditorState {
@@ -63,9 +62,10 @@ export interface RecordingSavePayload {
     release_group: {
       title: string;
       musicbrainz_release_group_id: string;
+      attribution: RecordingAttributionPayload[];
     } | null;
     attribution: RecordingAttributionPayload[];
-    performers: RecordingPerformerPayload[];
+    personnel: RecordingPersonnelPayload[];
   };
   private: {
     key: string | null;
@@ -106,14 +106,15 @@ const loadedDraft = (recording: SavedRecording): RecordingDraft => ({
         title: recording.release_groups.title,
         musicbrainzReleaseGroupId:
           recording.release_groups.musicbrainz_release_group_id,
+        attribution: attributionCreditsToDraft(
+          recording.release_groups.artist_attributions ?? [],
+        ),
       }
     : null,
   attribution: attributionCreditsToDraft(
     recording.recording_artist_attributions ?? [],
   ),
-  performers: performerCreditsToDraft(
-    recording.recording_artist_credits ?? []
-  ),
+  personnel: personnelEntriesToDraft(recording.personnel ?? []),
 });
 
 export const recordingToEditorState = (
@@ -168,7 +169,7 @@ export const recordingDraftWithoutMusicBrainzMatch = (
   musicbrainzRecordingId: null,
   musicbrainzReleaseId: null,
   releaseGroup: null,
-  performers: [],
+  personnel: [],
 });
 
 export const recordingDraftWithResolvedMatch = (
@@ -184,7 +185,7 @@ export const recordingDraftWithResolvedMatch = (
   recordingDateEnd: match.recordingDateEnd || "",
   recordingLocation: match.recordingLocation || "",
   attribution: match.attribution,
-  performers: match.performers,
+  personnel: match.personnel,
   ...(match.duration ? { duration: match.duration } : {}),
 });
 
@@ -215,10 +216,13 @@ export const recordingDraftToPayload = (
           title: draft.releaseGroup.title,
           musicbrainz_release_group_id:
             draft.releaseGroup.musicbrainzReleaseGroupId,
+          attribution: attributionsToSavePayload(
+            draft.releaseGroup.attribution,
+          ),
         }
       : null,
     attribution: attributionsToSavePayload(draft.attribution),
-    performers: performersToSavePayload(draft.performers),
+    personnel: personnelEntriesToSavePayload(draft.personnel),
   },
   private: {
     key: draft.key || null,

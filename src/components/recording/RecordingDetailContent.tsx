@@ -28,6 +28,8 @@ import { RecordingKind } from "@/types/types";
 import type { RecordingDraft } from "@/utils/recordingDraft";
 import YouTubeMediaInfoModal from "@/components/recording/YouTubeMediaInfoModal";
 import RecordingAttributionEditor from "@/components/recording/RecordingAttributionEditor";
+import ReleaseGroupAttribution from "@/components/recording/ReleaseGroupAttribution";
+import RecordingPersonnel from "@/components/recording/RecordingPersonnel";
 
 type RecordingDraftTextField =
   | "name"
@@ -98,6 +100,7 @@ export default function RecordingDetailContent({
   const notes = draft?.notes ?? "";
   const artist = draft?.artist ?? "";
   const attribution = draft?.attribution ?? [];
+  const personnel = draft?.personnel ?? [];
   const album = draft?.album ?? "";
   const year = draft?.year ?? "";
   const recordingDateStart = draft?.recordingDateStart ?? "";
@@ -111,7 +114,8 @@ export default function RecordingDetailContent({
   const musicbrainzReleaseId = draft?.musicbrainzReleaseId ?? null;
   const releaseGroup = draft?.releaseGroup ?? null;
   const videoId = recording?.youtube_items[0]?.video_id ?? null;
-  const handleDraftTextChange = (field: RecordingDraftTextField) =>
+  const handleDraftTextChange =
+    (field: RecordingDraftTextField) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       patchDraft({ [field]: event.target.value });
     };
@@ -123,7 +127,8 @@ export default function RecordingDetailContent({
       await unsaveRecording({ recordingId: id as Id<"recordings"> });
       router.push(backHref);
     } catch (problem) {
-      const message = problem instanceof Error ? problem.message : String(problem);
+      const message =
+        problem instanceof Error ? problem.message : String(problem);
       console.error("Error removing recording:", problem);
       setError(`Error removing recording: ${message}`);
     }
@@ -131,9 +136,7 @@ export default function RecordingDetailContent({
 
   if (loading) return <RecordingDetailSkeleton backHref={backHref} />;
   if (loadError && !recording)
-    return (
-      <AsyncStateMessage variant="error">{loadError}</AsyncStateMessage>
-    );
+    return <AsyncStateMessage variant="error">{loadError}</AsyncStateMessage>;
   if (!recording)
     return <AsyncStateMessage>No recording found.</AsyncStateMessage>;
   if (!draft) return <RecordingDetailSkeleton backHref={backHref} />;
@@ -145,264 +148,294 @@ export default function RecordingDetailContent({
       </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
-      {error && (
-        <p className="mb-3 text-sm text-vermillion-600">
-          {error}
-        </p>
-      )}
-      {videoId && recording && (
-        <div className="mb-6 space-y-2">
-          <button
-            onClick={() =>
-              play({
-                name: recording.name,
-                songTitle,
-                artist: recording.artist,
-                kind,
-                youtubeVideoId: videoId,
-              })
-            }
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-action text-text-on-accent font-bold rounded-md hover:bg-action-hover"
-          >
-            <PlayIcon className="w-5 h-5" />
-            Play
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowYouTubeMediaInfo(true)}
-            className="w-full rounded-md border border-paper-600 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-paper-100"
-          >
-            YouTube media info
-          </button>
-        </div>
-      )}
-      <form
-        className="w-full"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void save();
-        }}
-      >
-        <div className="flex justify-between items-center mb-4">
-          {(releaseGroup || musicbrainzReleaseId) && (
-            <RecordingThumbnail
-              src={releaseGroupCoverArtUrl(
-                releaseGroup?.musicbrainzReleaseGroupId
-              )}
-              fallbackSrc={coverArtUrl(musicbrainzReleaseId)}
-              alt=""
-              className="w-16 h-16 rounded shrink-0 mr-3"
-            />
-          )}
-          <input
-            value={name}
-            onChange={handleDraftTextChange("name")}
-            className="font-bold text-2xl bg-transparent pb-2 w-full"
-          />
-          <SaveAction
-            status={saveStatus}
-            error={saveError}
-            className="ml-2 shrink-0"
-          />
-        </div>
-
-        <div className="mb-4">
-          <RecordingAttributionEditor
-            value={attribution}
-            onChange={(next) => patchDraft({ attribution: next })}
-          />
-          <FormField
-            label="Attribution fallback"
-            value={artist}
-            onChange={handleDraftTextChange("artist")}
-          />
-          {artist && (
+        {error && <p className="mb-3 text-sm text-vermillion-600">{error}</p>}
+        {videoId && recording && (
+          <div className="mb-6 space-y-2">
+            <button
+              onClick={() =>
+                play({
+                  name: recording.name,
+                  songTitle,
+                  artist: recording.artist,
+                  kind,
+                  youtubeVideoId: videoId,
+                })
+              }
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-action text-text-on-accent font-bold rounded-md hover:bg-action-hover"
+            >
+              <PlayIcon className="w-5 h-5" />
+              Play
+            </button>
             <button
               type="button"
-              onClick={() => patchDraft({ artist: "" })}
-              className="mt-1 text-xs text-vermillion-600 underline"
+              onClick={() => setShowYouTubeMediaInfo(true)}
+              className="w-full rounded-md border border-paper-600 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-paper-100"
             >
-              Clear attribution fallback
+              YouTube media info
             </button>
-          )}
-        </div>
-        <label className="block mb-4">
-          <span className="block text-xs text-ink-600">Recording kind</span>
-          <select
-            value={kind}
-            onChange={(event) => {
-              patchDraft({ kind: event.target.value as RecordingKind });
-            }}
-            className="block w-full p-1.5 rounded-md"
-          >
-            <option value="released">Released recording</option>
-            <option value="video_capture">Video capture</option>
-          </select>
-        </label>
-        <div className="mb-4">
-          <FormField
-            label="Album"
-            value={album}
-            onChange={handleDraftTextChange("album")}
-          />
-        </div>
-        <div className="mb-4">
-          <FormField
-            label="Year"
-            value={year}
-            onChange={handleDraftTextChange("year")}
-          />
-        </div>
-        <div className="mb-4">
-          <FormField
-            label="Recorded"
-            value={
-              recordingDateEnd
-                ? `${recordingDateStart} – ${recordingDateEnd}`
-                : recordingDateStart
-            }
-            onChange={() => undefined}
-            disabled
-            placeholder="Unknown"
-          />
-        </div>
-        <div className="mb-4">
-          <FormField
-            label="Recording location"
-            value={recordingLocation}
-            onChange={handleDraftTextChange("recordingLocation")}
-            placeholder="Unknown"
-          />
-        </div>
-        <div className="mb-4">
-          <FormField
-            label="Duration"
-            value={duration}
-            onChange={handleDraftTextChange("duration")}
-          />
-        </div>
-        <div className="mb-4">
-          {showManualSearch ? (
-            <>
-              <label className="block mb-2">
-                <span className="block text-xs text-ink-600">Search MusicBrainz</span>
-                <input
-                  type="text"
-                  value={manualQuery}
-                  onChange={(e) => setManualQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleManualSearch();
-                    }
-                  }}
-                  className="block w-full p-1.5 rounded-md"
-                />
-              </label>
-              {album && (
-                <label className="flex items-center gap-1.5 mb-2 text-xs text-ink-600">
-                  <input
-                    type="checkbox"
-                    checked={ignoreAlbumForMatch}
-                    onChange={(e) => setIgnoreAlbumForMatch(e.target.checked)}
-                  />
-                  {`"${album}" might be a compilation -- don't use it to match`}
-                </label>
-              )}
-              <LinkButton
-                onClick={handleManualSearch}
-                disabled={manualSearching}
-                className="mb-2 mr-3"
-              >
-                {manualSearching ? "Searching..." : "Search"}
-              </LinkButton>
-              <LinkButton
-                variant="muted"
-                onClick={() => setShowManualSearch(false)}
-                className="mb-2"
-              >
-                Cancel
-              </LinkButton>
-              <RecordingMatchResultsList results={manualResults} onSelect={applyMatch} />
-            </>
-          ) : musicbrainzRecordingId ? (
-            <>
-              <MusicBrainzLink type="recording" id={musicbrainzRecordingId} />
-              <SyncFromMusicBrainzButton
-                syncing={syncingFromMusicBrainz}
-                onClick={handleUpdateFromMusicBrainz}
-                className="text-xs text-azure-600 underline disabled:opacity-70 mr-3"
+          </div>
+        )}
+        <form
+          className="w-full"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void save();
+          }}
+        >
+          <div className="flex justify-between items-center mb-4">
+            {(releaseGroup || musicbrainzReleaseId) && (
+              <RecordingThumbnail
+                src={releaseGroupCoverArtUrl(
+                  releaseGroup?.musicbrainzReleaseGroupId,
+                )}
+                fallbackSrc={coverArtUrl(musicbrainzReleaseId)}
+                alt=""
+                className="w-16 h-16 rounded shrink-0 mr-3"
               />
-              <LinkButton variant="muted" onClick={handleChangeMatch}>
-                Change match
-              </LinkButton>
+            )}
+            <input
+              value={name}
+              onChange={handleDraftTextChange("name")}
+              className="font-bold text-2xl bg-transparent pb-2 w-full"
+            />
+            <SaveAction
+              status={saveStatus}
+              error={saveError}
+              className="ml-2 shrink-0"
+            />
+          </div>
+
+          <div className="mb-4">
+            <RecordingAttributionEditor
+              value={attribution}
+              onChange={(next) => patchDraft({ attribution: next })}
+            />
+            <RecordingPersonnel
+              attribution={attribution}
+              personnel={personnel}
+            />
+            <FormField
+              label="Attribution fallback"
+              value={artist}
+              onChange={handleDraftTextChange("artist")}
+            />
+            {artist && (
               <button
                 type="button"
-                onClick={handleRemoveMusicBrainzMatch}
-                className="ml-3 text-xs text-vermillion-600 underline"
+                onClick={() => patchDraft({ artist: "" })}
+                className="mt-1 text-xs text-vermillion-600 underline"
               >
-                Remove match
+                Clear attribution fallback
               </button>
-              {syncError && <p className="text-sm text-ink-600 mt-1">{syncError}</p>}
-            </>
-          ) : suggestedMatch ? (
-            <RecordingMatchSuggestion
-              match={suggestedMatch}
-              onConfirm={applyMatch}
-              onReject={handleRejectSuggestion}
-              onSearchManually={handleOpenManualSearch}
-            />
-          ) : (
-            <LinkButton
-              onClick={handleOpenManualSearch}
-              disabled={matchStatus === "searching"}
+            )}
+          </div>
+          <label className="block mb-4">
+            <span className="block text-xs text-ink-600">Recording kind</span>
+            <select
+              value={kind}
+              onChange={(event) => {
+                patchDraft({ kind: event.target.value as RecordingKind });
+              }}
+              className="block w-full p-1.5 rounded-md"
             >
-              {matchStatus === "searching"
-                ? "Looking for a match..."
-                : "Match with MusicBrainz"}
-            </LinkButton>
-          )}
-          {matchError && <p className="text-sm text-ink-600 mt-1">{matchError}</p>}
-        </div>
+              <option value="released">Released recording</option>
+              <option value="video_capture">Video capture</option>
+            </select>
+          </label>
+          <div className="mb-4">
+            <FormField
+              label="Album"
+              value={album}
+              onChange={handleDraftTextChange("album")}
+            />
+            {releaseGroup && releaseGroup.attribution.length > 0 && (
+              <p className="mt-1 text-xs text-ink-600">
+                <span className="font-medium">{releaseGroup.title}</span>
+                {": "}
+                <ReleaseGroupAttribution
+                  attribution={releaseGroup.attribution}
+                />
+              </p>
+            )}
+            {releaseGroup && (
+              <RecordingAttributionEditor
+                value={releaseGroup.attribution}
+                onChange={(next) =>
+                  patchDraft({
+                    releaseGroup: { ...releaseGroup, attribution: next },
+                  })
+                }
+                label="Album credit — shared across recordings"
+                description="Edit each credited Artist in order. Saving updates every Recording using this album. Following text is preserved exactly."
+              />
+            )}
+          </div>
+          <div className="mb-4">
+            <FormField
+              label="Year"
+              value={year}
+              onChange={handleDraftTextChange("year")}
+            />
+          </div>
+          <div className="mb-4">
+            <FormField
+              label="Recorded"
+              value={
+                recordingDateEnd
+                  ? `${recordingDateStart} – ${recordingDateEnd}`
+                  : recordingDateStart
+              }
+              onChange={() => undefined}
+              disabled
+              placeholder="Unknown"
+            />
+          </div>
+          <div className="mb-4">
+            <FormField
+              label="Recording location"
+              value={recordingLocation}
+              onChange={handleDraftTextChange("recordingLocation")}
+              placeholder="Unknown"
+            />
+          </div>
+          <div className="mb-4">
+            <FormField
+              label="Duration"
+              value={duration}
+              onChange={handleDraftTextChange("duration")}
+            />
+          </div>
+          <div className="mb-4">
+            {showManualSearch ? (
+              <>
+                <label className="block mb-2">
+                  <span className="block text-xs text-ink-600">
+                    Search MusicBrainz
+                  </span>
+                  <input
+                    type="text"
+                    value={manualQuery}
+                    onChange={(e) => setManualQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleManualSearch();
+                      }
+                    }}
+                    className="block w-full p-1.5 rounded-md"
+                  />
+                </label>
+                {album && (
+                  <label className="flex items-center gap-1.5 mb-2 text-xs text-ink-600">
+                    <input
+                      type="checkbox"
+                      checked={ignoreAlbumForMatch}
+                      onChange={(e) => setIgnoreAlbumForMatch(e.target.checked)}
+                    />
+                    {`"${album}" might be a compilation -- don't use it to match`}
+                  </label>
+                )}
+                <LinkButton
+                  onClick={handleManualSearch}
+                  disabled={manualSearching}
+                  className="mb-2 mr-3"
+                >
+                  {manualSearching ? "Searching..." : "Search"}
+                </LinkButton>
+                <LinkButton
+                  variant="muted"
+                  onClick={() => setShowManualSearch(false)}
+                  className="mb-2"
+                >
+                  Cancel
+                </LinkButton>
+                <RecordingMatchResultsList
+                  results={manualResults}
+                  onSelect={applyMatch}
+                />
+              </>
+            ) : musicbrainzRecordingId ? (
+              <>
+                <MusicBrainzLink type="recording" id={musicbrainzRecordingId} />
+                <SyncFromMusicBrainzButton
+                  syncing={syncingFromMusicBrainz}
+                  onClick={handleUpdateFromMusicBrainz}
+                  className="text-xs text-azure-600 underline disabled:opacity-70 mr-3"
+                />
+                <LinkButton variant="muted" onClick={handleChangeMatch}>
+                  Change match
+                </LinkButton>
+                <button
+                  type="button"
+                  onClick={handleRemoveMusicBrainzMatch}
+                  className="ml-3 text-xs text-vermillion-600 underline"
+                >
+                  Remove match
+                </button>
+                {syncError && (
+                  <p className="text-sm text-ink-600 mt-1">{syncError}</p>
+                )}
+              </>
+            ) : suggestedMatch ? (
+              <RecordingMatchSuggestion
+                match={suggestedMatch}
+                onConfirm={applyMatch}
+                onReject={handleRejectSuggestion}
+                onSearchManually={handleOpenManualSearch}
+              />
+            ) : (
+              <LinkButton
+                onClick={handleOpenManualSearch}
+                disabled={matchStatus === "searching"}
+              >
+                {matchStatus === "searching"
+                  ? "Looking for a match..."
+                  : "Match with MusicBrainz"}
+              </LinkButton>
+            )}
+            {matchError && (
+              <p className="text-sm text-ink-600 mt-1">{matchError}</p>
+            )}
+          </div>
 
-        <div className="mb-4">
-          <FormField
-            label="Key"
-            value={key}
-            onChange={handleDraftTextChange("key")}
-          />
-        </div>
-        <div className="mb-4">
-          <FormField
-            label="Tempo (BPM)"
-            type="number"
-            value={tempo}
-            onChange={handleDraftTextChange("tempo")}
-          />
-        </div>
-        <div className="mb-4">
-          <FormField
-            label="Tags (comma separated)"
-            value={tags}
-            onChange={handleDraftTextChange("tags")}
-          />
-        </div>
+          <div className="mb-4">
+            <FormField
+              label="Key"
+              value={key}
+              onChange={handleDraftTextChange("key")}
+            />
+          </div>
+          <div className="mb-4">
+            <FormField
+              label="Tempo (BPM)"
+              type="number"
+              value={tempo}
+              onChange={handleDraftTextChange("tempo")}
+            />
+          </div>
+          <div className="mb-4">
+            <FormField
+              label="Tags (comma separated)"
+              value={tags}
+              onChange={handleDraftTextChange("tags")}
+            />
+          </div>
 
-        <NotesField
-          label="Notes"
-          value={notes}
-          onChange={handleDraftTextChange("notes")}
-          rows={10}
-          placeholder="Add notes here"
+          <NotesField
+            label="Notes"
+            value={notes}
+            onChange={handleDraftTextChange("notes")}
+            rows={10}
+            placeholder="Add notes here"
+          />
+        </form>
+
+        <DeleteButton
+          label="Recording"
+          actionLabel="Remove from my Recordings"
+          confirmMessage="Remove this Recording from your saved Recordings? Shared metadata will remain available."
+          onDelete={handleDelete}
         />
-      </form>
-
-      <DeleteButton
-        label="Recording"
-        actionLabel="Remove from my Recordings"
-        confirmMessage="Remove this Recording from your saved Recordings? Shared metadata will remain available."
-        onDelete={handleDelete}
-      />
       </div>
       {showYouTubeMediaInfo && (
         <YouTubeMediaInfoModal
