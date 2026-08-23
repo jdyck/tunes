@@ -82,6 +82,63 @@ export const searchYtMusic = async (
   return [...songResults, ...videoResults];
 };
 
+export interface YtMusicVideoData {
+  title: string;
+  artistId: string | null;
+  artistName: string;
+  albumId: string | null;
+  albumName: string | null;
+  durationSeconds: number | null;
+  metadataFetchedAt: string;
+}
+
+export const fetchYtMusicVideoData = async (
+  videoId: string
+): Promise<YtMusicVideoData | null> => {
+  try {
+    const client = await withTimeout(getClient(), SEARCH_TIMEOUT_MS);
+    const video = await withTimeout(
+      client.getVideo(videoId),
+      SEARCH_TIMEOUT_MS
+    );
+
+    // The player endpoint has no album data; recover it by finding this
+    // exact video among the YT Music song results for title + artist.
+    let albumId: string | null = null;
+    let albumName: string | null = null;
+    let artistId = video.artist.artistId ?? null;
+    let artistName = video.artist.name;
+    try {
+      const songs = await withTimeout(
+        client.searchSongs(`${video.name} ${video.artist.name}`),
+        SEARCH_TIMEOUT_MS
+      );
+      const match = songs.find((song) => song.videoId === videoId);
+      if (match) {
+        albumId = match.album?.albumId ?? null;
+        albumName = match.album ? decodeHtmlEntities(match.album.name) : null;
+        artistId = match.artist.artistId ?? artistId;
+        artistName = match.artist.name || artistName;
+      }
+    } catch (error) {
+      console.error("Error searching YT Music for album data:", error);
+    }
+
+    return {
+      title: decodeHtmlEntities(video.name),
+      artistId,
+      artistName: decodeHtmlEntities(artistName),
+      albumId,
+      albumName,
+      durationSeconds: video.duration ?? null,
+      metadataFetchedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error("Error fetching YT Music video data:", error);
+    return null;
+  }
+};
+
 export interface YtMusicAlbumTrack {
   videoId: string;
   title: string;

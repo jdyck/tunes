@@ -174,6 +174,7 @@ export interface YouTubeItem {
   video_id: string;
   title: string;
   channel_name?: string | null;
+  description?: string | null;
   search_category: YouTubeSearchCategory;
   discovery_sources: YouTubeDiscoverySource[];
   ytmusic_artist_id?: string | null;
