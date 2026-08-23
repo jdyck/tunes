@@ -87,6 +87,7 @@ export default function RecordingDetailContent({
     syncingFromMusicBrainz,
     syncError,
     applyMatch,
+    handleFindMatch,
     handleOpenManualSearch,
     handleManualSearch,
     handleUpdateFromMusicBrainz,
@@ -384,14 +385,24 @@ export default function RecordingDetailContent({
                 onSearchManually={handleOpenManualSearch}
               />
             ) : (
-              <LinkButton
-                onClick={handleOpenManualSearch}
-                disabled={matchStatus === "searching"}
-              >
-                {matchStatus === "searching"
-                  ? "Looking for a match..."
-                  : "Match with MusicBrainz"}
-              </LinkButton>
+              <>
+                <LinkButton
+                  onClick={handleFindMatch}
+                  disabled={matchStatus === "searching"}
+                  className="mr-3"
+                >
+                  {matchStatus === "searching"
+                    ? "Looking for a match..."
+                    : "Match with MusicBrainz"}
+                </LinkButton>
+                <LinkButton
+                  variant="muted"
+                  onClick={handleOpenManualSearch}
+                  disabled={matchStatus === "searching"}
+                >
+                  Search manually
+                </LinkButton>
+              </>
             )}
             {matchError && (
               <p className="text-sm text-ink-600 mt-1">{matchError}</p>
