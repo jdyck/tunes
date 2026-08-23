@@ -46,7 +46,7 @@ export default function RecordingThumbnail({
       // Lists can mount many of these at once, and cover art comes from a
       // third party that is slow to 404 -- only ask for the ones on screen.
       loading="lazy"
-      className={`object-cover ${className}`}
+      className={`object-cover bg-surface-sunken ${className}`}
       onError={() => {
         if (!failedPrimary && fallbackSrc) setFailedPrimary(true);
         else setFailedFallback(true);

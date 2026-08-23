@@ -78,12 +78,12 @@ function SortableRecordingRow({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-stretch border-b hover:border-transparent hover:bg-paper-200 active:bg-paper-300 [&:has(+_li:hover)]:border-transparent ${
+      className={`flex items-stretch hover:bg-paper-200 active:bg-paper-300 ${
         isDragging
-          ? "relative z-10 border-transparent bg-paper-200 shadow-md"
+          ? "relative z-10 bg-paper-200 shadow-md"
           : isSelected
-            ? "border-transparent bg-paper-300"
-            : "border-border-default"
+            ? "bg-paper-300"
+            : ""
       }`}
     >
       <Link
