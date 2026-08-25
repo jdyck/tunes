@@ -167,6 +167,8 @@ export default defineSchema({
     videoId: v.string(),
     title: v.string(),
     channelName: nullableString,
+    // Provider description; optional because rows predate the field.
+    description: v.optional(nullableString),
     searchCategory: v.union(v.literal("song"), v.literal("video")),
     discoverySources: v.array(
       v.union(

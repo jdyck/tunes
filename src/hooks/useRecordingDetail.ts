@@ -90,65 +90,50 @@ export function useRecordingDetail(id: string, songId: string) {
   const year = draft?.year ?? "";
   const name = draft?.name ?? "";
 
-  useEffect(() => {
-    if (
-      loading ||
-      !songTitle ||
-      !artistForSearch ||
-      musicbrainzRecordingId ||
-      matchStatus !== "idle"
-    ) {
+  const handleFindMatch = useCallback(async () => {
+    if (!songTitle || !artistForSearch) {
+      setShowManualSearch(true);
+      setManualQuery(songTitle || name);
+      setIgnoreAlbumForMatch(false);
+      setMatchError(null);
       return;
     }
 
-    let cancelled = false;
     setMatchStatus("searching");
-    searchRecordingMetadata(
-      songTitle,
-      artistForSearch,
-      duration,
-      album,
-      songWorkId,
-      year,
-    )
-      .then((result) => {
-        if (cancelled) return;
-        if (result.state === "clear" && result.candidates.length > 0) {
-          setSuggestedMatch(result.candidates[0]);
-          setMatchStatus("suggested");
-        } else if (result.candidates.length > 0) {
-          setManualResults(result.candidates);
-          setShowManualSearch(true);
-          setMatchStatus("dismissed");
-          setMatchError(
-            result.state === "degraded"
-              ? "MusicBrainz results are based on incomplete evidence. Choose a match."
-              : "Several MusicBrainz recordings are plausible. Choose a match.",
-          );
-        } else {
-          setMatchStatus("no-results");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setMatchStatus("no-results");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // matchStatus is set inside this effect; including it would cancel the
-    // active search immediately.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    loading,
-    songTitle,
-    artistForSearch,
-    duration,
-    album,
-    year,
-    songWorkId,
-    musicbrainzRecordingId,
-  ]);
+    setMatchError(null);
+    try {
+      const result = await searchRecordingMetadata(
+        songTitle,
+        artistForSearch,
+        duration,
+        album,
+        songWorkId,
+        year,
+      );
+      if (result.state === "clear" && result.candidates.length > 0) {
+        setSuggestedMatch(result.candidates[0]);
+        setMatchStatus("suggested");
+      } else if (result.candidates.length > 0) {
+        setManualQuery(songTitle);
+        setManualResults(result.candidates);
+        setShowManualSearch(true);
+        setMatchStatus("dismissed");
+        setMatchError(
+          result.state === "degraded"
+            ? "MusicBrainz results are based on incomplete evidence. Choose a match."
+            : "Several MusicBrainz recordings are plausible. Choose a match.",
+        );
+      } else {
+        setManualQuery(songTitle);
+        setShowManualSearch(true);
+        setMatchStatus("no-results");
+        setMatchError("No MusicBrainz match found. Try a manual search.");
+      }
+    } catch {
+      setMatchStatus("no-results");
+      setMatchError("Couldn't search MusicBrainz. Try again later.");
+    }
+  }, [album, artistForSearch, duration, name, songTitle, songWorkId, year]);
 
   const applyResolvedMatch = useCallback(
     (match: ResolvedRecordingMatch) => {
@@ -328,6 +313,7 @@ export function useRecordingDetail(id: string, songId: string) {
       syncingFromMusicBrainz,
       syncError,
       applyMatch,
+      handleFindMatch,
       handleOpenManualSearch,
       handleManualSearch,
       handleUpdateFromMusicBrainz,

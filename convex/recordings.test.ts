@@ -869,3 +869,99 @@ test("replaces shared Release Group Attribution atomically and exposes it to eve
       ?.release_groups?.artist_attributions,
   ).toEqual([]);
 });
+
+test("refreshes YouTube media metadata with ownership and linkage checks", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("youtube-refresh-owner"));
+  const other = t.withIdentity(identity("youtube-refresh-other"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  await other.mutation(api.users.ensureCurrent, {});
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "youtube-refresh-song",
+    shared: songInput("St. James Infirmary"),
+    writers: [],
+  });
+  const recordingId = await owner.mutation(api.recordings.saveYoutube, {
+    ...youtubeInput(songId, "refreshvid1"),
+    channelName: null,
+    ytmusicArtistId: null,
+    ytmusicArtistName: null,
+    ytmusicAlbumId: null,
+    ytmusicAlbumName: null,
+    durationSeconds: null,
+    metadataFetchedAt: null,
+  });
+
+  const refreshInput = {
+    recordingId,
+    videoId: "refreshvid1",
+    title: "St. James Infirmary (Official Audio)",
+    channelName: "Example Channel",
+    description: "Provided to YouTube by Example\n\nComposer: Primrose",
+    ytmusicArtistId: "refresh-artist-id",
+    ytmusicArtistName: "Refresh Artist",
+    ytmusicAlbumId: "refresh-album-id",
+    ytmusicAlbumName: "Refresh Album",
+    durationSeconds: 200,
+    metadataFetchedAt: "2026-08-23T00:00:00.000Z",
+  };
+  await expect(
+    t.mutation(api.recordings.refreshYoutubeMetadata, refreshInput),
+  ).rejects.toThrow("Unauthenticated");
+  await expect(
+    other.mutation(api.recordings.refreshYoutubeMetadata, refreshInput),
+  ).rejects.toThrow("Recording not found in your list");
+  await expect(
+    owner.mutation(api.recordings.refreshYoutubeMetadata, {
+      ...refreshInput,
+      videoId: "unlinkedvd1",
+    }),
+  ).rejects.toThrow("YouTube media not found");
+
+  await owner.mutation(api.recordings.refreshYoutubeMetadata, refreshInput);
+  expect(
+    (await owner.query(api.recordings.getMine, { recordingId }))?.youtube_items,
+  ).toMatchObject([
+    {
+      video_id: "refreshvid1",
+      title: "St. James Infirmary (Official Audio)",
+      channel_name: "Example Channel",
+      description: "Provided to YouTube by Example\n\nComposer: Primrose",
+      ytmusic_artist_id: "refresh-artist-id",
+      ytmusic_artist_name: "Refresh Artist",
+      ytmusic_album_id: "refresh-album-id",
+      ytmusic_album_name: "Refresh Album",
+      duration_seconds: 200,
+      metadata_fetched_at: "2026-08-23T00:00:00.000Z",
+    },
+  ]);
+
+  // A stale fetch cannot regress fresher metadata or blank known fields.
+  await owner.mutation(api.recordings.refreshYoutubeMetadata, {
+    ...refreshInput,
+    title: "",
+    channelName: null,
+    description: null,
+    ytmusicArtistId: null,
+    ytmusicArtistName: null,
+    ytmusicAlbumId: null,
+    ytmusicAlbumName: null,
+    durationSeconds: null,
+    metadataFetchedAt: "2026-08-01T00:00:00.000Z",
+  });
+  expect(
+    (await owner.query(api.recordings.getMine, { recordingId }))?.youtube_items,
+  ).toMatchObject([
+    {
+      title: "St. James Infirmary (Official Audio)",
+      channel_name: "Example Channel",
+      description: "Provided to YouTube by Example\n\nComposer: Primrose",
+      ytmusic_artist_id: "refresh-artist-id",
+      ytmusic_artist_name: "Refresh Artist",
+      ytmusic_album_id: "refresh-album-id",
+      ytmusic_album_name: "Refresh Album",
+      duration_seconds: 200,
+      metadata_fetched_at: "2026-08-23T00:00:00.000Z",
+    },
+  ]);
+});

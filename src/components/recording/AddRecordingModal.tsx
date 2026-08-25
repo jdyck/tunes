@@ -39,6 +39,7 @@ interface PlatformSearchState {
 interface VideoMetadata {
   title: string;
   channelTitle: string;
+  description: string | null;
   durationSeconds: number | null;
   metadataFetchedAt: string;
 }
@@ -208,9 +209,11 @@ export default function AddRecordingModal({
 
     try {
       let selected = result;
+      let description: string | null = null;
       if (result.discoverySource === "youtube_search") {
         const metadata = await fetchOfficialMetadata(videoId);
         if (metadata) {
+          description = metadata.description;
           selected = {
             ...result,
             title: metadata.title || result.title,
@@ -227,6 +230,7 @@ export default function AddRecordingModal({
         videoId: selected.videoId,
         title: selected.title,
         channelName: selected.channelTitle || null,
+        description,
         searchCategory: selected.searchCategory,
         discoverySource: selected.discoverySource,
         recordingKind: kind,

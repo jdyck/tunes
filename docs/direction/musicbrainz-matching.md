@@ -188,13 +188,10 @@ data, resolves the MusicBrainz-backed Release Group, and replaces confirmed
 Attribution and Personnel. Personnel reads and writes use `recordingPersonnel`
 exclusively after the verified storage cutover.
 
-The repeatable `migrations:backfillRecordingPersonnel` migration converts
-legacy generic rows without a provider refetch, and
-`migrations:verifyRecordingPersonnel` checks grouped source coverage, target
-uniqueness, Artist references, relationship shape, required text, and bounds.
-Roll out the compatibility commits first, run and verify both migrations on the
-named deployment with the required consent, then deploy the new-only read
-cutover. Do not deploy the cutover before verification succeeds.
+The repeatable `migrations:backfillRecordingPersonnel` and
+`migrations:verifyRecordingPersonnel` migrations completed the non-destructive
+cutover to `recordingPersonnel`. See "Remaining work" for the deferred,
+separately authorized removal of the legacy collection and its markers.
 
 Do not persist raw MusicBrainz JSON, search scores/evidence, relationship
 indexes, Release type/status/date copies, artwork URLs, or every edition.

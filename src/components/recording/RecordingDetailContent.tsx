@@ -57,6 +57,9 @@ export default function RecordingDetailContent({
   const router = useRouter();
   const { play } = usePlayer();
   const unsaveRecording = useMutation(api.recordings.unsave);
+  const refreshYoutubeMetadata = useMutation(
+    api.recordings.refreshYoutubeMetadata,
+  );
   const {
     recording,
     songTitle,
@@ -72,6 +75,8 @@ export default function RecordingDetailContent({
 
   const [error, setError] = useState<string | null>(null);
   const [showYouTubeMediaInfo, setShowYouTubeMediaInfo] = useState(false);
+  const [updatingYouTubeInfo, setUpdatingYouTubeInfo] = useState(false);
+  const [youTubeInfoError, setYouTubeInfoError] = useState<string | null>(null);
   const {
     matchStatus,
     suggestedMatch,
@@ -87,6 +92,7 @@ export default function RecordingDetailContent({
     syncingFromMusicBrainz,
     syncError,
     applyMatch,
+    handleFindMatch,
     handleOpenManualSearch,
     handleManualSearch,
     handleUpdateFromMusicBrainz,
@@ -114,6 +120,62 @@ export default function RecordingDetailContent({
   const musicbrainzReleaseId = draft?.musicbrainzReleaseId ?? null;
   const releaseGroup = draft?.releaseGroup ?? null;
   const videoId = recording?.youtube_items[0]?.video_id ?? null;
+  const youtubeItemsMissingChannel =
+    recording?.youtube_items.filter((item) => !item.channel_name) ?? [];
+
+  const handleUpdateYouTubeInfo = async () => {
+    setUpdatingYouTubeInfo(true);
+    setYouTubeInfoError(null);
+    try {
+      for (const item of recording?.youtube_items ?? []) {
+        const response = await fetch(
+          `/api/youtube-video?videoId=${encodeURIComponent(item.video_id)}`,
+        );
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          throw new Error(
+            body?.error || `YouTube metadata request failed (${response.status})`,
+          );
+        }
+        const metadata = (await response.json()) as {
+          title: string;
+          channelTitle: string;
+          description: string | null;
+          durationSeconds: number | null;
+          metadataFetchedAt: string;
+          ytmusicArtistId: string | null;
+          ytmusicArtistName: string | null;
+          ytmusicAlbumId: string | null;
+          ytmusicAlbumName: string | null;
+        };
+        await refreshYoutubeMetadata({
+          recordingId: id as Id<"recordings">,
+          videoId: item.video_id,
+          title: metadata.title ?? "",
+          channelName: metadata.channelTitle || null,
+          description: metadata.description ?? null,
+          ytmusicArtistId: metadata.ytmusicArtistId ?? null,
+          ytmusicArtistName: metadata.ytmusicArtistName ?? null,
+          ytmusicAlbumId: metadata.ytmusicAlbumId ?? null,
+          ytmusicAlbumName: metadata.ytmusicAlbumName ?? null,
+          durationSeconds: metadata.durationSeconds ?? null,
+          metadataFetchedAt: metadata.metadataFetchedAt ?? null,
+        });
+      }
+    } catch (problem) {
+      console.error("Error updating YouTube info:", problem);
+      setYouTubeInfoError(
+        `Couldn't update YouTube info: ${
+          problem instanceof Error ? problem.message : String(problem)
+        }`,
+      );
+    } finally {
+      setUpdatingYouTubeInfo(false);
+    }
+  };
+
   const handleDraftTextChange =
     (field: RecordingDraftTextField) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -166,13 +228,29 @@ export default function RecordingDetailContent({
               <PlayIcon className="w-5 h-5" />
               Play
             </button>
-            <button
-              type="button"
-              onClick={() => setShowYouTubeMediaInfo(true)}
-              className="w-full rounded-md border border-paper-600 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-paper-100"
-            >
-              YouTube media info
-            </button>
+            {youtubeItemsMissingChannel.length > 0 ? (
+              <button
+                type="button"
+                onClick={handleUpdateYouTubeInfo}
+                disabled={updatingYouTubeInfo}
+                className="w-full rounded-md border border-paper-600 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-paper-100 disabled:opacity-70"
+              >
+                {updatingYouTubeInfo
+                  ? "Updating YouTube info..."
+                  : "Update YouTube info"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowYouTubeMediaInfo(true)}
+                className="w-full rounded-md border border-paper-600 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-paper-100"
+              >
+                YouTube media info
+              </button>
+            )}
+            {youTubeInfoError && (
+              <p className="text-sm text-vermillion-600">{youTubeInfoError}</p>
+            )}
           </div>
         )}
         <form
@@ -384,14 +462,24 @@ export default function RecordingDetailContent({
                 onSearchManually={handleOpenManualSearch}
               />
             ) : (
-              <LinkButton
-                onClick={handleOpenManualSearch}
-                disabled={matchStatus === "searching"}
-              >
-                {matchStatus === "searching"
-                  ? "Looking for a match..."
-                  : "Match with MusicBrainz"}
-              </LinkButton>
+              <>
+                <LinkButton
+                  onClick={handleFindMatch}
+                  disabled={matchStatus === "searching"}
+                  className="mr-3"
+                >
+                  {matchStatus === "searching"
+                    ? "Looking for a match..."
+                    : "Match with MusicBrainz"}
+                </LinkButton>
+                <LinkButton
+                  variant="muted"
+                  onClick={handleOpenManualSearch}
+                  disabled={matchStatus === "searching"}
+                >
+                  Search manually
+                </LinkButton>
+              </>
             )}
             {matchError && (
               <p className="text-sm text-ink-600 mt-1">{matchError}</p>
@@ -441,6 +529,9 @@ export default function RecordingDetailContent({
         <YouTubeMediaInfoModal
           items={recording.youtube_items}
           onClose={() => setShowYouTubeMediaInfo(false)}
+          onUpdateInfo={handleUpdateYouTubeInfo}
+          updating={updatingYouTubeInfo}
+          updateError={youTubeInfoError}
         />
       )}
     </div>

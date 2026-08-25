@@ -45,6 +45,7 @@ export const fetchYouTubeVideoData = async (
       return {
         title: decodeHtmlEntities(video.snippet.title),
         channelTitle: decodeHtmlEntities(video.snippet.channelTitle),
+        description: (video.snippet.description as string | undefined) || null,
         durationSeconds: parseYouTubeDurationSeconds(
           video.contentDetails.duration
         ),

@@ -34,9 +34,15 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 export default function YouTubeMediaInfoModal({
   items,
   onClose,
+  onUpdateInfo,
+  updating = false,
+  updateError = null,
 }: {
   items: RecordingYouTubeItem[];
   onClose: () => void;
+  onUpdateInfo?: () => void;
+  updating?: boolean;
+  updateError?: string | null;
 }) {
   return (
     <Modal title="YouTube media info" onClose={onClose}>
@@ -44,6 +50,21 @@ export default function YouTubeMediaInfoModal({
         Stored provider metadata for this Recording. These fields describe the
         linked YouTube media, not the canonical Recording.
       </p>
+      {onUpdateInfo && (
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={onUpdateInfo}
+            disabled={updating}
+            className="rounded-md border border-paper-600 px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-paper-100 disabled:opacity-70"
+          >
+            {updating ? "Updating YouTube info..." : "Update YouTube info"}
+          </button>
+          {updateError && (
+            <p className="mt-1 text-sm text-vermillion-600">{updateError}</p>
+          )}
+        </div>
+      )}
 
       <div className="space-y-5">
         {items.map((item, index) => (
@@ -126,6 +147,16 @@ export default function YouTubeMediaInfoModal({
                   )
                 }
               />
+              {item.description && (
+                <InfoRow
+                  label="Description"
+                  value={
+                    <span className="whitespace-pre-line">
+                      {item.description}
+                    </span>
+                  }
+                />
+              )}
               <InfoRow
                 label="Metadata fetched"
                 value={formatTimestamp(item.metadata_fetched_at)}

@@ -194,6 +194,7 @@ export const saveYoutube = mutation({
     videoId: v.string(),
     title: v.string(),
     channelName: nullableString,
+    description: v.optional(nullableString),
     searchCategory: youtubeSearchCategoryValidator,
     discoverySource: youtubeDiscoverySourceValidator,
     recordingKind: recordingKindValidator,
@@ -243,6 +244,10 @@ export const saveYoutube = mutation({
       await ctx.db.patch(previousItem._id, {
         title: nextTitle,
         channelName: trimToNull(args.channelName) ?? previousItem.channelName,
+        description:
+          trimToNull(args.description ?? null) ??
+          previousItem.description ??
+          null,
         searchCategory:
           previousItem.searchCategory === "song" ||
           args.searchCategory === "song"
@@ -267,6 +272,7 @@ export const saveYoutube = mutation({
         videoId,
         title,
         channelName: trimToNull(args.channelName),
+        description: trimToNull(args.description ?? null),
         searchCategory: args.searchCategory,
         discoverySources: [args.discoverySource],
         ytmusicArtistId: trimToNull(args.ytmusicArtistId),
@@ -357,6 +363,82 @@ export const saveYoutube = mutation({
     }
 
     return recordingId;
+  },
+});
+
+export const refreshYoutubeMetadata = mutation({
+  args: {
+    recordingId: v.id("recordings"),
+    videoId: v.string(),
+    title: v.string(),
+    channelName: nullableString,
+    description: nullableString,
+    ytmusicArtistId: nullableString,
+    ytmusicArtistName: nullableString,
+    ytmusicAlbumId: nullableString,
+    ytmusicAlbumName: nullableString,
+    durationSeconds: v.union(v.number(), v.null()),
+    metadataFetchedAt: nullableString,
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const membership = await loadSavedRecordingMembership(
+      ctx,
+      user._id,
+      args.recordingId,
+    );
+    if (!membership) throw new Error("Recording not found in your list");
+
+    const videoId = args.videoId.trim();
+    if (!youtubeVideoIdPattern.test(videoId)) {
+      throw new Error("Invalid YouTube video ID");
+    }
+    if (args.durationSeconds !== null && args.durationSeconds < 0) {
+      throw new Error("Invalid YouTube duration");
+    }
+
+    const item = await ctx.db
+      .query("youtubeItems")
+      .withIndex("by_videoId", (index) => index.eq("videoId", videoId))
+      .unique();
+    if (!item) throw new Error("YouTube media not found");
+
+    const association = await ctx.db
+      .query("recordingYoutubeItems")
+      .withIndex("by_recordingId_and_youtubeItemId", (index) =>
+        index
+          .eq("recordingId", args.recordingId)
+          .eq("youtubeItemId", item._id),
+      )
+      .first();
+    if (!association) {
+      throw new Error("YouTube media is not linked to this Recording");
+    }
+
+    const title = args.title.trim();
+    const metadataFetchedAt =
+      args.metadataFetchedAt &&
+      (!item.metadataFetchedAt ||
+        args.metadataFetchedAt > item.metadataFetchedAt)
+        ? args.metadataFetchedAt
+        : item.metadataFetchedAt;
+    await ctx.db.patch(item._id, {
+      title: title || item.title,
+      channelName: trimToNull(args.channelName) ?? item.channelName,
+      description: trimToNull(args.description) ?? item.description ?? null,
+      ytmusicArtistId:
+        trimToNull(args.ytmusicArtistId) ?? item.ytmusicArtistId,
+      ytmusicArtistName:
+        trimToNull(args.ytmusicArtistName) ?? item.ytmusicArtistName,
+      ytmusicAlbumId:
+        trimToNull(args.ytmusicAlbumId) ?? item.ytmusicAlbumId,
+      ytmusicAlbumName:
+        trimToNull(args.ytmusicAlbumName) ?? item.ytmusicAlbumName,
+      durationSeconds: args.durationSeconds ?? item.durationSeconds,
+      metadataFetchedAt,
+    });
+    return null;
   },
 });
 

@@ -352,17 +352,15 @@ export default function SongsListPane() {
               {renderedSongs.map((song) => {
                 const isActive = pathname.startsWith(`/song/${song.id}`);
                 return (
-                  <li key={song.id} className="[&:has(+_li:hover)>a]:border-transparent">
+                  <li key={song.id}>
                     <Link
                       href={`/song/${song.id}`}
-                      className={`relative flex items-center gap-3 border-b border-border-default h-20 p-6 pl-0 hover:bg-paper-100 hover:border-transparent hover:rounded-lg active:bg-paper-100 ${
-                        isActive ? "bg-paper-100" : ""
+                      aria-current={isActive ? "page" : undefined}
+                      className={`relative flex items-center gap-3 h-20 p-6 pl-0 hover:bg-paper-200 hover:rounded-lg active:bg-paper-300 ${
+                        isActive ? "bg-paper-300" : ""
                       }`}
                     >
                       <SongRow song={song} artwork={artworkBySong.get(song.id)} />
-                      {isActive && (
-                        <div className="w-2 h-full absolute bg-vermillion-700 shrink-0" />
-                      )}
                     </Link>
                   </li>
                 );
@@ -520,7 +518,7 @@ function SongRow({
       {/* A Song has no artwork of its own (ADR-0007); this is its
           representative Recording's cover, the same one the detail header
           borrows. Kept decorative -- the title beside it already names the row. */}
-      <div className="ml-6 h-14 w-14 shrink-0 overflow-hidden rounded-sm">
+      <div className="ml-6 h-14 w-14 shrink-0 overflow-hidden rounded-sm bg-surface-sunken">
         <RecordingThumbnail
           src={artwork?.src}
           fallbackSrc={artwork?.fallbackSrc}

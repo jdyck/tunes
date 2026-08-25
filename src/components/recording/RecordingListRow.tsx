@@ -20,6 +20,11 @@ export default function RecordingListRow({
   const albumTitle = recording.release_groups?.title || recording.album || null;
   const primaryLine = recording.artist || descriptor;
   const secondaryLine = albumTitle || (recording.artist ? descriptor : null);
+  // Red flags a linked YouTube video whose channel is still unknown, so rows
+  // needing "Update YouTube info" stand out in the list.
+  const channelUnknown = recording.youtube_items.some(
+    (item) => !item.channel_name,
+  );
 
   return (
     <div className="flex overflow-hidden relative">
@@ -32,7 +37,11 @@ export default function RecordingListRow({
         />
       </div>
       <div className="p-4 pl-0 overflow-hidden">
-        <p className="font-semibold leading-5 line-clamp-2 overflow-hidden text-ellipsis wrap-break-word">
+        <p
+          className={`font-semibold leading-5 line-clamp-2 overflow-hidden text-ellipsis wrap-break-word ${
+            channelUnknown ? "text-vermillion-600" : ""
+          }`}
+        >
           {primaryLine}
         </p>
         {secondaryLine && (
