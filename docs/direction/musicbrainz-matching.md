@@ -6,6 +6,21 @@ Release Group, Release → representative edition, and Artist → credited Artis
 Calls stay server-side behind `musicbrainzTransport.ts`, and API routes return
 normalized app contracts rather than raw provider JSON.
 
+## Shared request queue and action progress
+
+[Spec #48](https://github.com/jdyck/tunes/issues/48) scopes shared outbound
+pacing across server instances, progress for each User's metadata action, and
+cancellation. The current transport identifies Standards and spaces requests
+within one in-memory instance; it does not coordinate independent instances.
+The planned queue must space actual MusicBrainz request starts at least one
+second apart across its callers. Progress shows pending requests ahead of the
+action's next request and a total only when known. Cancellation removes obsolete
+pending work and prevents stale results from changing the current draft.
+Keep requests server-side and preserve explicit confirmation/Save behavior.
+The spec includes the owner-approved public-action integration test boundary;
+queue technology remains an implementation choice. This is separate from
+inbound per-User abuse limits and a broader metadata cache.
+
 ## Original Works, translations, and repertoire identity
 
 MusicBrainz may represent one piece of music as a family of related Works: an
