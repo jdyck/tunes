@@ -75,7 +75,18 @@ const fitTitleFontSize = (element: HTMLElement) => {
   element.style.fontSize = `${best}px`;
 };
 
-export default function SongDetailContent({ id }: { id: string }) {
+export default function SongDetailContent({
+  id,
+  backHref = "/songs",
+  backLabel = "Back to songs",
+  basePath,
+}: {
+  id: string;
+  backHref?: string;
+  backLabel?: string;
+  basePath?: string;
+}) {
+  const recordingHrefBase = basePath ?? `/song/${id}`;
   const { songs } = useSongsList();
   const {
     song,
@@ -303,7 +314,8 @@ export default function SongDetailContent({ id }: { id: string }) {
     saveLifecycle.markDirty();
   };
 
-  if (loading || recordingsLoading) return <SongDetailSkeleton />;
+  if (loading || recordingsLoading)
+    return <SongDetailSkeleton backHref={backHref} backLabel={backLabel} />;
   if ((error || recordingsError) && !song)
     return (
       <AsyncStateMessage variant="error">
@@ -323,7 +335,7 @@ export default function SongDetailContent({ id }: { id: string }) {
 
   return (
     <div className="w-full h-full flex flex-col bg-surface-app">
-      <PaneHeader backHref="/songs" backLabel="Back to songs" safeAreaTop>
+      <PaneHeader backHref={backHref} backLabel={backLabel} safeAreaTop>
         <div className="flex gap-4 w-xl max-w-full lg:max-w-md pb-8 items-center">
           <div className="w-full">
             <div
@@ -350,7 +362,7 @@ export default function SongDetailContent({ id }: { id: string }) {
 
             <div className="flex items-start gap-2 pb-4">
               <div className="min-w-0 font-bold text-lg/5 text-balance text-azure-600">
-                <SongWriterCredits writers={writers} />
+                <SongWriterCredits writers={writers} songId={id} />
               </div>
               {canEditShared && (
                 <button
@@ -409,6 +421,7 @@ export default function SongDetailContent({ id }: { id: string }) {
           songTitle={title}
           recordings={recordings}
           onReorder={reorderRecordings}
+          recordingHrefBase={recordingHrefBase}
         />
         <SaveAction
           status={saveLifecycle.status}
@@ -572,7 +585,13 @@ export default function SongDetailContent({ id }: { id: string }) {
   );
 }
 
-function SongDetailSkeleton() {
+function SongDetailSkeleton({
+  backHref,
+  backLabel,
+}: {
+  backHref: string;
+  backLabel: string;
+}) {
   return (
     <div
       className="flex h-full w-full flex-col bg-surface-app"
@@ -581,7 +600,7 @@ function SongDetailSkeleton() {
     >
       <span className="sr-only">Loading song...</span>
       <div aria-hidden="true" className="contents">
-        <PaneHeader backHref="/songs" backLabel="Back to songs" safeAreaTop>
+        <PaneHeader backHref={backHref} backLabel={backLabel} safeAreaTop>
           <div className="flex w-xl max-w-full items-center gap-4 pb-8 lg:max-w-md">
             <div className="w-full animate-pulse">
               <div className="h-14 w-4/5 rounded-sm bg-surface-sunken" />

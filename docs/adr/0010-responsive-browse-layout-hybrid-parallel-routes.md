@@ -7,6 +7,10 @@ layout, an `@detail` parallel slot for Song and Artist detail, and a nested
 `@recording` slot for Recording detail. CSS breakpoints change which of those
 already-mounted panes are visible or overlaid:
 
+> Song and Artist are no longer mutually exclusive within `@detail` — see
+> [ADR-0011](0011-symmetric-artist-song-recording-panel-stacking.md), which
+> makes both symmetric stacking roots. Everything else below still holds.
+
 - mobile presents one pane at a time;
 - desktop retains the list and active detail panes side by side where space
   permits;

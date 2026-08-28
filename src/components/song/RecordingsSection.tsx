@@ -48,13 +48,13 @@ const verticalOnly: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
 function SortableRecordingRow({
   recording,
-  songId,
+  recordingHrefBase,
   songTitle,
   isSelected,
   isReorderable,
 }: {
   recording: SavedRecording;
-  songId: string;
+  recordingHrefBase: string;
   songTitle: string;
   isSelected: boolean;
   isReorderable: boolean;
@@ -87,7 +87,7 @@ function SortableRecordingRow({
       }`}
     >
       <Link
-        href={`/song/${songId}/recording/${recording.id}`}
+        href={`${recordingHrefBase}/recording/${recording.id}`}
         aria-current={isSelected ? "page" : undefined}
         className="flex flex-1 min-w-0"
       >
@@ -121,7 +121,7 @@ function SortableRecordingRow({
         </button>
       )}
       <Link
-        href={`/song/${songId}/recording/${recording.id}`}
+        href={`${recordingHrefBase}/recording/${recording.id}`}
         aria-label="Open recording details"
         className="p-3 text-ink-700 hover:text-action shrink-0 self-center"
       >
@@ -151,11 +151,13 @@ export default function RecordingsSection({
   songTitle,
   recordings,
   onReorder,
+  recordingHrefBase,
 }: {
   songId: string;
   songTitle: string;
   recordings: SavedRecording[];
   onReorder: (reordered: SavedRecording[]) => Promise<boolean>;
+  recordingHrefBase: string;
 }) {
   const { recordingId } = useParams<{ recordingId?: string | string[] }>();
   const [showAddRecording, setShowAddRecording] = useState(false);
@@ -221,7 +223,7 @@ export default function RecordingsSection({
                 <SortableRecordingRow
                   key={recording.id}
                   recording={recording}
-                  songId={songId}
+                  recordingHrefBase={recordingHrefBase}
                   songTitle={songTitle}
                   isSelected={recording.id === selectedRecordingId}
                   isReorderable={isReorderable}

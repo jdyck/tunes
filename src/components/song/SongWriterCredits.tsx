@@ -33,11 +33,14 @@ const hasDifferentComposerAndLyricist = (writers: WriterInput[]) => {
   );
 };
 
-function WriterLink({ writer }: { writer: WriterInput }) {
+function WriterLink({ writer, songId }: { writer: WriterInput; songId: string }) {
   const name = writer.creditedAs.trim();
 
   return writer.artistId ? (
-    <Link href={`/artist/${writer.artistId}`} className="hover:text-azure-600">
+    <Link
+      href={`/song/${songId}/artist/${writer.artistId}`}
+      className="hover:text-azure-600"
+    >
       {name}
     </Link>
   ) : (
@@ -47,8 +50,10 @@ function WriterLink({ writer }: { writer: WriterInput }) {
 
 export default function SongWriterCredits({
   writers,
+  songId,
 }: {
   writers: WriterInput[];
+  songId: string;
 }) {
   const creditedWriters = writers.filter((writer) => writer.creditedAs.trim());
   if (creditedWriters.length === 0) return <span>No writer credits</span>;
@@ -65,7 +70,7 @@ export default function SongWriterCredits({
         {uniqueWriters.map((writer, index) => (
           <span key={`${writerKey(writer)}-${index}`}>
             {index > 0 && ", "}
-            <WriterLink writer={writer} />
+            <WriterLink writer={writer} songId={songId} />
           </span>
         ))}
       </>
@@ -85,7 +90,7 @@ export default function SongWriterCredits({
             {writersForRole.map((writer, index) => (
               <span key={`${writerKey(writer)}-${index}`}>
                 {index > 0 && ", "}
-                <WriterLink writer={writer} />
+                <WriterLink writer={writer} songId={songId} />
               </span>
             ))}
             , {roleLabels[role]}

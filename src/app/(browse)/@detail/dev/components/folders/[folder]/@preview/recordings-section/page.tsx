@@ -56,6 +56,7 @@ export default function RecordingsSectionDemoPage() {
         songId="demo-song"
         songTitle="Autumn Leaves"
         recordings={recordings}
+        recordingHrefBase="/song/demo-song"
         onReorder={async (reordered) => {
           setRecordings(reordered);
           return true;

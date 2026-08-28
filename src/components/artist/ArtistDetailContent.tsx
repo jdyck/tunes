@@ -24,7 +24,15 @@ const kindLabels: Record<ArtistKind, string> = {
   other: "Other",
 };
 
-export default function ArtistDetailContent({ id }: { id: string }) {
+export default function ArtistDetailContent({
+  id,
+  backHref = "/artists",
+  backLabel = "Back to artists",
+}: {
+  id: string;
+  backHref?: string;
+  backLabel?: string;
+}) {
   const { play } = usePlayer();
   const { artist, songs, recordings, recordingSongTitles, loading } =
     useArtistDetail(id);
@@ -62,7 +70,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
 
   return (
     <div className="w-full h-full flex flex-col bg-surface-app">
-      <PaneHeader backHref="/artists" backLabel="Back to artists" safeAreaTop>
+      <PaneHeader backHref={backHref} backLabel={backLabel} safeAreaTop>
         <div className="flex items-start gap-4 pb-8">
           <div className="min-w-0 flex-1">
             <h1
@@ -131,7 +139,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                   className="[&:has(+_li:hover)>a]:border-transparent"
                 >
                   <Link
-                    href={`/song/${song.id}`}
+                    href={`/artist/${id}/song/${song.id}`}
                     className={`flex items-center justify-between gap-2 border-b border-border-default p-4 pl-0 hover:bg-paper-100 hover:border-transparent hover:rounded-lg active:bg-paper-100 ${robotoCondensed.className}`}
                   >
                     <span className="min-w-0">
@@ -189,7 +197,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                     className="flex items-stretch border-b border-border-default hover:border-transparent hover:bg-paper-200 active:bg-paper-300 [&:has(+_li:hover)]:border-transparent"
                   >
                     <Link
-                      href={`/song/${recording.song_id}/recording/${recording.id}`}
+                      href={`/artist/${id}/song/${recording.song_id}/recording/${recording.id}`}
                       className="flex flex-1 min-w-0 flex-col justify-center"
                     >
                       <span
@@ -224,7 +232,7 @@ export default function ArtistDetailContent({ id }: { id: string }) {
                       </button>
                     )}
                     <Link
-                      href={`/song/${recording.song_id}/recording/${recording.id}`}
+                      href={`/artist/${id}/song/${recording.song_id}/recording/${recording.id}`}
                       aria-label="Open recording details"
                       className="p-3 text-ink-700 hover:text-ink-900 shrink-0 self-center"
                     >

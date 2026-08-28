@@ -2,14 +2,16 @@
 
 import { useParams } from "next/navigation";
 import SongDetailContent from "@/components/song/SongDetailContent";
-import RecordingPaneGate from "@/components/layout/RecordingPaneGate";
+import NestedPaneGate from "@/components/layout/NestedPaneGate";
 
 export default function SongDetailLayout({
   children,
   recording,
+  artist,
 }: {
   children: React.ReactNode;
   recording?: React.ReactNode;
+  artist?: React.ReactNode;
 }) {
   const { id } = useParams();
   const songId = Array.isArray(id) ? id[0] : id;
@@ -22,9 +24,19 @@ export default function SongDetailLayout({
         <SongDetailContent id={songId} />
         {children}
       </div>
-      <RecordingPaneGate backHref={`/song/${songId}`}>
+      <NestedPaneGate
+        matchPattern={/\/recording\//}
+        zLayerClassName="z-[var(--layer-recording-detail)]"
+      >
         {recording}
-      </RecordingPaneGate>
+      </NestedPaneGate>
+      <NestedPaneGate
+        matchPattern={/\/artist\//}
+        zLayerClassName="z-[var(--layer-nested-detail-3)]"
+        neverStatic
+      >
+        {artist}
+      </NestedPaneGate>
     </>
   );
 }
