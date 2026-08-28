@@ -14,6 +14,7 @@ import { effectiveSongTitle } from "@/utils/songTitle";
 import { formatWriterCredit } from "@/lib/songWriters";
 import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
 import { useArtistDetail } from "@/hooks/useArtistDetail";
+import ArtistMemberships from "./ArtistMemberships";
 
 const kindLabels: Record<ArtistKind, string> = {
   person: "Person",
@@ -117,6 +118,7 @@ export default function ArtistDetailContent({
       </PaneHeader>
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+        <ArtistMemberships key={id} artistId={id} />
         {artistSongs.length > 0 && (
           <section className="mb-8">
             <div className="flex items-center gap-2 mb-2 max-w-xl">

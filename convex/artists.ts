@@ -4,6 +4,14 @@ import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { getCurrentUser, requireAdmin } from "./model/auth";
 import {
+  artistMembershipValidator,
+  artistMembershipViewValidator,
+} from "./model/artistMemberships";
+import {
+  isArtistMembershipCacheFresh,
+  validateArtistMemberships,
+} from "../src/utils/artistMemberships";
+import {
   artistIdentityViewValidator,
   artistSummaryViewValidator,
   toArtistIdentityView,
@@ -327,6 +335,100 @@ export const getMine = query({
       recordings: reachableRecordings,
       recording_song_titles: recordingSongTitles,
     };
+  },
+});
+
+export const getMemberships = query({
+  args: { artistId: v.id("artists") },
+  returns: v.union(
+    v.object({
+      musicbrainz_artist_id: nullableString,
+      fetched_at: nullableString,
+      memberships: v.array(artistMembershipViewValidator),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, { artistId }) => {
+    await getCurrentUser(ctx);
+    const artist = await ctx.db.get(artistId);
+    if (!artist) return null;
+    const lookup = await ctx.db
+      .query("artistMembershipLookups")
+      .withIndex("by_artistId", (index) => index.eq("artistId", artistId))
+      .unique();
+    if (!lookup || lookup.musicbrainzArtistId !== artist.musicbrainzArtistId) {
+      return {
+        musicbrainz_artist_id: artist.musicbrainzArtistId,
+        fetched_at: null,
+        memberships: [],
+      };
+    }
+
+    const ids = [
+      ...new Set(lookup.memberships.map((item) => item.musicbrainz_artist_id)),
+    ];
+    const localArtists = new Map(
+      await Promise.all(
+        ids.map(async (mbid) => {
+          const localArtist = await ctx.db
+            .query("artists")
+            .withIndex("by_musicbrainzArtistId", (index) =>
+              index.eq("musicbrainzArtistId", mbid),
+            )
+            .unique();
+          return [mbid, localArtist?._id ?? null] as const;
+        }),
+      ),
+    );
+    return {
+      musicbrainz_artist_id: artist.musicbrainzArtistId,
+      fetched_at: lookup.fetchedAt,
+      memberships: lookup.memberships.map((item) => ({
+        ...item,
+        // Resolve at read time, so newly added Artists become links without a provider refresh.
+        artist_id: localArtists.get(item.musicbrainz_artist_id) ?? null,
+      })),
+    };
+  },
+});
+
+export const cacheMemberships = mutation({
+  args: {
+    artistId: v.id("artists"),
+    musicbrainzArtistId: v.string(),
+    memberships: v.array(artistMembershipValidator),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Same trusted-stage writer policy as Artist images; clients cannot freely edit shared facts.
+    await requireAdmin(ctx);
+    const artist = await ctx.db.get(args.artistId);
+    if (!artist) throw new Error("Artist not found");
+    if (artist.musicbrainzArtistId !== args.musicbrainzArtistId) {
+      throw new Error(
+        "Artist MusicBrainz identity changed during membership lookup",
+      );
+    }
+    validateArtistMemberships(args.memberships);
+    const existing = await ctx.db
+      .query("artistMembershipLookups")
+      .withIndex("by_artistId", (index) => index.eq("artistId", args.artistId))
+      .unique();
+    if (
+      existing?.musicbrainzArtistId === args.musicbrainzArtistId &&
+      isArtistMembershipCacheFresh(existing.fetchedAt)
+    )
+      return null;
+
+    const snapshot = {
+      artistId: args.artistId,
+      musicbrainzArtistId: args.musicbrainzArtistId,
+      fetchedAt: new Date().toISOString(),
+      memberships: args.memberships,
+    };
+    if (existing) await ctx.db.replace(existing._id, snapshot);
+    else await ctx.db.insert("artistMembershipLookups", snapshot);
+    return null;
   },
 });
 

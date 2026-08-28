@@ -19,6 +19,13 @@ owner-scoped saved-Recording payloads. The Artist row's relationship-reason
 view model remains a focused pure contract rather than a component-internal
 test.
 
+Artist-membership coverage includes both MusicBrainz relationship directions,
+separate membership periods, unknown dates, malformed/oversized responses,
+cache freshness, and provider failures. Convex tests verify authenticated reads,
+admin-only cache writes, source-identity checks, exact-ID local links (including
+Artists added after the lookup), plain-text unmatched names, and unchanged
+credit reachability and private Artist data.
+
 The Clerk/Convex backend privacy boundary uses fast authorization-contract
 coverage with Vitest and `convex-test`. Exercise anonymous, owner, other-User,
 and Site Admin access as applicable for every public query and mutation. These

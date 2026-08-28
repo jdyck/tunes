@@ -517,3 +517,258 @@ test("only an admin can cache constrained shared Artist image metadata", async (
   });
   expect(cached.image_lookup_completed_at).not.toBeNull();
 });
+
+test("membership names link only by existing MusicBrainz identity without creating Artists or credits", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("membership-owner"));
+  const other = t.withIdentity(identity("membership-other"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  const otherUserId = await other.mutation(api.users.ensureCurrent, {});
+  await t.mutation(internal.users.setRole, {
+    clerkSubject: "membership-owner",
+    role: "admin",
+  });
+  const groupMbid = "00000000-0000-0000-0000-000000000001";
+  const memberMbid = "00000000-0000-0000-0000-000000000002";
+  const unknownMbid = "00000000-0000-0000-0000-000000000003";
+  const { groupId, memberId } = await t.run(async (ctx) => {
+    const groupId = await ctx.db.insert("artists", {
+      name: "The Group",
+      kind: "group",
+      musicbrainzArtistId: groupMbid,
+      legacySupabaseId: null,
+    });
+    const memberId = await ctx.db.insert("artists", {
+      name: "Known Member",
+      kind: "person",
+      musicbrainzArtistId: memberMbid,
+      legacySupabaseId: null,
+    });
+    // Same name alone is insufficient to resolve the third member.
+    await ctx.db.insert("artists", {
+      name: "Unknown Member",
+      kind: "person",
+      musicbrainzArtistId: null,
+      legacySupabaseId: null,
+    });
+    await ctx.db.insert("artistUserData", {
+      userId: otherUserId,
+      artistId: memberId,
+      notes: "Private to other",
+      tags: ["private"],
+      legacyUserId: null,
+      legacyArtistId: null,
+    });
+    return { groupId, memberId };
+  });
+  const membership = {
+    musicbrainz_artist_id: memberMbid,
+    name: "Known Member",
+    relationship: "member" as const,
+    begin: "1955",
+    end: "1957",
+    ended: true,
+    attributes: ["piano"],
+  };
+  const songId = await owner.mutation(api.songs.create, {
+    requestId: "group-membership-song",
+    shared: songInput("Group Composition"),
+    writers: [
+      {
+        artistId: groupId,
+        canonicalName: "The Group",
+        creditedAs: "The Group",
+        role: "composer",
+        artistKind: "group",
+        musicbrainzArtistId: groupMbid,
+      },
+    ],
+  });
+  const recordingId = await owner.mutation(
+    api.recordings.saveYoutube,
+    youtubeInput(songId),
+  );
+  const update = recordingUpdateInput(
+    recordingId,
+    "Group performance",
+    "Owner only",
+  );
+  await owner.mutation(api.recordings.update, {
+    ...update,
+    shared: {
+      ...update.shared,
+      attribution: [
+        {
+          type: "existing",
+          artist_id: groupId,
+          credited_as: "The Group",
+          join_phrase: "",
+        },
+      ],
+    },
+  });
+  const before = await owner.query(api.artists.listMine, {});
+  expect(before).toEqual([
+    expect.objectContaining({ id: groupId, songCount: 1, recordingCount: 1 }),
+  ]);
+  await owner.mutation(api.artists.cacheMemberships, {
+    artistId: groupId,
+    musicbrainzArtistId: groupMbid,
+    memberships: [
+      membership,
+      {
+        ...membership,
+        musicbrainz_artist_id: unknownMbid,
+        name: "Unknown Member",
+      },
+    ],
+  });
+  const result = await other.query(api.artists.getMemberships, {
+    artistId: groupId,
+  });
+  expect(result?.memberships).toEqual([
+    { ...membership, artist_id: memberId },
+    {
+      ...membership,
+      musicbrainz_artist_id: unknownMbid,
+      name: "Unknown Member",
+      artist_id: null,
+    },
+  ]);
+  await expect(owner.query(api.artists.listMine, {})).resolves.toEqual(before);
+  await expect(other.query(api.artists.listMine, {})).resolves.toEqual([]);
+  await expect(
+    owner.query(api.artists.getMine, { artistId: memberId }),
+  ).resolves.toMatchObject({
+    artist: { id: memberId },
+    user_data: null,
+    songs: [],
+    recordings: [],
+  });
+  await expect(
+    other.query(api.artists.getMine, { artistId: memberId }),
+  ).resolves.toMatchObject({
+    user_data: { notes: "Private to other" },
+  });
+  const newMemberId = await t.run((ctx) =>
+    ctx.db.insert("artists", {
+      name: "Unknown Member",
+      kind: "person",
+      musicbrainzArtistId: unknownMbid,
+      legacySupabaseId: null,
+    }),
+  );
+  const updated = await owner.query(api.artists.getMemberships, {
+    artistId: groupId,
+  });
+  expect(updated?.memberships[1].artist_id).toBe(newMemberId);
+  expect(updated?.fetched_at).toBe(result?.fetched_at);
+
+  await owner.mutation(api.artists.cacheMemberships, {
+    artistId: memberId,
+    musicbrainzArtistId: memberMbid,
+    memberships: [
+      {
+        ...membership,
+        musicbrainz_artist_id: groupMbid,
+        name: "The Group",
+        relationship: "group",
+      },
+    ],
+  });
+  expect(
+    (await owner.query(api.artists.getMemberships, { artistId: memberId }))
+      ?.memberships[0],
+  ).toMatchObject({ artist_id: groupId, relationship: "group" });
+});
+
+test("membership caches require authentication and an admin writer, reject stale identity, and bound snapshots", async () => {
+  const t = convexTest({ schema, modules });
+  const owner = t.withIdentity(identity("membership-admin"));
+  const other = t.withIdentity(identity("membership-user"));
+  await owner.mutation(api.users.ensureCurrent, {});
+  await other.mutation(api.users.ensureCurrent, {});
+  const mbid = "00000000-0000-0000-0000-000000000001";
+  const artistId = await t.run((ctx) =>
+    ctx.db.insert("artists", {
+      name: "The Group",
+      kind: "group",
+      musicbrainzArtistId: mbid,
+      legacySupabaseId: null,
+    }),
+  );
+  const args = { artistId, musicbrainzArtistId: mbid, memberships: [] };
+  await expect(
+    t.query(api.artists.getMemberships, { artistId }),
+  ).rejects.toThrow("Unauthenticated");
+  await expect(t.mutation(api.artists.cacheMemberships, args)).rejects.toThrow(
+    "Unauthenticated",
+  );
+  await expect(
+    other.mutation(api.artists.cacheMemberships, args),
+  ).rejects.toThrow("Forbidden");
+  await t.mutation(internal.users.setRole, {
+    clerkSubject: "membership-admin",
+    role: "admin",
+  });
+  await expect(
+    owner.mutation(api.artists.cacheMemberships, {
+      ...args,
+      musicbrainzArtistId: "changed",
+    }),
+  ).rejects.toThrow("identity changed");
+  const membership = {
+    musicbrainz_artist_id: "00000000-0000-0000-0000-000000000002",
+    name: "Member",
+    relationship: "member" as const,
+    begin: null,
+    end: null,
+    ended: false,
+    attributes: [],
+  };
+  await expect(
+    owner.mutation(api.artists.cacheMemberships, {
+      ...args,
+      memberships: Array.from({ length: 501 }, () => membership),
+    }),
+  ).rejects.toThrow("500");
+  await expect(
+    owner.mutation(api.artists.cacheMemberships, {
+      ...args,
+      memberships: [{ ...membership, musicbrainz_artist_id: "bad-id" }],
+    }),
+  ).rejects.toThrow("identity");
+  await owner.mutation(api.artists.cacheMemberships, args);
+  const cached = await other.query(api.artists.getMemberships, { artistId });
+  expect(cached?.fetched_at).not.toBeNull();
+  expect(cached?.memberships).toEqual([]);
+  await owner.mutation(api.artists.cacheMemberships, {
+    ...args,
+    memberships: [membership],
+  });
+  expect(await owner.query(api.artists.getMemberships, { artistId })).toEqual(
+    cached,
+  );
+
+  await t.run(async (ctx) => {
+    const cache = await ctx.db
+      .query("artistMembershipLookups")
+      .withIndex("by_artistId", (index) => index.eq("artistId", artistId))
+      .unique();
+    if (!cache) throw new Error("Expected cache");
+    await ctx.db.patch(cache._id, { fetchedAt: "2000-01-01T00:00:00Z" });
+  });
+  await owner.mutation(api.artists.cacheMemberships, {
+    ...args,
+    memberships: [membership],
+  });
+  expect(
+    (await owner.query(api.artists.getMemberships, { artistId }))?.memberships,
+  ).toHaveLength(1);
+  await t.run((ctx) => ctx.db.patch(artistId, { musicbrainzArtistId: null }));
+  expect(await other.query(api.artists.getMemberships, { artistId })).toEqual({
+    musicbrainz_artist_id: null,
+    fetched_at: null,
+    memberships: [],
+  });
+});

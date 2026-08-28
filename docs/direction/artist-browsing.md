@@ -88,6 +88,42 @@ result. This is sufficient for the current sole-owner trusted stage; revisit
 the cache-writer capability before non-admin Artist browsing becomes a launch
 requirement.
 
+## Group membership
+
+Artist detail shows **Members** for a group and **Groups** for an individual,
+using only MusicBrainz's explicit
+[member-of-band relationship](https://musicbrainz.org/relationship/5be4c609-9afa-4ea0-910b-12ffb71e3821)
+from an Artist lookup with `inc=artist-rels`. The relationship direction controls
+the section; missing Artist kind does not discard explicit membership evidence.
+Preserve sourced roles, partial dates, and separate joining/leaving/rejoining
+periods. A missing end date must not be presented as proof of current membership.
+
+Every known name is shown, but only an exact MusicBrainz Artist ID match to an
+existing canonical Standards Artist becomes an internal Artist-pane link.
+Unmatched names are plain text, with no external link and no automatic Artist
+creation or name-based identity matching. Links resolve when the view is read,
+so adding an Artist later makes the existing membership name linkable without
+another provider lookup. Membership does not add Artists to the User's Artists
+list, alter counts, infer Recording Personnel, or transfer Song/Recording credits
+between a group and its members. Linked Artist panes retain the existing
+User-scoped data boundaries even when the Artist has no credits in that User's
+repertoire.
+
+`artistMembershipLookups` stores one shared, bounded provider snapshot per
+existing Artist (up to 500 entries / 256 KiB), tied to the source MusicBrainz ID.
+It is enrichment data, not a second canonical Artist model. Successful lookups,
+including empty results and provider 404s, are cached for seven days and refreshed
+on a later view. A source-ID change invalidates the snapshot. Provider failures
+and malformed/oversized results preserve the previous snapshot and show a retry
+state rather than being cached as no membership. No match or an ordinary empty
+result omits the section.
+
+The Clerk-protected Next.js membership route uses the shared MusicBrainz
+transport. Like image caching, the cache mutation is admin-authorized for the
+current trusted stage; all initialized authenticated Users can read cached
+membership facts. Revisit the shared cache-writer capability before non-admin
+Artist enrichment is a launch requirement.
+
 Because the pane combines shared canonical facts with private `artistUserData`,
 saving notes/tags must never issue a broad update to the canonical Artist row.
 The write policy for editing shared Artist metadata is a separate migration

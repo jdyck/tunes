@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { artistMembershipValidator } from "./model/artistMemberships";
 
 const nullableString = v.union(v.string(), v.null());
 
@@ -75,6 +76,14 @@ export default defineSchema({
     .index("by_musicbrainzArtistId", ["musicbrainzArtistId"])
     .searchIndex("search_name", { searchField: "name" })
     .index("by_legacySupabaseId", ["legacySupabaseId"]),
+
+  // Bounded provider snapshots (500 entries / 256 KiB), not local Artist edges.
+  artistMembershipLookups: defineTable({
+    artistId: v.id("artists"),
+    musicbrainzArtistId: v.string(),
+    fetchedAt: v.string(),
+    memberships: v.array(artistMembershipValidator),
+  }).index("by_artistId", ["artistId"]),
 
   artistUserData: defineTable({
     userId: v.id("users"),
