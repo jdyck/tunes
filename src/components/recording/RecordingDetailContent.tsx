@@ -291,6 +291,8 @@ export default function RecordingDetailContent({
             <RecordingPersonnel
               attribution={attribution}
               personnel={personnel}
+              songId={songId}
+              recordingId={id}
             />
             <FormField
               label="Attribution fallback"
@@ -332,6 +334,8 @@ export default function RecordingDetailContent({
                 {": "}
                 <ReleaseGroupAttribution
                   attribution={releaseGroup.attribution}
+                  songId={songId}
+                  recordingId={id}
                 />
               </p>
             )}

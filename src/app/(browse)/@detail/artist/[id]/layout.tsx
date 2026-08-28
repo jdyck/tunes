@@ -2,11 +2,16 @@
 
 import { useParams } from "next/navigation";
 import ArtistDetailContent from "@/components/artist/ArtistDetailContent";
+import NestedPaneGate from "@/components/layout/NestedPaneGate";
 
 export default function ArtistDetailLayout({
   children,
+  song,
+  recording,
 }: {
   children: React.ReactNode;
+  song?: React.ReactNode;
+  recording?: React.ReactNode;
 }) {
   const { id } = useParams();
   const artistId = Array.isArray(id) ? id[0] : id;
@@ -14,9 +19,24 @@ export default function ArtistDetailLayout({
   if (!artistId) return null;
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-0 z-[var(--layer-browse-detail)] overscroll-none bg-surface-app lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:min-w-[500px] lg:h-full lg:border-r lg:border-paper-600">
-      <ArtistDetailContent id={artistId} />
-      {children}
-    </div>
+    <>
+      <div className="fixed inset-x-0 top-0 bottom-0 z-[var(--layer-browse-detail)] overscroll-none bg-surface-app lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:min-w-[500px] lg:h-full lg:border-r lg:border-paper-600">
+        <ArtistDetailContent id={artistId} />
+        {children}
+      </div>
+      <NestedPaneGate
+        matchPattern={/\/song\//}
+        zLayerClassName="z-[var(--layer-recording-detail)]"
+      >
+        {song}
+      </NestedPaneGate>
+      <NestedPaneGate
+        matchPattern={/\/recording\//}
+        zLayerClassName="z-[var(--layer-nested-detail-3)]"
+        neverStatic
+      >
+        {recording}
+      </NestedPaneGate>
+    </>
   );
 }

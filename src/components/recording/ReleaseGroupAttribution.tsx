@@ -3,8 +3,12 @@ import type { RecordingAttributionInput } from "@/utils/musicbrainzRecordingAttr
 
 export default function ReleaseGroupAttribution({
   attribution,
+  songId,
+  recordingId,
 }: {
   attribution: readonly RecordingAttributionInput[];
+  songId: string;
+  recordingId: string;
 }) {
   if (attribution.length === 0) return null;
 
@@ -16,7 +20,7 @@ export default function ReleaseGroupAttribution({
         >
           {part.artistId ? (
             <Link
-              href={`/artist/${part.artistId}`}
+              href={`/song/${songId}/recording/${recordingId}/artist/${part.artistId}`}
               className="text-azure-700 underline"
             >
               {part.creditedAs}

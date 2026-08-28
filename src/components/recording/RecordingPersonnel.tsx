@@ -6,9 +6,13 @@ import { recordingPersonnelRows } from "@/utils/recordingPersonnelView";
 export default function RecordingPersonnel({
   attribution,
   personnel,
+  songId,
+  recordingId,
 }: {
   attribution: readonly RecordingAttributionInput[];
   personnel: readonly RecordingPersonnelDraftEntry[];
+  songId: string;
+  recordingId: string;
 }) {
   const rows = recordingPersonnelRows(attribution, personnel);
   if (rows.length === 0) return null;
@@ -26,7 +30,7 @@ export default function RecordingPersonnel({
           <li key={row.artistId ?? `${index}-${row.creditedAs}`}>
             {row.artistId ? (
               <Link
-                href={`/artist/${row.artistId}`}
+                href={`/song/${songId}/recording/${recordingId}/artist/${row.artistId}`}
                 className="text-azure-700 underline"
               >
                 {row.creditedAs}

@@ -6,6 +6,7 @@ export default function SongWriterCreditsDemoPage() {
       <section>
         <h2 className="mb-1 font-semibold">Shared writer credit</h2>
         <SongWriterCredits
+          songId="demo-song"
           writers={[
             {
               artistId: "demo-artist",
@@ -20,6 +21,7 @@ export default function SongWriterCreditsDemoPage() {
       <section>
         <h2 className="mb-1 font-semibold">Separate roles</h2>
         <SongWriterCredits
+          songId="demo-song"
           writers={[
             {
               canonicalName: "George Gershwin",
@@ -37,7 +39,7 @@ export default function SongWriterCreditsDemoPage() {
 
       <section>
         <h2 className="mb-1 font-semibold">Empty</h2>
-        <SongWriterCredits writers={[]} />
+        <SongWriterCredits songId="demo-song" writers={[]} />
       </section>
     </div>
   );
