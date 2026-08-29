@@ -5,6 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:accounts": "node --experimental-strip-types scripts/dev-auth.ts setup",
+    "dev:login": "node --experimental-strip-types scripts/dev-auth.ts login",
+    "dev:auth-status": "node --experimental-strip-types scripts/dev-auth.ts status",
+    "dev:revoke-login": "node --experimental-strip-types scripts/dev-auth.ts revoke",
     "build": "next build",
     "test": "node scripts/run-tests.mjs",
     "test:pure": "node --experimental-strip-types --test tests/*.test.ts",
@@ -28,6 +32,7 @@
     "ytmusic-api": "^5.3.1"
   },
   "devDependencies": {
+    "@clerk/backend": "3.16.6",
     "@edge-runtime/vm": "^5.0.0",
     "@types/node": "^20.19.43",
     "@types/react": "^19.2.17",

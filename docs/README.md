@@ -12,6 +12,7 @@ Use capitalized domain names—**User**, **Song**, **Artist**, **Recording**, an
 - [direction/](direction/) — one file per subject/issue (e.g. `music-player.md`, `artist-browsing.md`). Each file mixes whatever's true about that subject — known problems, things to add, patterns to avoid — rather than being sorted into "bugs" vs "features" categories. Looser and more opinionated than an ADR; not all of it will happen.
 - [verifying-changes.md](verifying-changes.md) — reusable checks for code, UI, route, backend, and migration changes.
 - [working-with-agents.md](working-with-agents.md) — collaboration, worktree safety, and best-practice pushback norms.
+- [agents/local-dev-access.md](agents/local-dev-access.md) — dedicated Clerk development accounts, local agent login, and fixture setup.
 
 See also, at repo root:
 

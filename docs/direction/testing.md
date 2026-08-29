@@ -40,3 +40,12 @@ small two-account smoke when authentication wiring or a private-data boundary
 changes, and before the project enters privacy-active use. Keep browser
 automation, hosted browser CI, broad component testing, and general browser
 coverage as separate decisions.
+
+Repeatable local agent sessions use the dedicated development accounts in
+[local development access](../agents/local-dev-access.md), with isolated private
+fixture notes and separate ordinary/admin roles. This uses real Clerk sessions
+without changing the application authentication path. Guard and seed tests cover
+production refusal, missing/mismatched private environment configuration, pinned
+account identity, rejection of Clerk fixed-code test addresses, local redirects,
+replacement-ticket revocation and cleanup, fixture idempotence after email-less
+sessions, private data isolation, and admin boundaries.

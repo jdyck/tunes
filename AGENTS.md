@@ -62,7 +62,9 @@ Convex authorization behavior; broader component/browser testing remains
 undecided. See
 [docs/direction/testing.md](docs/direction/testing.md).
 
-Login credentials for local dev are in `.env.local` (not checked in).
+For local browser sign-in, account setup, or auth blockers, read
+[docs/agents/local-dev-access.md](docs/agents/local-dev-access.md). Use the
+dedicated dev accounts and `npm run dev:login`; secrets stay in `.env.local`.
 
 ## Collaboration workflow
 
