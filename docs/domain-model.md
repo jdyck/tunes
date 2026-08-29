@@ -18,6 +18,13 @@ _Avoid_: User Song, My Tune, Listed Song, Repertoire Entry (earlier names consid
 A canonical, shared identity that can receive a musical credit: a person, group, orchestra, choir, character, or another credited entity. This follows MusicBrainz's broad and useful meaning rather than treating Artist as synonymous with individual performer. Artist kind may be absent when the source does not know it; missing is not the same as MusicBrainz's positive `Other` type and must not be coerced to it. Composer, lyricist, writer, and performer are roles relating an Artist to a Song or Recording; they are not different entity types. A credited group remains the group unless individual members are separately known — never omit it because it is not a person, and never infer its members. Shared identity lives in `artists`; ordered Song roles live in `song_artist_credits`, while grouped Recording Personnel lives in `recordingPersonnel`. See [ADR-0008](adr/0008-provider-neutral-music-entities-and-user-data.md) and [direction/artist-browsing.md](direction/artist-browsing.md).
 _Avoid_: using Person as the universal identity; using performer as a synonym for Artist
 
+An Artist's sourced group memberships are shared background facts, separate from
+Song credits and Recording Personnel. Show known members/groups even when they
+have no local Artist identity; link a name only when its MusicBrainz ID matches
+an existing Standards Artist. Membership never creates an Artist automatically
+or attributes a group's Recordings to its members. Preserve known membership
+periods rather than treating the lineup as timeless.
+
 **artist_user_data**:
 A User's private layer over a canonical Artist: personal notes, tags, and any later private organization. There is at most one row per User and Artist. It is not an Artist subtype and must not hold the shared name, kind, biography, or provider identity. `artist_user_data` follows the `song_user_data` private-layer pattern; those names are database vocabulary, not UI labels. Owner-scoped Convex authorization keeps this payload private while the Artist identity and credit facts are shared.
 

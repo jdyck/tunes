@@ -19,6 +19,13 @@ owner-scoped saved-Recording payloads. The Artist row's relationship-reason
 view model remains a focused pure contract rather than a component-internal
 test.
 
+Artist-membership coverage includes both MusicBrainz relationship directions,
+separate membership periods, unknown dates, malformed/oversized responses,
+cache freshness, and provider failures. Convex tests verify authenticated reads,
+admin-only cache writes, source-identity checks, exact-ID local links (including
+Artists added after the lookup), plain-text unmatched names, and unchanged
+credit reachability and private Artist data.
+
 The Clerk/Convex backend privacy boundary uses fast authorization-contract
 coverage with Vitest and `convex-test`. Exercise anonymous, owner, other-User,
 and Site Admin access as applicable for every public query and mutation. These
@@ -33,3 +40,12 @@ small two-account smoke when authentication wiring or a private-data boundary
 changes, and before the project enters privacy-active use. Keep browser
 automation, hosted browser CI, broad component testing, and general browser
 coverage as separate decisions.
+
+Repeatable local agent sessions use the dedicated development accounts in
+[local development access](../agents/local-dev-access.md), with isolated private
+fixture notes and separate ordinary/admin roles. This uses real Clerk sessions
+without changing the application authentication path. Guard and seed tests cover
+production refusal, missing/mismatched private environment configuration, pinned
+account identity, rejection of Clerk fixed-code test addresses, local redirects,
+replacement-ticket revocation and cleanup, fixture idempotence after email-less
+sessions, private data isolation, and admin boundaries.

@@ -30,6 +30,10 @@ verification.
 
 ## Components and UI
 
+For authenticated local browser checks, follow
+[local development access](agents/local-dev-access.md). Use the ordinary dev
+account by default and the separate admin account only for admin checks.
+
 Use the dev component gallery under `/dev/components` to exercise shared
 components in isolation. When a component changes, verify the states its public
 contract permits, including relevant loading, empty, error, disabled, dirty,
