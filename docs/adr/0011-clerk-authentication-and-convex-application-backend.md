@@ -61,6 +61,10 @@ surface of two services is acceptable at this scale.
   and covered by negative tests for anonymous and non-owner identities.
 - Clerk owns account identity and access policy only. Application roles and all
   repertoire data remain in Convex.
+- A Clerk production-domain change preserves the User subject but changes the
+  issuer-qualified token identifier. `users.ensureCurrent` therefore rebinds an
+  existing User with the same Clerk subject to the new token identifier rather
+  than creating a second application User and orphaning their private data.
 - Development and production require separate Clerk/Convex configuration,
   issuer values, Users, data imports, and verification.
 - Supabase migrations and the live source project remain temporarily for the

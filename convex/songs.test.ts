@@ -7,10 +7,14 @@ import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
 
-const identity = (subject: string, email: string) => ({
+const identity = (
+  subject: string,
+  email: string,
+  issuer = "https://clerk.example.test",
+) => ({
   subject,
-  tokenIdentifier: `https://clerk.example.test|${subject}`,
-  issuer: "https://clerk.example.test",
+  tokenIdentifier: `${issuer}|${subject}`,
+  issuer,
   email,
 });
 
@@ -52,6 +56,34 @@ test("requires Clerk identity and initializes one application User idempotently"
     email: "owner@example.test",
     role: "user",
   });
+});
+
+test("preserves the application User when Clerk's issuer domain changes", async () => {
+  const t = convexTest({ schema, modules });
+  const previousIssuer = t.withIdentity(
+    identity("owner", "owner@example.test", "https://old.clerk.example.test"),
+  );
+  const currentIssuer = t.withIdentity(
+    identity("owner", "owner@example.test", "https://clerk.example.test"),
+  );
+
+  const userId = await previousIssuer.mutation(api.users.ensureCurrent, {});
+  const songId = await previousIssuer.mutation(api.songs.create, {
+    requestId: "issuer-change-song",
+    shared: sharedSong("Body and Soul"),
+    writers,
+  });
+
+  await expect(
+    currentIssuer.mutation(api.users.ensureCurrent, {}),
+  ).resolves.toBe(userId);
+  await expect(
+    currentIssuer.query(api.songs.getMine, { songId }),
+  ).resolves.toMatchObject({ song: { id: songId } });
+
+  expect(
+    await t.run(async (ctx) => (await ctx.db.query("users").take(10)).length),
+  ).toBe(1);
 });
 
 test("keeps private Song membership isolated while sharing discoverable identity", async () => {
