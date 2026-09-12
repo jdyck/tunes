@@ -1,79 +1,29 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { leagueGothic } from "@/lib/fonts";
+import { useEffect, useRef, useState } from "react";
 import { useSongsList } from "@/components/song/SongsListContext";
 import RecordingsSection from "@/components/song/RecordingsSection";
-import SongWriterCredits from "@/components/song/SongWriterCredits";
 import SongWritersEditor from "@/components/song/SongWritersEditor";
-import SongWorkResultsList from "@/components/song/SongWorkResultsList";
+import SongDetailHeader from "@/components/song/SongDetailHeader";
+import SongBackgroundSection from "@/components/song/SongBackgroundSection";
+import SongDetailSkeleton from "@/components/song/SongDetailSkeleton";
 import SaveAction from "@/components/ui/SaveAction";
 import FormField from "@/components/ui/FormField";
 import Switch from "@/components/ui/Switch";
-import MusicBrainzLink from "@/components/ui/MusicBrainzLink";
 import SyncFromMusicBrainzButton from "@/components/ui/SyncFromMusicBrainzButton";
-import WikipediaBackgroundCard from "@/components/song/WikipediaBackgroundCard";
 import AsyncStateMessage from "@/components/ui/AsyncStateMessage";
 import NotesField from "@/components/ui/NotesField";
 import { useFieldChange } from "@/hooks/useFieldChange";
 import { WriterInput } from "@/lib/songWriters";
 import { writersFromMusicBrainz } from "@/utils/writerCredits";
-import { SongWorkSearchResult } from "@/lib/musicbrainz";
-import {
-  searchSongMetadata,
-  fetchWorkDetail,
-  fetchWorkBackground,
-} from "@/lib/songMetadataClient";
-import PaneHeader from "@/components/layout/PaneHeader";
-import LinkButton from "@/components/ui/LinkButton";
+import { fetchWorkDetail } from "@/lib/songMetadataClient";
 import { useSavedRecordings } from "@/hooks/useSavedRecordings";
-import RecordingThumbnail from "@/components/recording/RecordingThumbnail";
-import { recordingArtwork } from "@/utils/recordingArtwork";
 import { effectiveSongTitle } from "@/utils/songTitle";
 import Modal from "@/components/ui/Modal";
-import {
-  PencilIcon,
-  StarIcon as SolidStarIcon,
-} from "@heroicons/react/20/solid";
-import { StarIcon as OutlineStarIcon } from "@heroicons/react/24/outline";
 import TagChipInput from "@/components/ui/TagChipInput";
 import { collectTags } from "@/utils/songTags";
 import { useSongDetail } from "@/hooks/useSongDetail";
 import { useSaveLifecycle } from "@/hooks/useSaveLifecycle";
-
-const normalizeTitleText = (value: string) =>
-  value.replace(/\u00a0/g, " ").replace(/\s*\n\s*/g, " ");
-
-const TITLE_MAX_FONT_PX = 60;
-const TITLE_MIN_FONT_PX = 20;
-const TITLE_LINE_HEIGHT_RATIO = 0.93;
-const TITLE_MAX_LINES = 3;
-
-// Long titles otherwise overflow to 6-7 lines at the display size \u2014 shrink
-// the (fixed-height, unitless) line-height in step with font-size so it
-// keeps scaling together, then binary-search down until it fits 3 lines.
-const fitTitleFontSize = (element: HTMLElement) => {
-  element.style.lineHeight = `${TITLE_LINE_HEIGHT_RATIO}`;
-
-  let low = TITLE_MIN_FONT_PX;
-  let high = TITLE_MAX_FONT_PX;
-  let best = TITLE_MIN_FONT_PX;
-
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    element.style.fontSize = `${mid}px`;
-    const maxHeight = mid * TITLE_LINE_HEIGHT_RATIO * TITLE_MAX_LINES;
-
-    if (element.scrollHeight <= maxHeight + 1) {
-      best = mid;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  element.style.fontSize = `${best}px`;
-};
 
 export default function SongDetailContent({
   id,
@@ -119,17 +69,9 @@ export default function SongDetailContent({
   const [musicbrainzWorkId, setMusicbrainzWorkId] = useState<string | null>(
     null
   );
-  const [showBackgroundSearch, setShowBackgroundSearch] = useState(false);
-  const [backgroundSearchResults, setBackgroundSearchResults] = useState<
-    SongWorkSearchResult[]
-  >([]);
-  const [backgroundSearching, setBackgroundSearching] = useState(false);
-  const [lookingUpBackground, setLookingUpBackground] = useState(false);
-  const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const [syncingFromMusicBrainz, setSyncingFromMusicBrainz] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [showWritersEditor, setShowWritersEditor] = useState(false);
-  const titleRef = useRef<HTMLDivElement | null>(null);
   const hydratedSongIdRef = useRef<string | null>(null);
   const saveLifecycle = useSaveLifecycle();
 
@@ -151,25 +93,6 @@ export default function SongDetailContent({
     setWriters(loadedWriters);
     saveLifecycle.reset();
   }, [id, loadedWriters, saveLifecycle.reset, song]);
-
-  useLayoutEffect(() => {
-    const titleElement = titleRef.current;
-    if (!titleElement) return;
-    if (titleElement.textContent !== title) titleElement.textContent = title;
-
-    fitTitleFontSize(titleElement);
-    // `titleElement` doesn't exist yet while `loading` is true (an earlier
-    // return renders <AsyncStateMessage> instead) -- re-run once it mounts.
-  }, [title, loading]);
-
-  useEffect(() => {
-    const titleElement = titleRef.current;
-    if (!titleElement) return;
-
-    const handleResize = () => fitTitleFontSize(titleElement);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [loading]);
 
   const handleSave = async () => {
     const saveRevision = saveLifecycle.beginSave();
@@ -243,75 +166,22 @@ export default function SongDetailContent({
     saveLifecycle.markDirty();
   };
 
-  const handleOpenBackgroundSearch = async () => {
-    setBackgroundError(null);
-    setShowBackgroundSearch(true);
-    setBackgroundSearching(true);
-    try {
-      setBackgroundSearchResults(await searchSongMetadata(sharedTitle));
-    } catch {
-      setBackgroundError("Couldn't look up song metadata. Try again later.");
-    }
-    setBackgroundSearching(false);
-  };
-
-  // Used once a MusicBrainz work is already linked -- fetches straight from
-  // that work instead of re-searching by title.
-  const handleLookUpBackground = async () => {
-    if (!musicbrainzWorkId) return;
-
-    setBackgroundError(null);
-    setLookingUpBackground(true);
-    const background = await fetchWorkBackground(musicbrainzWorkId);
-    setLookingUpBackground(false);
-
-    if (!background) {
-      setBackgroundError("No Wikipedia background found for this song.");
-      return;
-    }
-
-    setWikipediaExtract(background.extract);
-    setWikipediaUrl(background.url);
-    saveLifecycle.markDirty();
-  };
-
-  const handleSelectBackgroundWork = async (result: SongWorkSearchResult) => {
-    setShowBackgroundSearch(false);
-    setBackgroundSearchResults([]);
-    setBackgroundError(null);
-    setMusicbrainzWorkId(result.workId);
-    setWikipediaExtract(null);
-    setWikipediaUrl(null);
-    saveLifecycle.markDirty();
-
-    setLookingUpBackground(true);
-    const background = await fetchWorkBackground(result.workId);
-    setLookingUpBackground(false);
-
-    if (!background) {
-      setBackgroundError("No Wikipedia background found for this song.");
-      return;
-    }
-
-    setWikipediaExtract(background.extract);
-    setWikipediaUrl(background.url);
-  };
-
-  const handleRemoveBackground = () => {
-    setWikipediaExtract(null);
-    setWikipediaUrl(null);
-    saveLifecycle.markDirty();
-  };
-
   const handleDiscoverabilityChange = async (nextValue: boolean) => {
     await setDiscoverability(nextValue);
   };
 
   const handleFieldChange = useFieldChange(saveLifecycle.markDirty);
 
-  const handleTitleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    setTitle(normalizeTitleText(e.currentTarget.textContent ?? ""));
+  const handleTitleChange = (nextTitle: string) => {
+    setTitle(nextTitle);
     saveLifecycle.markDirty();
+  };
+
+  const handleFavoriteChange = (nextFavorite: boolean) => {
+    setFavorite(nextFavorite);
+    void saveFavorite(nextFavorite).then((saved) => {
+      if (!saved) saveLifecycle.markDirty();
+    });
   };
 
   if (loading || recordingsLoading)
@@ -325,9 +195,6 @@ export default function SongDetailContent({
   if (!song) return <AsyncStateMessage>No song found.</AsyncStateMessage>;
 
   const firstRecording = recordings[0];
-  const songArtwork = firstRecording
-    ? recordingArtwork(firstRecording)
-    : { src: null, fallbackSrc: null };
 
   const canEditShared = isAdmin || !song.is_discoverable;
   const titleEditsPrivate =
@@ -335,80 +202,20 @@ export default function SongDetailContent({
 
   return (
     <div className="w-full h-full flex flex-col bg-surface-app">
-      <PaneHeader backHref={backHref} backLabel={backLabel} safeAreaTop>
-        <div className="flex gap-4 w-xl max-w-full lg:max-w-md pb-8 items-center">
-          <div className="w-full">
-            <div
-              ref={titleRef}
-              contentEditable
-              suppressContentEditableWarning
-              role="textbox"
-              aria-label={titleEditsPrivate ? "Your Song title" : "Song title"}
-              onInput={handleTitleInput}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.preventDefault();
-              }}
-              onPaste={(e) => {
-                e.preventDefault();
-                const text = e.clipboardData
-                  .getData("text/plain")
-                  .replace(/\s*\n\s*/g, " ");
-                document.execCommand("insertText", false, text);
-              }}
-              className={`wrap-break-word text-balance text-6xl uppercase leading-14 bg-transparent outline-none ${leagueGothic.className} tracking-wide mb-2`}
-            >
-              {title}
-            </div>
-
-            <div className="flex items-start gap-2 pb-4">
-              <div className="min-w-0 font-bold text-lg/5 text-balance text-azure-600">
-                <SongWriterCredits writers={writers} songId={id} />
-              </div>
-              {canEditShared && (
-                <button
-                  type="button"
-                  onClick={() => setShowWritersEditor(true)}
-                  aria-label="Edit writers"
-                  className="shrink-0 rounded-sm p-1 text-azure-600 hover:bg-paper-200 hover:text-azure-500"
-                >
-                  <PencilIcon className="h-5 w-5" />
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="grow-0 w-40 self-start">
-            {firstRecording ? (
-              <RecordingThumbnail
-                src={songArtwork.src}
-                fallbackSrc={songArtwork.fallbackSrc}
-                alt=""
-                className="aspect-square w-36"
-              />
-            ) : (
-              <div className="aspect-square bg-ink-500/10 w-36"></div>
-            )}
-            <button
-              type="button"
-              aria-pressed={favorite}
-              aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
-              onClick={() => {
-                const nextFavorite = !favorite;
-                setFavorite(nextFavorite);
-                void saveFavorite(nextFavorite).then((saved) => {
-                  if (!saved) saveLifecycle.markDirty();
-                });
-              }}
-              className="mt-2 flex w-36 justify-center rounded-sm p-1 text-vermillion-600 hover:bg-paper-200"
-            >
-              {favorite ? (
-                <SolidStarIcon className="h-7 w-7" />
-              ) : (
-                <OutlineStarIcon className="h-7 w-7" />
-              )}
-            </button>
-          </div>
-        </div>
-      </PaneHeader>
+      <SongDetailHeader
+        title={title}
+        titleEditsPrivate={titleEditsPrivate}
+        writers={writers}
+        songId={id}
+        canEditShared={canEditShared}
+        firstRecording={firstRecording}
+        favorite={favorite}
+        onTitleChange={handleTitleChange}
+        onToggleFavorite={handleFavoriteChange}
+        onEditWriters={() => setShowWritersEditor(true)}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
         {(error || recordingsError) && (
@@ -516,58 +323,23 @@ export default function SongDetailContent({
             }}
           />
 
-          <div className="mb-4">
-            {showBackgroundSearch ? (
-              backgroundSearching ? (
-                <p className="text-sm text-ink-600">Looking up...</p>
-              ) : (
-                <SongWorkResultsList
-                  results={backgroundSearchResults}
-                  onSelect={handleSelectBackgroundWork}
-                />
-              )
-            ) : (
-              <>
-                {musicbrainzWorkId && (
-                  <MusicBrainzLink type="work" id={musicbrainzWorkId} />
-                )}
-
-                {wikipediaExtract ? (
-                  <WikipediaBackgroundCard
-                    extract={wikipediaExtract}
-                    url={wikipediaUrl}
-                    onRemove={canEditShared ? handleRemoveBackground : undefined}
-                  />
-                ) : canEditShared ? (
-                  <button
-                    type="button"
-                    onClick={
-                      musicbrainzWorkId
-                        ? handleLookUpBackground
-                        : handleOpenBackgroundSearch
-                    }
-                    disabled={lookingUpBackground}
-                    className="text-sm text-azure-600 underline disabled:opacity-70"
-                  >
-                    {lookingUpBackground ? "Looking up..." : "Look up background"}
-                  </button>
-                ) : null}
-
-                {canEditShared && (musicbrainzWorkId || wikipediaExtract) && (
-                  <LinkButton
-                    variant="muted"
-                    onClick={handleOpenBackgroundSearch}
-                    className="block mt-1"
-                  >
-                    Change match
-                  </LinkButton>
-                )}
-              </>
-            )}
-            {backgroundError && (
-              <p className="text-sm text-ink-600 mt-1">{backgroundError}</p>
-            )}
-          </div>
+          <SongBackgroundSection
+            sharedTitle={sharedTitle}
+            musicbrainzWorkId={musicbrainzWorkId}
+            wikipediaExtract={wikipediaExtract}
+            wikipediaUrl={wikipediaUrl}
+            canEditShared={canEditShared}
+            onChange={({
+              musicbrainzWorkId: nextMusicbrainzWorkId,
+              wikipediaExtract: nextWikipediaExtract,
+              wikipediaUrl: nextWikipediaUrl,
+            }) => {
+              setMusicbrainzWorkId(nextMusicbrainzWorkId);
+              setWikipediaExtract(nextWikipediaExtract);
+              setWikipediaUrl(nextWikipediaUrl);
+            }}
+            onDirty={saveLifecycle.markDirty}
+          />
         </form>
       </div>
       {showWritersEditor && canEditShared && (
@@ -581,63 +353,6 @@ export default function SongDetailContent({
           />
         </Modal>
       )}
-    </div>
-  );
-}
-
-function SongDetailSkeleton({
-  backHref,
-  backLabel,
-}: {
-  backHref: string;
-  backLabel: string;
-}) {
-  return (
-    <div
-      className="flex h-full w-full flex-col bg-surface-app"
-      role="status"
-      aria-label="Loading song"
-    >
-      <span className="sr-only">Loading song...</span>
-      <div aria-hidden="true" className="contents">
-        <PaneHeader backHref={backHref} backLabel={backLabel} safeAreaTop>
-          <div className="flex w-xl max-w-full items-center gap-4 pb-8 lg:max-w-md">
-            <div className="w-full animate-pulse">
-              <div className="h-14 w-4/5 rounded-sm bg-surface-sunken" />
-              <div className="mt-3 h-5 w-1/2 rounded-sm bg-surface-sunken" />
-            </div>
-            <div className="w-40 grow-0">
-              <div className="aspect-square w-36 animate-pulse bg-surface-sunken" />
-            </div>
-          </div>
-        </PaneHeader>
-
-        <div className="flex-1 overflow-hidden p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
-          <div className="animate-pulse">
-            <div className="mb-2 flex max-w-xl items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-28 rounded-sm bg-surface-sunken" />
-                <div className="h-5 w-5 rounded-full bg-surface-sunken" />
-              </div>
-              <div className="h-6 w-6 rounded-full bg-surface-sunken" />
-            </div>
-
-            <div className="mb-5 border-b border-border-default py-4">
-              <div className="h-5 w-2/3 rounded-sm bg-surface-sunken" />
-              <div className="mt-2 h-3.5 w-1/2 rounded-sm bg-surface-sunken" />
-            </div>
-            <div className="mb-5 border-b border-border-default py-4">
-              <div className="h-5 w-1/2 rounded-sm bg-surface-sunken" />
-              <div className="mt-2 h-3.5 w-1/3 rounded-sm bg-surface-sunken" />
-            </div>
-
-            <div className="mb-4 h-8 w-24 rounded-md bg-surface-sunken" />
-            <div className="mb-1 h-3 w-10 rounded-sm bg-surface-sunken" />
-            <div className="mb-5 h-7 w-20 rounded-sm bg-surface-sunken" />
-            <div className="h-36 w-full max-w-xl rounded-md bg-surface-sunken" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
