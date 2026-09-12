@@ -45,7 +45,6 @@ export const ensureCurrent = mutation({
       clerkTokenIdentifier: identity.tokenIdentifier,
       clerkSubject: identity.subject,
       email,
-      legacySupabaseId: null,
       role: "user",
     });
   },

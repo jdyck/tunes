@@ -138,7 +138,6 @@ const resolveReleaseGroup = async (
     : await ctx.db.insert("releaseGroups", {
         title,
         musicbrainzReleaseGroupId,
-        legacySupabaseId: null,
       });
   await replaceReleaseGroupAttribution(ctx, releaseGroupId, input.attribution);
   return releaseGroupId;
@@ -320,7 +319,6 @@ export const saveYoutube = mutation({
         releaseGroupId: null,
         personnelMigrated: true,
         personnelMigrationKind: "saved",
-        legacySupabaseId: null,
       });
       await ctx.db.insert("recordingYoutubeItems", {
         recordingId,
@@ -357,8 +355,6 @@ export const saveYoutube = mutation({
         key: null,
         tempo: null,
         createdAt: new Date().toISOString(),
-        legacyUserId: null,
-        legacyRecordingId: null,
       });
     }
 

@@ -164,7 +164,6 @@ const resolveArtist = async (ctx: MutationCtx, writer: WriterInput) => {
     name,
     kind: writer.artistKind,
     musicbrainzArtistId: writer.musicbrainzArtistId,
-    legacySupabaseId: null,
   });
 };
 
@@ -191,7 +190,6 @@ export const replaceWriters = async (
       role: writer.role,
       creditedAs: writer.creditedAs.trim(),
       sortOrder,
-      legacySupabaseId: null,
     });
   }
 };

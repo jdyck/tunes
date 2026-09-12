@@ -1,6 +1,6 @@
 # Standards
 
-The app is named **Standards** (renamed from "Tunes", July 2026 — the repo folder and legacy Supabase project id still say `tunes`). "Standards" as in the repertoire sense: the songs a musician keeps.
+The app is named **Standards** (renamed from "Tunes", July 2026 — the repo folder still says `tunes`). "Standards" as in the repertoire sense: the songs a musician keeps.
 
 A personal tool for consolidating scattered musical repertoire — song lists and lead sheets currently kept on paper and scattered across digital tools, plus liked recordings currently tracked as one YouTube Music playlist per song. Those playlists work for focused/analytical listening (transcription, comparison) but get in the way of casual listening, so this app exists to hold that analytical, per-song recording list on its own, separate from casual playlists. Built for personal use first, with multi-user use as a goal.
 

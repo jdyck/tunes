@@ -129,7 +129,6 @@ test("seeder refuses other deployments and never promotes an unrelated User", as
       clerkTokenIdentifier: `${target.clerkIssuer}|${subjects.adminSubject}`,
       email: "owner@example.com",
       role: "user",
-      legacySupabaseId: null,
     }),
   );
   await expect(t.mutation(internal.devAgents.seed, subjects)).rejects.toThrow(

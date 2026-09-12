@@ -63,13 +63,11 @@ test("backfills grouped generic Personnel, verifies it, and is safe to rerun", a
       name: "Bill Evans",
       kind: "person",
       musicbrainzArtistId: "mb-bill-evans",
-      legacySupabaseId: null,
     });
     const secondArtistId = await ctx.db.insert("artists", {
       name: "Scott LaFaro",
       kind: "person",
       musicbrainzArtistId: "mb-scott-lafaro",
-      legacySupabaseId: null,
     });
     for (const [artistId, creditedAs, sortOrder] of [
       [firstArtistId, "Bill Evans", 0],
@@ -82,7 +80,6 @@ test("backfills grouped generic Personnel, verifies it, and is safe to rerun", a
         role: "performer",
         creditedAs,
         sortOrder,
-        legacySupabaseId: null,
       });
     }
     const recording = await ctx.db.get(recordingId);
@@ -174,7 +171,6 @@ test("preserves an intentionally empty new Personnel set over legacy rows", asyn
       name: "Legacy Artist",
       kind: "person",
       musicbrainzArtistId: "mb-legacy-artist",
-      legacySupabaseId: null,
     });
     await ctx.db.insert("recordingArtistCredits", {
       recordingId,
@@ -182,7 +178,6 @@ test("preserves an intentionally empty new Personnel set over legacy rows", asyn
       role: "performer",
       creditedAs: "Legacy Artist",
       sortOrder: 0,
-      legacySupabaseId: null,
     });
     await runToCompletion(
       ctx,
@@ -222,7 +217,6 @@ test("verification rejects a missing canonical Personnel Artist", async () => {
       name: "Temporary Artist",
       kind: "person",
       musicbrainzArtistId: "mb-temporary-artist",
-      legacySupabaseId: null,
     });
     await ctx.db.insert("recordingPersonnel", {
       recordingId,
@@ -267,7 +261,6 @@ test("verification rejects more than 500 aggregate details across Artists", asyn
         name: `Personnel Artist ${artistIndex}`,
         kind: "person",
         musicbrainzArtistId: `mb-personnel-artist-${artistIndex}`,
-        legacySupabaseId: null,
       });
       await ctx.db.insert("recordingPersonnel", {
         recordingId,

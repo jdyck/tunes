@@ -2,16 +2,10 @@
 
 **Current implementation note (August 2026):** Production cutover, owner-data
 import, and production verification are complete. The completed migration
-direction and local implementation plan have been removed. This repo's
-Supabase configuration and migrations (`supabase/`) and the one-time
-export/import tooling have also been removed, superseding the "Supabase
-migrations... remain temporarily" and "their later removal is separately
-scoped cleanup" language in Consequences below. The live hosted Supabase
-project is no longer required by this ADR as migration or rollback evidence;
-deleting that external project remains a separate, explicit owner action. The
-`legacySupabaseId`/`legacySupabaseVideoId` fields remain on the Convex schema as
-harmless historical import bookkeeping; purging them from live data is
-unscoped.
+direction and local implementation plan have been removed. Supabase was the
+first backend service tried for this project. It was abandoned because its
+free tier pauses projects during periods of low usage. The current runtime uses
+Clerk and Convex.
 
 **Status:** Accepted 2026-08-17
 
@@ -19,8 +13,7 @@ unscoped.
 
 Standards uses Clerk for authentication and invite-only account admission, and
 Convex for application data, authorization, reactive queries, mutations,
-actions, and future application-managed storage. Supabase is no longer an
-application runtime.
+actions, and future application-managed storage.
 
 Clerk establishes identity. Convex functions derive that identity from
 `ctx.auth`; clients never supply a trusted User identifier. Every public Convex
@@ -29,36 +22,29 @@ rules before reading or writing private data. Backend-only migration and
 administrative operations use internal functions.
 
 Clerk and Convex development and production environments remain separate.
-Development data is not promoted as an ordinary release mechanism. The legacy
-Supabase project remains the migration source and rollback evidence until the
-owner's final snapshot has been imported into Convex production and the cutover
-has been verified. Production creation and mutation are a separate, explicitly
-approved operation.
+Development data is not promoted as an ordinary release mechanism. Production
+creation and mutation are a separate, explicitly approved operation.
 
-This ADR supersedes only the Supabase/RLS implementation details in ADR-0001
-and ADR-0008. Their identity, canonical-entity, and private User-data decisions
-remain in force.
+The identity, canonical-entity, and private User-data decisions in ADR-0001 and
+ADR-0008 remain in force.
 
 ## Why
 
-The replacement branch implemented the complete current runtime, removed all
-reachable Supabase dependencies, and passed the focused tests and production
-build. A repeatable export/import rehearsal preserved all shared data plus the
-owner's private Song and Recording data, and a second import proved idempotent.
+The replacement implementation passed the focused tests and production build.
 A browser smoke with two real Clerk Development Users proved that a shared Song
 can be discovered without exposing the owner's favorite, notes, Recordings, or
 Site Admin controls.
 
 The owner prefers the Clerk and Convex development experience and free-tier
-posture for this solo, intermittently used project. In particular, avoiding the
-Supabase Free project's inactivity pause is valuable. The extra operational
+posture for this solo, intermittently used project. The extra operational
 surface of two services is acceptable at this scale.
 
 ## Consequences
 
-- Convex has no database-enforced equivalent of Supabase RLS. Authorization is
-  an application invariant and must remain centralized, consistently applied,
-  and covered by negative tests for anonymous and non-owner identities.
+- Convex has no database-enforced equivalent of row-level security.
+  Authorization is an application invariant and must remain centralized,
+  consistently applied, and covered by negative tests for anonymous and
+  non-owner identities.
 - Clerk owns account identity and access policy only. Application roles and all
   repertoire data remain in Convex.
 - A Clerk production-domain change preserves the User subject but changes the
@@ -67,12 +53,6 @@ surface of two services is acceptable at this scale.
   than creating a second application User and orphaning their private data.
 - Development and production require separate Clerk/Convex configuration,
   issuer values, Users, data imports, and verification.
-- Supabase migrations and the live source project remain temporarily for the
-  production owner-data cutover and audit. Their later removal is separately
-  scoped cleanup, not part of adopting this ADR.
 - Raw Convex storage URLs are bearer URLs. Before private Lead Sheets or other
   revocable files are implemented, storage delivery must receive a separate
   privacy design rather than assuming those URLs enforce per-request access.
-- The Supabase implementation is the rejected runtime alternative. It remains
-  the rollback source until production cutover succeeds; the branch is no
-  longer an undecided experiment.

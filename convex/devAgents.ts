@@ -49,7 +49,6 @@ const ensureUser = async (
     clerkTokenIdentifier: tokenIdentifier,
     email,
     role: profile,
-    legacySupabaseId: null,
   });
 };
 
@@ -91,7 +90,6 @@ const ensureSong = async (
       workDateEnd: null,
       isDiscoverable: false,
       firstDiscoverableAt: null,
-      legacySupabaseId: null,
     }));
   await ctx.db.insert("songUserData", {
     userId,
@@ -102,8 +100,6 @@ const ensureSong = async (
     tags: ["Agent demo"],
     createdAt: new Date().toISOString(),
     creationRequestId: requestId,
-    legacyUserId: null,
-    legacySongId: null,
   });
   return songId;
 };
@@ -147,7 +143,6 @@ const ensureRecordings = async (ctx: MutationCtx, songId: Id<"songs">) => {
         name: artist.name,
         kind: artist.kind,
         musicbrainzArtistId: artist.mbid,
-        legacySupabaseId: null,
       }));
     const recordingId = await ctx.db.insert("recordings", {
       songId,
@@ -163,7 +158,6 @@ const ensureRecordings = async (ctx: MutationCtx, songId: Id<"songs">) => {
       recordingDateEnd: null,
       recordingLocation: null,
       releaseGroupId: null,
-      legacySupabaseId: null,
       personnelMigrated: true,
     });
     await ctx.db.insert("recordingArtistAttributions", {
@@ -172,7 +166,6 @@ const ensureRecordings = async (ctx: MutationCtx, songId: Id<"songs">) => {
       creditedAs: artist.name,
       joinPhrase: "",
       sortOrder: 0,
-      legacySupabaseId: null,
     });
     recordings.push(recordingId);
   }
@@ -225,8 +218,6 @@ export const seed = internalMutation({
           key: null,
           tempo: null,
           createdAt: new Date().toISOString(),
-          legacyUserId: null,
-          legacyRecordingId: null,
         });
       }
     }
