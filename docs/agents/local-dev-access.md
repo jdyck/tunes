@@ -129,3 +129,18 @@ established browser session. Do not report a consumed ticket as revoked.
 
 Sources: [Clerk Agent Tasks](https://clerk.com/docs/guides/development/testing/agent-tasks),
 [test email addresses](https://clerk.com/docs/guides/development/testing/test-emails-and-phones).
+
+## Production-to-development data pull
+
+`npm run data:pull` copies one configured production User into the configured
+browser User on the pinned hosted development deployment. It never writes to
+production, imports only application tables, and restores the dedicated agent
+fixtures afterward. `npm run data:pull:dry-run` validates the same mapping
+without replacing development data.
+
+Both commands show their exact targets and require confirmation. Production
+and pre-pull development snapshots are retained with private permissions under
+ignored `local/backups/`; file storage and component data are excluded. If a
+replacement fails after it starts clearing tables, rerun it or restore the
+saved pre-pull development ZIP. Configuration and commands are documented in
+the root README.

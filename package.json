@@ -9,6 +9,8 @@
     "dev:login": "node --experimental-strip-types scripts/dev-auth.ts login",
     "dev:auth-status": "node --experimental-strip-types scripts/dev-auth.ts status",
     "dev:revoke-login": "node --experimental-strip-types scripts/dev-auth.ts revoke",
+    "data:pull": "node --experimental-strip-types scripts/data-pull.ts",
+    "data:pull:dry-run": "node --experimental-strip-types scripts/data-pull.ts --dry-run",
     "build": "next build",
     "test": "node scripts/run-tests.mjs",
     "test:pure": "node --experimental-strip-types --test tests/*.test.ts",

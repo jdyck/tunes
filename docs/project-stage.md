@@ -8,7 +8,11 @@ This is the repository's mutable operational-status document, not an ADR. It ans
 ## What the current stage means
 
 - The only Users are the owner, a small number of personally known, explicitly invited testers, and two owner-authorized agent test accounts restricted to the development environment ([local development access](agents/local-dev-access.md)).
-- Current database content is development/test content. It is not being treated as sensitive personal data or as content whose authors expect confidentiality from the other trusted testers.
+- Content created in development is test content. It is not treated as sensitive personal data or as content whose authors expect confidentiality from the other trusted testers.
+- The owner's hosted development deployment may contain a temporary clone of
+  production data. Treat those rows and snapshots under `local/backups/` as
+  private production data; the trusted-testing posture does not make copies
+  nonsensitive.
 - Data migrations do not need zero-exposure choreography merely to prevent temporary visibility of current User-scoped test data among authenticated trusted testers. A migration plan may accept a short, explicit transition window while tables, queries, and owner-scoped authorization move to their target shape.
 - Existing Song and Recording data is useful and should be preserved by default, but it is still replaceable development data: the owner has not stored personal notes of consequence and accepts a targeted reset or loss when it materially simplifies work that unlocks the next model. Never discard, corrupt, or merge rows silently; explain the concrete benefit and get explicit approval for the destructive step first.
 - Authentication credentials, API keys, and other secrets are never covered by this relaxed test-data assumption.
