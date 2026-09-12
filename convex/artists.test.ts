@@ -536,28 +536,23 @@ test("membership names link only by existing MusicBrainz identity without creati
       name: "The Group",
       kind: "group",
       musicbrainzArtistId: groupMbid,
-      legacySupabaseId: null,
     });
     const memberId = await ctx.db.insert("artists", {
       name: "Known Member",
       kind: "person",
       musicbrainzArtistId: memberMbid,
-      legacySupabaseId: null,
     });
     // Same name alone is insufficient to resolve the third member.
     await ctx.db.insert("artists", {
       name: "Unknown Member",
       kind: "person",
       musicbrainzArtistId: null,
-      legacySupabaseId: null,
     });
     await ctx.db.insert("artistUserData", {
       userId: otherUserId,
       artistId: memberId,
       notes: "Private to other",
       tags: ["private"],
-      legacyUserId: null,
-      legacyArtistId: null,
     });
     return { groupId, memberId };
   });
@@ -655,7 +650,6 @@ test("membership names link only by existing MusicBrainz identity without creati
       name: "Unknown Member",
       kind: "person",
       musicbrainzArtistId: unknownMbid,
-      legacySupabaseId: null,
     }),
   );
   const updated = await owner.query(api.artists.getMemberships, {
@@ -694,7 +688,6 @@ test("membership caches require authentication and an admin writer, reject stale
       name: "The Group",
       kind: "group",
       musicbrainzArtistId: mbid,
-      legacySupabaseId: null,
     }),
   );
   const args = { artistId, musicbrainzArtistId: mbid, memberships: [] };

@@ -9,12 +9,10 @@ export default defineSchema({
     clerkTokenIdentifier: v.string(),
     clerkSubject: v.string(),
     email: nullableString,
-    legacySupabaseId: nullableString,
     role: v.union(v.literal("user"), v.literal("admin")),
   })
     .index("by_clerkTokenIdentifier", ["clerkTokenIdentifier"])
     .index("by_clerkSubject", ["clerkSubject"])
-    .index("by_legacySupabaseId", ["legacySupabaseId"])
     .index("by_role", ["role"]),
 
   songs: defineTable({
@@ -27,9 +25,7 @@ export default defineSchema({
     workDateEnd: nullableString,
     isDiscoverable: v.boolean(),
     firstDiscoverableAt: nullableString,
-    legacySupabaseId: nullableString,
   })
-    .index("by_legacySupabaseId", ["legacySupabaseId"])
     .index("by_musicbrainzWorkId", ["musicbrainzWorkId"])
     .searchIndex("search_name", {
       searchField: "name",
@@ -45,14 +41,11 @@ export default defineSchema({
     tags: v.union(v.array(v.string()), v.null()),
     createdAt: v.string(),
     creationRequestId: nullableString,
-    legacyUserId: nullableString,
-    legacySongId: nullableString,
   })
     .index("by_userId", ["userId"])
     .index("by_songId", ["songId"])
     .index("by_userId_and_songId", ["userId", "songId"])
-    .index("by_userId_and_creationRequestId", ["userId", "creationRequestId"])
-    .index("by_legacyUserId", ["legacyUserId"]),
+    .index("by_userId_and_creationRequestId", ["userId", "creationRequestId"]),
 
   artists: defineTable({
     name: v.string(),
@@ -71,11 +64,9 @@ export default defineSchema({
     imageSourceUrl: v.optional(nullableString),
     imageLicense: v.optional(nullableString),
     imageLookupCompletedAt: v.optional(nullableString),
-    legacySupabaseId: nullableString,
   })
     .index("by_musicbrainzArtistId", ["musicbrainzArtistId"])
-    .searchIndex("search_name", { searchField: "name" })
-    .index("by_legacySupabaseId", ["legacySupabaseId"]),
+    .searchIndex("search_name", { searchField: "name" }),
 
   // Bounded provider snapshots (500 entries / 256 KiB), not local Artist edges.
   artistMembershipLookups: defineTable({
@@ -90,13 +81,10 @@ export default defineSchema({
     artistId: v.id("artists"),
     notes: nullableString,
     tags: v.union(v.array(v.string()), v.null()),
-    legacyUserId: nullableString,
-    legacyArtistId: nullableString,
   })
     .index("by_userId", ["userId"])
     .index("by_artistId", ["artistId"])
-    .index("by_userId_and_artistId", ["userId", "artistId"])
-    .index("by_legacyUserId", ["legacyUserId"]),
+    .index("by_userId_and_artistId", ["userId", "artistId"]),
 
   songArtistCredits: defineTable({
     songId: v.id("songs"),
@@ -108,20 +96,16 @@ export default defineSchema({
     ),
     creditedAs: v.string(),
     sortOrder: v.number(),
-    legacySupabaseId: nullableString,
   })
     .index("by_songId", ["songId"])
     .index("by_songId_and_sortOrder", ["songId", "sortOrder"])
-    .index("by_artistId", ["artistId"])
-    .index("by_legacySupabaseId", ["legacySupabaseId"]),
+    .index("by_artistId", ["artistId"]),
 
   releaseGroups: defineTable({
     title: v.string(),
     musicbrainzReleaseGroupId: nullableString,
-    legacySupabaseId: nullableString,
   })
-    .index("by_musicbrainzReleaseGroupId", ["musicbrainzReleaseGroupId"])
-    .index("by_legacySupabaseId", ["legacySupabaseId"]),
+    .index("by_musicbrainzReleaseGroupId", ["musicbrainzReleaseGroupId"]),
 
   recordings: defineTable({
     songId: v.id("songs"),
@@ -141,12 +125,10 @@ export default defineSchema({
     personnelMigrationKind: v.optional(
       v.union(v.literal("saved"), v.literal("legacy_backfill")),
     ),
-    legacySupabaseId: nullableString,
   })
     .index("by_songId", ["songId"])
     .index("by_musicbrainzRecordingId", ["musicbrainzRecordingId"])
-    .index("by_releaseGroupId", ["releaseGroupId"])
-    .index("by_legacySupabaseId", ["legacySupabaseId"]),
+    .index("by_releaseGroupId", ["releaseGroupId"]),
 
   userRecordingData: defineTable({
     userId: v.id("users"),
@@ -159,8 +141,6 @@ export default defineSchema({
     key: nullableString,
     tempo: nullableString,
     createdAt: v.string(),
-    legacyUserId: nullableString,
-    legacyRecordingId: nullableString,
   })
     .index("by_userId", ["userId"])
     .index("by_recordingId", ["recordingId"])
@@ -169,8 +149,7 @@ export default defineSchema({
       "userId",
       "songId",
       "sortOrder",
-    ])
-    .index("by_legacyUserId", ["legacyUserId"]),
+    ]),
 
   youtubeItems: defineTable({
     videoId: v.string(),
@@ -193,18 +172,14 @@ export default defineSchema({
     ytmusicAlbumName: nullableString,
     durationSeconds: v.union(v.number(), v.null()),
     metadataFetchedAt: nullableString,
-    legacySupabaseVideoId: v.optional(nullableString),
   })
-    .index("by_videoId", ["videoId"])
-    .index("by_legacySupabaseVideoId", ["legacySupabaseVideoId"]),
+    .index("by_videoId", ["videoId"]),
 
   recordingYoutubeItems: defineTable({
     recordingId: v.id("recordings"),
     songId: v.id("songs"),
     youtubeItemId: v.id("youtubeItems"),
     createdAt: v.string(),
-    legacyRecordingId: v.optional(nullableString),
-    legacyYoutubeVideoId: v.optional(nullableString),
   })
     .index("by_recordingId_and_createdAt", ["recordingId", "createdAt"])
     .index("by_recordingId_and_youtubeItemId", [
@@ -212,11 +187,7 @@ export default defineSchema({
       "youtubeItemId",
     ])
     .index("by_songId_and_youtubeItemId", ["songId", "youtubeItemId"])
-    .index("by_youtubeItemId", ["youtubeItemId"])
-    .index("by_legacyRecordingId_and_legacyYoutubeVideoId", [
-      "legacyRecordingId",
-      "legacyYoutubeVideoId",
-    ]),
+    .index("by_youtubeItemId", ["youtubeItemId"]),
 
   recordingArtistCredits: defineTable({
     recordingId: v.id("recordings"),
@@ -224,12 +195,10 @@ export default defineSchema({
     role: v.literal("performer"),
     creditedAs: v.string(),
     sortOrder: v.number(),
-    legacySupabaseId: nullableString,
   })
     .index("by_recordingId", ["recordingId"])
     .index("by_recordingId_and_sortOrder", ["recordingId", "sortOrder"])
-    .index("by_artistId", ["artistId"])
-    .index("by_legacySupabaseId", ["legacySupabaseId"]),
+    .index("by_artistId", ["artistId"]),
 
   recordingPersonnel: defineTable({
     recordingId: v.id("recordings"),
@@ -264,12 +233,10 @@ export default defineSchema({
     creditedAs: v.string(),
     joinPhrase: v.string(),
     sortOrder: v.number(),
-    legacySupabaseId: nullableString,
   })
     .index("by_recordingId", ["recordingId"])
     .index("by_recordingId_and_sortOrder", ["recordingId", "sortOrder"])
-    .index("by_artistId", ["artistId"])
-    .index("by_legacySupabaseId", ["legacySupabaseId"]),
+    .index("by_artistId", ["artistId"]),
 
   releaseGroupArtistAttributions: defineTable({
     releaseGroupId: v.id("releaseGroups"),
@@ -277,10 +244,8 @@ export default defineSchema({
     creditedAs: v.string(),
     joinPhrase: v.string(),
     sortOrder: v.number(),
-    legacySupabaseId: nullableString,
   })
     .index("by_releaseGroupId", ["releaseGroupId"])
     .index("by_releaseGroupId_and_sortOrder", ["releaseGroupId", "sortOrder"])
-    .index("by_artistId", ["artistId"])
-    .index("by_legacySupabaseId", ["legacySupabaseId"]),
+    .index("by_artistId", ["artistId"]),
 });

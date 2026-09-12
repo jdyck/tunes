@@ -71,6 +71,5 @@ the Next.js parallel-route mechanics ADR-0010 already established (a stub
 resolver per active slot at every URL depth where that slot is reachable),
 not a new pattern.
 
-Playlist is a planned fourth stacking-capable entity per
-routing-trail-combinations.md but does not exist in this codebase yet; its
-trails remain blocked and out of scope for this decision.
+Playlist does not exist in this codebase; its routing remains out of scope for
+this decision.

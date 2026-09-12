@@ -40,6 +40,29 @@ YOUTUBE_API_KEY=
 prefix; both YouTube search and selected-video enrichment run through server
 routes.
 
+### Refreshing hosted development data from production
+
+This owner-only command copies one User's production data into the hosted
+Convex development deployment used by local Next.js. Production is read-only;
+the development application tables are replaced.
+
+Create `.env.data-pull.local` from
+[`docs/examples/data-pull.env.example`](docs/examples/data-pull.env.example),
+fill in its three values, and run `chmod 600 .env.data-pull.local`.
+
+Then run:
+
+```bash
+npm run data:pull:dry-run
+npm run data:pull
+```
+
+Both commands ask for confirmation and save private snapshots under ignored
+`local/backups/`. Those ZIPs contain real production data; delete them when they
+are no longer useful. See
+[local development access](docs/agents/local-dev-access.md#production-to-development-data-pull)
+for safeguards and recovery.
+
 ## Learn more about this project
 
 - [docs/project-stage.md](docs/project-stage.md) — current development/tester phase and the trigger for switching to privacy-active operation.

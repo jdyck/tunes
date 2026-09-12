@@ -540,7 +540,6 @@ const resolveArtist = async (
     name: credit.name.trim() || creditedAs,
     kind: credit.kind,
     musicbrainzArtistId,
-    legacySupabaseId: null,
   });
 };
 
@@ -686,7 +685,6 @@ export const replaceAttribution = async (
       creditedAs: part.credited_as,
       joinPhrase: part.join_phrase,
       sortOrder,
-      legacySupabaseId: null,
     });
   }
 };
@@ -715,7 +713,6 @@ export const replaceReleaseGroupAttribution = async (
       creditedAs: part.credited_as,
       joinPhrase: part.join_phrase,
       sortOrder,
-      legacySupabaseId: null,
     });
   }
 };
@@ -775,7 +772,6 @@ const createProviderUnmatchedArtist = async (
     name: part.name.trim(),
     kind: part.kind,
     musicbrainzArtistId: null,
-    legacySupabaseId: null,
   });
 
 export const normalizeTags = (tags: string[]) => {

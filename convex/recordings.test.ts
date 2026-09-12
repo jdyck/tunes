@@ -237,7 +237,6 @@ test("ignores legacy generic rows after the Personnel storage cutover", async ()
       role: "performer",
       creditedAs: personnel.creditedAs,
       sortOrder: personnel.sortOrder,
-      legacySupabaseId: null,
     });
     await ctx.db.delete(personnel._id);
     const {

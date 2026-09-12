@@ -22,11 +22,29 @@ export const ensureCurrent = mutation({
       return existing._id;
     }
 
+    // Clerk includes its issuer in tokenIdentifier. A production-domain change
+    // changes that issuer but preserves the User subject within the same Clerk
+    // instance, so rebind the existing application User instead of orphaning
+    // their private data behind a newly inserted row.
+    const existingForSubject = await ctx.db
+      .query("users")
+      .withIndex("by_clerkSubject", (query) =>
+        query.eq("clerkSubject", identity.subject),
+      )
+      .unique();
+
+    if (existingForSubject) {
+      await ctx.db.patch(existingForSubject._id, {
+        clerkTokenIdentifier: identity.tokenIdentifier,
+        email,
+      });
+      return existingForSubject._id;
+    }
+
     return ctx.db.insert("users", {
       clerkTokenIdentifier: identity.tokenIdentifier,
       clerkSubject: identity.subject,
       email,
-      legacySupabaseId: null,
       role: "user",
     });
   },

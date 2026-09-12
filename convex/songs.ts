@@ -139,7 +139,6 @@ export const create = mutation({
       workDateEnd: args.shared.workDateEnd,
       isDiscoverable: false,
       firstDiscoverableAt: null,
-      legacySupabaseId: null,
     });
     await replaceWriters(ctx, songId, args.writers);
     await ctx.db.insert("songUserData", {
@@ -151,8 +150,6 @@ export const create = mutation({
       tags: null,
       createdAt: new Date().toISOString(),
       creationRequestId: requestId,
-      legacyUserId: null,
-      legacySongId: null,
     });
     return songId;
   },
@@ -178,8 +175,6 @@ export const addDiscoverable = mutation({
       tags: null,
       createdAt: new Date().toISOString(),
       creationRequestId: null,
-      legacyUserId: null,
-      legacySongId: null,
     });
     return songId;
   },

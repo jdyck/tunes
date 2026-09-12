@@ -202,7 +202,7 @@ export default function GlobalPlayer({
     <PlayerContext.Provider value={playerValue}>
       {children}
 
-      <div className="fixed bottom-0 inset-x-0 z-[var(--layer-player)] border-t border-paper-600 bg-surface-app pb-[env(safe-area-inset-bottom)] lg:inset-x-auto lg:left-0 lg:w-64 lg:border-r">
+      <div className="fixed bottom-0 inset-x-0 z-(--layer-player) border-t border-paper-600 bg-surface-app pb-[env(safe-area-inset-bottom)] lg:inset-x-auto lg:left-0 lg:w-64 lg:border-r">
         {recording ? (
           <div className="max-w-3xl mx-auto px-4 py-2 flex items-center gap-3">
             <button
@@ -282,7 +282,7 @@ export default function GlobalPlayer({
       <div
         className={
           recording && isVideoVisible
-            ? "yt-album-art fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom))] left-2 z-[var(--layer-player)] aspect-square w-32 overflow-hidden rounded-md bg-black shadow-lg sm:w-40 lg:left-0 lg:w-64 lg:rounded-none"
+            ? "yt-album-art fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom))] left-2 z-(--layer-player) aspect-square w-32 overflow-hidden rounded-md bg-black shadow-lg sm:w-40 lg:left-0 lg:w-64 lg:rounded-none"
             : "fixed left-[-9999px] top-0 w-80 aspect-video"
         }
       >
