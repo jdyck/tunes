@@ -46,6 +46,7 @@ export const ensureCurrent = mutation({
       clerkSubject: identity.subject,
       email,
       role: "user",
+      artistRepertoireProjectedAt: new Date().toISOString(),
     });
   },
 });

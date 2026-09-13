@@ -1,7 +1,7 @@
 # Browse routing trails
 
 [ADR-0010](../adr/0010-responsive-browse-layout-hybrid-parallel-routes.md) and
-[ADR-0011](../adr/0011-symmetric-artist-song-recording-panel-stacking.md) define
+[ADR-0015](../adr/0015-symmetric-artist-song-recording-panel-stacking.md) define
 the route architecture. The allowed Artist/Song/Recording trails are:
 
 ```text

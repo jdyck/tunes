@@ -7,6 +7,10 @@ export const APPLICATION_TABLES = [
   "artists",
   "artistMembershipLookups",
   "artistUserData",
+  "artistRepertoireSummaries",
+  "artistSongRepertoireEntries",
+  "artistRecordingRepertoireEntries",
+  "artistRepertoireReconciliationJobs",
   "songArtistCredits",
   "releaseGroups",
   "recordings",
@@ -52,6 +56,9 @@ const PRIVATE_USER_TABLES = [
   "songUserData",
   "artistUserData",
   "userRecordingData",
+  "artistRepertoireSummaries",
+  "artistSongRepertoireEntries",
+  "artistRecordingRepertoireEntries",
 ] as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -132,9 +139,10 @@ export const parseDocumentsJsonl = (
   return documents;
 };
 
-export const documentsToJsonLines = (
-  documents: readonly SnapshotDocument[],
-) => (documents.length === 0 ? "" : `${documents.map((document) => JSON.stringify(document)).join("\n")}\n`);
+export const documentsToJsonLines = (documents: readonly SnapshotDocument[]) =>
+  documents.length === 0
+    ? ""
+    : `${documents.map((document) => JSON.stringify(document)).join("\n")}\n`;
 
 const completeSnapshot = (snapshot: SnapshotTables): CompleteSnapshotTables => {
   const complete = {} as CompleteSnapshotTables;
@@ -183,16 +191,22 @@ const validateReferences = (tables: CompleteSnapshotTables) => {
     ids.set(table, new Set(tables[table].map((document) => document._id)));
   }
 
-  const foreignKeys: ReadonlyArray<readonly [
-    ApplicationTable,
-    string,
-    ApplicationTable,
-    boolean?,
-  ]> = [
+  const foreignKeys: ReadonlyArray<
+    readonly [ApplicationTable, string, ApplicationTable, boolean?]
+  > = [
     ["songUserData", "userId", "users"],
     ["songUserData", "songId", "songs"],
     ["artistUserData", "userId", "users"],
     ["artistUserData", "artistId", "artists"],
+    ["artistRepertoireSummaries", "userId", "users"],
+    ["artistRepertoireSummaries", "artistId", "artists"],
+    ["artistSongRepertoireEntries", "userId", "users"],
+    ["artistSongRepertoireEntries", "artistId", "artists"],
+    ["artistSongRepertoireEntries", "songId", "songs"],
+    ["artistRecordingRepertoireEntries", "userId", "users"],
+    ["artistRecordingRepertoireEntries", "artistId", "artists"],
+    ["artistRecordingRepertoireEntries", "recordingId", "recordings"],
+    ["artistRecordingRepertoireEntries", "songId", "songs"],
     ["songArtistCredits", "songId", "songs"],
     ["songArtistCredits", "artistId", "artists"],
     ["artistMembershipLookups", "artistId", "artists"],
@@ -276,7 +290,10 @@ export const filterProductionSnapshot = (
     add(artistIds, requiredString(document, "artistUserData", "artistId"));
   }
   for (const document of selectedPrivateRows.userRecordingData) {
-    add(recordingIds, requiredString(document, "userRecordingData", "recordingId"));
+    add(
+      recordingIds,
+      requiredString(document, "userRecordingData", "recordingId"),
+    );
     add(songIds, requiredString(document, "userRecordingData", "songId"));
   }
 
@@ -293,48 +310,116 @@ export const filterProductionSnapshot = (
 
     for (const document of productionSnapshot.recordings) {
       if (!recordingIds.has(document._id)) continue;
-      changed = add(songIds, requiredString(document, "recordings", "songId")) || changed;
-      const releaseGroupId = stringOrNull(document, "recordings", "releaseGroupId");
+      changed =
+        add(songIds, requiredString(document, "recordings", "songId")) ||
+        changed;
+      const releaseGroupId = stringOrNull(
+        document,
+        "recordings",
+        "releaseGroupId",
+      );
       if (releaseGroupId !== null) {
         changed = add(releaseGroupIds, releaseGroupId) || changed;
       }
     }
 
     for (const document of productionSnapshot.songArtistCredits) {
-      if (!songIds.has(requiredString(document, "songArtistCredits", "songId"))) continue;
-      changed = add(artistIds, requiredString(document, "songArtistCredits", "artistId")) || changed;
+      if (!songIds.has(requiredString(document, "songArtistCredits", "songId")))
+        continue;
+      changed =
+        add(
+          artistIds,
+          requiredString(document, "songArtistCredits", "artistId"),
+        ) || changed;
     }
 
     for (const document of productionSnapshot.recordingArtistCredits) {
-      if (!recordingIds.has(requiredString(document, "recordingArtistCredits", "recordingId"))) continue;
-      changed = add(artistIds, requiredString(document, "recordingArtistCredits", "artistId")) || changed;
+      if (
+        !recordingIds.has(
+          requiredString(document, "recordingArtistCredits", "recordingId"),
+        )
+      )
+        continue;
+      changed =
+        add(
+          artistIds,
+          requiredString(document, "recordingArtistCredits", "artistId"),
+        ) || changed;
     }
 
     for (const document of productionSnapshot.recordingPersonnel) {
-      if (!recordingIds.has(requiredString(document, "recordingPersonnel", "recordingId"))) continue;
-      changed = add(artistIds, requiredString(document, "recordingPersonnel", "artistId")) || changed;
+      if (
+        !recordingIds.has(
+          requiredString(document, "recordingPersonnel", "recordingId"),
+        )
+      )
+        continue;
+      changed =
+        add(
+          artistIds,
+          requiredString(document, "recordingPersonnel", "artistId"),
+        ) || changed;
     }
 
     for (const document of productionSnapshot.recordingArtistAttributions) {
-      if (!recordingIds.has(requiredString(document, "recordingArtistAttributions", "recordingId"))) continue;
-      changed = add(artistIds, requiredString(document, "recordingArtistAttributions", "artistId")) || changed;
+      if (
+        !recordingIds.has(
+          requiredString(
+            document,
+            "recordingArtistAttributions",
+            "recordingId",
+          ),
+        )
+      )
+        continue;
+      changed =
+        add(
+          artistIds,
+          requiredString(document, "recordingArtistAttributions", "artistId"),
+        ) || changed;
     }
 
     for (const document of productionSnapshot.releaseGroupArtistAttributions) {
-      if (!releaseGroupIds.has(requiredString(document, "releaseGroupArtistAttributions", "releaseGroupId"))) continue;
-      changed = add(artistIds, requiredString(document, "releaseGroupArtistAttributions", "artistId")) || changed;
+      if (
+        !releaseGroupIds.has(
+          requiredString(
+            document,
+            "releaseGroupArtistAttributions",
+            "releaseGroupId",
+          ),
+        )
+      )
+        continue;
+      changed =
+        add(
+          artistIds,
+          requiredString(
+            document,
+            "releaseGroupArtistAttributions",
+            "artistId",
+          ),
+        ) || changed;
     }
 
     for (const document of productionSnapshot.recordingYoutubeItems) {
-      const recordingId = requiredString(document, "recordingYoutubeItems", "recordingId");
-      const songId = requiredString(document, "recordingYoutubeItems", "songId");
+      const recordingId = requiredString(
+        document,
+        "recordingYoutubeItems",
+        "recordingId",
+      );
+      const songId = requiredString(
+        document,
+        "recordingYoutubeItems",
+        "songId",
+      );
       if (!recordingIds.has(recordingId) && !songIds.has(songId)) continue;
       changed = add(recordingIds, recordingId) || changed;
       changed = add(songIds, songId) || changed;
-      changed = add(
-        youtubeItemIds,
-        requiredString(document, "recordingYoutubeItems", "youtubeItemId"),
-      ) || changed;
+      changed =
+        add(
+          youtubeItemIds,
+          requiredString(document, "recordingYoutubeItems", "youtubeItemId"),
+        ) || changed;
     }
   }
 
@@ -342,15 +427,32 @@ export const filterProductionSnapshot = (
   for (const table of APPLICATION_TABLES) {
     switch (table) {
       case "users":
-        tables[table] = [{ ...localUser, _id: importedUserId }];
+        tables[table] = [
+          {
+            ...localUser,
+            _id: importedUserId,
+            artistRepertoireProjectedAt:
+              typeof productionUser.artistRepertoireProjectedAt === "string"
+                ? productionUser.artistRepertoireProjectedAt
+                : undefined,
+          },
+        ];
         break;
       case "songUserData":
       case "artistUserData":
       case "userRecordingData":
+      case "artistRepertoireSummaries":
+      case "artistSongRepertoireEntries":
+      case "artistRecordingRepertoireEntries":
         tables[table] = selectedPrivateRows[table].map((document) => ({
           ...document,
           userId: importedUserId,
         }));
+        break;
+      case "artistRepertoireReconciliationJobs":
+        // Cursors and scheduled continuations are deployment-local operational
+        // state. Replaying production work in development is unsafe and stale.
+        tables[table] = [];
         break;
       case "songs":
         tables[table] = productionSnapshot[table].filter((document) =>
@@ -401,7 +503,9 @@ export const filterProductionSnapshot = (
         break;
       case "releaseGroupArtistAttributions":
         tables[table] = productionSnapshot[table].filter((document) =>
-          releaseGroupIds.has(requiredString(document, table, "releaseGroupId")),
+          releaseGroupIds.has(
+            requiredString(document, table, "releaseGroupId"),
+          ),
         );
         break;
     }

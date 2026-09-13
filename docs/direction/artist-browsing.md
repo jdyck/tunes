@@ -11,7 +11,7 @@ is available.
 ## Remaining detail enrichment
 
 - Add User-specific editable tags and personal notes backed only by
-  `artist_user_data`.
+  `artistUserData`.
 - If a suitable metadata source can be matched reliably, add a short shared
   canonical biographical/background section. Prefer the existing
   MusicBrainz/Wikipedia integration patterns over introducing a new provider,
@@ -55,15 +55,34 @@ credits whose role is composer, lyricist, or writer. Recordings come from
 structured Recording Attribution, Release Group Attribution, and Personnel
 credits.
 
-Convex composes this User-specific browsing view on the backend. `artists:listMine`
-counts each Artist once per owned Song and once per saved Recording, even when
-several structured credit paths point to the same Artist. `artists:getMine`
-begins Recording traversal with the current User's saved-recording memberships,
-then follows the Recording's Release Group when present. It returns the
-canonical identity together with only the current User's Songs, saved
-Recordings (including their relationship reasons and Release Group title),
-Recording Song titles, and optional private Artist row. React does not rebuild
-these joins from unrelated global queries.
+Per [ADR-0016](../adr/0016-private-artist-repertoire-projection.md), Convex
+maintains a private Artist repertoire projection instead of rebuilding this
+User-specific view from the whole repertoire on every read.
+`artists:listMine` cursor-pages owner-scoped summary rows and hydrates only the
+canonical Artist identity. The UI finishes loading all summary pages before it
+applies the existing global search, sort, and count experience, so a transport
+page is never presented as the complete filtered result.
+
+`artists:getMine` returns only the canonical identity, optional private Artist
+row, and full summary counts. `artists:listSongsMine` and
+`artists:listRecordingsMine` page the selected Artist's owner-scoped projection
+entries and hydrate only that page from canonical sources and the current
+User's private membership. A Recording page item carries all relationship
+reasons and its effective Song title. Missing source rows are data-integrity
+errors rather than silently omitted results; an Artist with no repertoire
+entries is an ordinary empty detail.
+
+Song and Recording membership writes synchronize the current User's projection
+in the same mutation. Shared credit edits enqueue durable, source-keyed
+reconciliation work which fans out in bounded continuations without exposing
+another User's membership to the editor. The additive backfill and verification
+series is `migrations:runArtistRepertoireProjection`; it requires a
+snapshot-seeded preview rehearsal and separate approval before any production
+execution. Until that series verifies and marks an existing User ready, the
+reader contract uses the former bounded live traversal as a rollout bridge.
+New Users start ready because their empty repertoire and all later writes are
+already projected. Remove the bridge only after production activation and
+verification.
 
 Recording Personnel is populated when a User confirms or explicitly refreshes
 a MusicBrainz Recording match. It groups instrument, vocal, conductor,

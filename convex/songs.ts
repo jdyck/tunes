@@ -10,6 +10,10 @@ import {
   toSharedSongView,
   writerValidator,
 } from "./model/songs";
+import {
+  enqueueSongReconciliation,
+  projectSongForUser,
+} from "./model/artistRepertoire";
 
 const nullableString = v.union(v.string(), v.null());
 
@@ -90,9 +94,7 @@ export const searchDiscoverable = query({
     const matches = await ctx.db
       .query("songs")
       .withSearchIndex("search_name", (search) =>
-        search
-          .search("name", normalizedTerm)
-          .eq("isDiscoverable", true),
+        search.search("name", normalizedTerm).eq("isDiscoverable", true),
       )
       .take(10);
 
@@ -124,7 +126,10 @@ export const create = mutation({
         query.eq("userId", user._id).eq("creationRequestId", requestId),
       )
       .unique();
-    if (previous) return previous.songId;
+    if (previous) {
+      await projectSongForUser(ctx, user._id, previous.songId);
+      return previous.songId;
+    }
 
     const name = args.shared.name.trim();
     if (!name) throw new Error("A Song name is required");
@@ -151,6 +156,7 @@ export const create = mutation({
       createdAt: new Date().toISOString(),
       creationRequestId: requestId,
     });
+    await projectSongForUser(ctx, user._id, songId);
     return songId;
   },
 });
@@ -164,7 +170,10 @@ export const addDiscoverable = mutation({
     if (!song?.isDiscoverable) throw new Error("Discoverable Song not found");
 
     const existing = await loadMembership(ctx, user._id, songId);
-    if (existing) return songId;
+    if (existing) {
+      await projectSongForUser(ctx, user._id, songId);
+      return songId;
+    }
 
     await ctx.db.insert("songUserData", {
       userId: user._id,
@@ -176,6 +185,7 @@ export const addDiscoverable = mutation({
       createdAt: new Date().toISOString(),
       creationRequestId: null,
     });
+    await projectSongForUser(ctx, user._id, songId);
     return songId;
   },
 });
@@ -206,7 +216,9 @@ export const update = mutation({
     if (args.shared || args.writers) {
       if (!canEditShared) throw new Error("Forbidden");
       if (!args.shared || !args.writers) {
-        throw new Error("Shared Song data and writers must be updated together");
+        throw new Error(
+          "Shared Song data and writers must be updated together",
+        );
       }
       const name = args.shared.name.trim();
       if (!name) throw new Error("A shared Song name is required");
@@ -220,6 +232,8 @@ export const update = mutation({
         workDateEnd: args.shared.workDateEnd,
       });
       await replaceWriters(ctx, song._id, args.writers);
+      await projectSongForUser(ctx, user._id, song._id);
+      await enqueueSongReconciliation(ctx, song._id);
     }
 
     return args.songId;

@@ -15,7 +15,11 @@ credited-as normalization, conflicting-identity protection, and stable local
 Artist reuse across refreshes and roles. Artist-browsing coverage includes
 two-User Attribution reachability and isolation, distinct Recording counts,
 combined Attribution and Personnel reasons on one Recording row, and
-owner-scoped saved-Recording payloads. The Artist row's relationship-reason
+owner-scoped saved-Recording payloads. Projection tests seed more than 500
+owned Songs and saved Recordings, traverse detail cursor pages without missing
+or duplicate items, exercise multi-batch shared-writer and Release Group
+fanout, and prove the legacy-read bridge, retry-safe backfill, summary
+verification, and readiness activation. The Artist row's relationship-reason
 view model remains a focused pure contract rather than a component-internal
 test.
 

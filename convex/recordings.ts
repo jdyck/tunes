@@ -21,6 +21,11 @@ import {
   youtubeDiscoverySourceValidator,
   youtubeSearchCategoryValidator,
 } from "./model/recordings";
+import {
+  enqueueRecordingReconciliation,
+  enqueueReleaseGroupReconciliation,
+  projectRecordingForUser,
+} from "./model/artistRepertoire";
 
 export const listArtworkMine = query({
   args: {},
@@ -88,18 +93,14 @@ const musicDateBounds = (value: string) => {
   const startMonth = month ?? 1;
   const startDay = day ?? 1;
   const endMonth = month ?? 12;
-  const endDay =
-    day ?? new Date(Date.UTC(year, endMonth, 0)).getUTCDate();
+  const endDay = day ?? new Date(Date.UTC(year, endMonth, 0)).getUTCDate();
   return {
     lower: year * 10000 + startMonth * 100 + startDay,
     upper: year * 10000 + endMonth * 100 + endDay,
   };
 };
 
-const validateMusicDateRange = (
-  start: string | null,
-  end: string | null,
-) => {
+const validateMusicDateRange = (start: string | null, end: string | null) => {
   const startBounds = start ? musicDateBounds(start) : null;
   const endBounds = end ? musicDateBounds(end) : null;
   if (start && !startBounds) throw new Error("Invalid Recording start date");
@@ -119,8 +120,7 @@ const resolveReleaseGroup = async (
 ) => {
   if (!input) return null;
   const title = input.title.trim();
-  const musicbrainzReleaseGroupId =
-    input.musicbrainz_release_group_id.trim();
+  const musicbrainzReleaseGroupId = input.musicbrainz_release_group_id.trim();
   if (!title || !musicbrainzReleaseGroupId) {
     throw new Error(
       "Release Group requires a title and MusicBrainz provider ID",
@@ -261,8 +261,7 @@ export const saveYoutube = mutation({
           trimToNull(args.ytmusicAlbumId) ?? previousItem.ytmusicAlbumId,
         ytmusicAlbumName:
           trimToNull(args.ytmusicAlbumName) ?? previousItem.ytmusicAlbumName,
-        durationSeconds:
-          args.durationSeconds ?? previousItem.durationSeconds,
+        durationSeconds: args.durationSeconds ?? previousItem.durationSeconds,
         metadataFetchedAt,
       });
       youtubeItemId = previousItem._id;
@@ -286,9 +285,7 @@ export const saveYoutube = mutation({
     const association = await ctx.db
       .query("recordingYoutubeItems")
       .withIndex("by_songId_and_youtubeItemId", (index) =>
-        index
-          .eq("songId", args.songId)
-          .eq("youtubeItemId", youtubeItemId),
+        index.eq("songId", args.songId).eq("youtubeItemId", youtubeItemId),
       )
       .first();
 
@@ -358,6 +355,8 @@ export const saveYoutube = mutation({
       });
     }
 
+    await projectRecordingForUser(ctx, user._id, recordingId);
+
     return recordingId;
   },
 });
@@ -403,9 +402,7 @@ export const refreshYoutubeMetadata = mutation({
     const association = await ctx.db
       .query("recordingYoutubeItems")
       .withIndex("by_recordingId_and_youtubeItemId", (index) =>
-        index
-          .eq("recordingId", args.recordingId)
-          .eq("youtubeItemId", item._id),
+        index.eq("recordingId", args.recordingId).eq("youtubeItemId", item._id),
       )
       .first();
     if (!association) {
@@ -423,12 +420,10 @@ export const refreshYoutubeMetadata = mutation({
       title: title || item.title,
       channelName: trimToNull(args.channelName) ?? item.channelName,
       description: trimToNull(args.description) ?? item.description ?? null,
-      ytmusicArtistId:
-        trimToNull(args.ytmusicArtistId) ?? item.ytmusicArtistId,
+      ytmusicArtistId: trimToNull(args.ytmusicArtistId) ?? item.ytmusicArtistId,
       ytmusicArtistName:
         trimToNull(args.ytmusicArtistName) ?? item.ytmusicArtistName,
-      ytmusicAlbumId:
-        trimToNull(args.ytmusicAlbumId) ?? item.ytmusicAlbumId,
+      ytmusicAlbumId: trimToNull(args.ytmusicAlbumId) ?? item.ytmusicAlbumId,
       ytmusicAlbumName:
         trimToNull(args.ytmusicAlbumName) ?? item.ytmusicAlbumName,
       durationSeconds: args.durationSeconds ?? item.durationSeconds,
@@ -473,9 +468,7 @@ export const update = mutation({
       album: trimToNull(args.shared.album),
       year: trimToNull(args.shared.year),
       duration: trimToNull(args.shared.duration),
-      musicbrainzRecordingId: trimToNull(
-        args.shared.musicbrainz_recording_id,
-      ),
+      musicbrainzRecordingId: trimToNull(args.shared.musicbrainz_recording_id),
       musicbrainzReleaseId: trimToNull(args.shared.musicbrainz_release_id),
       recordingDateStart,
       recordingDateEnd,
@@ -492,6 +485,11 @@ export const update = mutation({
       key: trimToNull(args.privateData.key),
       tempo: trimToNull(args.privateData.tempo),
     });
+    await projectRecordingForUser(ctx, user._id, recording._id);
+    await enqueueRecordingReconciliation(ctx, recording._id);
+    if (releaseGroupId) {
+      await enqueueReleaseGroupReconciliation(ctx, releaseGroupId);
+    }
     const [savedRecording, savedMembership] = await Promise.all([
       ctx.db.get(recording._id),
       ctx.db.get(membership._id),
@@ -532,7 +530,8 @@ export const reorder = mutation({
     );
     for (const [sortOrder, recordingId] of args.recordingIds.entries()) {
       const membership = byRecordingId.get(recordingId);
-      if (!membership) throw new Error("Cannot reorder another User's Recording");
+      if (!membership)
+        throw new Error("Cannot reorder another User's Recording");
       await ctx.db.patch(membership._id, { sortOrder });
     }
     return null;
@@ -551,6 +550,7 @@ export const unsave = mutation({
     );
     if (!membership) throw new Error("Saved Recording not found");
     await ctx.db.delete(membership._id);
+    await projectRecordingForUser(ctx, user._id, recordingId);
     return null;
   },
 });

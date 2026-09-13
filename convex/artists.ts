@@ -1,6 +1,8 @@
 import { mutation, query } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import {
+  paginationOptsValidator,
+  paginationResultValidator,
+} from "convex/server";
 import { v } from "convex/values";
 import { getCurrentUser, requireAdmin } from "./model/auth";
 import {
@@ -21,145 +23,69 @@ import {
   savedRecordingViewValidator,
   toSavedRecordingView,
 } from "./model/recordings";
+import { recordingRelationshipReasonValidator } from "./model/artistRepertoire";
+import {
+  loadLegacyArtistRecordings,
+  loadLegacyArtistSongs,
+  loadLegacyArtistSummaries,
+} from "./model/legacyArtistRepertoire";
 
 const nullableString = v.union(v.string(), v.null());
-const repertoireLimit = 500;
-const recordingRelationshipReasonValidator = v.union(
-  v.literal("release_group_attribution"),
-  v.literal("attribution"),
-  v.literal("personnel"),
-);
 const artistRecordingViewValidator = savedRecordingViewValidator.extend({
   relationship_reasons: v.array(recordingRelationshipReasonValidator),
+  song_title: v.string(),
 });
 
-const loadRecordingArtistRelationships = async (
-  ctx: Pick<QueryCtx, "db">,
-  recording: Doc<"recordings">,
-) => {
-  const [personnel, attribution, releaseGroupAttribution] = await Promise.all([
-    ctx.db
-      .query("recordingPersonnel")
-      .withIndex("by_recordingId", (index) =>
-        index.eq("recordingId", recording._id),
-      )
-      .take(101),
-    ctx.db
-      .query("recordingArtistAttributions")
-      .withIndex("by_recordingId", (index) =>
-        index.eq("recordingId", recording._id),
-      )
-      .take(101),
-    recording.releaseGroupId
-      ? ctx.db
-          .query("releaseGroupArtistAttributions")
-          .withIndex("by_releaseGroupId", (index) =>
-            index.eq("releaseGroupId", recording.releaseGroupId!),
-          )
-          .take(101)
-      : Promise.resolve([]),
-  ]);
-  if (personnel.length > 100) {
-    throw new Error("Recording Personnel exceeds 100 credits");
+const requirePageSizeAtMost = (numItems: number, maximum: number) => {
+  if (!Number.isInteger(numItems) || numItems < 1 || numItems > maximum) {
+    throw new Error(`Page size must be between 1 and ${maximum}`);
   }
-  if (attribution.length > 100) {
-    throw new Error("Recording Attribution exceeds 100 parts");
-  }
-  if (releaseGroupAttribution.length > 100) {
-    throw new Error("Release Group Attribution exceeds 100 parts");
-  }
-  return { personnel, attribution, releaseGroupAttribution };
 };
 
-const takeRepertoire = async <Value>(
-  load: (limit: number) => Promise<Value[]>,
-) => {
-  const values = await load(repertoireLimit + 1);
-  if (values.length > repertoireLimit) {
-    throw new Error("Artist browsing supports up to 500 repertoire items");
-  }
-  return values;
-};
+const completedPage = <Value>(page: Value[]) => ({
+  page,
+  isDone: true,
+  continueCursor: "",
+});
 
 export const listMine = query({
-  args: {},
-  returns: v.array(artistSummaryViewValidator),
-  handler: async (ctx) => {
+  args: { paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(artistSummaryViewValidator),
+  handler: async (ctx, { paginationOpts }) => {
+    requirePageSizeAtMost(paginationOpts.numItems, 100);
     const user = await getCurrentUser(ctx);
-    const [songMemberships, recordingMemberships] = await Promise.all([
-      takeRepertoire((limit) =>
-        ctx.db
-          .query("songUserData")
-          .withIndex("by_userId", (index) => index.eq("userId", user._id))
-          .take(limit),
-      ),
-      takeRepertoire((limit) =>
-        ctx.db
-          .query("userRecordingData")
-          .withIndex("by_userId", (index) => index.eq("userId", user._id))
-          .take(limit),
-      ),
-    ]);
-
-    const counts = new Map<
-      Id<"artists">,
-      { songCount: number; recordingCount: number }
-    >();
-    const addCounts = (
-      artistIds: Set<Id<"artists">>,
-      field: "songCount" | "recordingCount",
-    ) => {
-      for (const artistId of artistIds) {
-        const entry = counts.get(artistId) ?? {
-          songCount: 0,
-          recordingCount: 0,
-        };
-        entry[field] += 1;
-        counts.set(artistId, entry);
-      }
-    };
-
-    for (const membership of songMemberships) {
-      const credits = await ctx.db
-        .query("songArtistCredits")
-        .withIndex("by_songId", (index) =>
-          index.eq("songId", membership.songId),
-        )
-        .take(25);
-      addCounts(new Set(credits.map((credit) => credit.artistId)), "songCount");
-    }
-    for (const membership of recordingMemberships) {
-      const recording = await ctx.db.get(membership.recordingId);
-      if (!recording) {
-        throw new Error("Saved Recording references a missing Recording");
-      }
-      const { personnel, attribution, releaseGroupAttribution } =
-        await loadRecordingArtistRelationships(
-          ctx,
-          recording,
+    if (!user.artistRepertoireProjectedAt) {
+      if (paginationOpts.cursor !== null) {
+        throw new Error(
+          "Legacy Artist browsing accepts only an initial cursor",
         );
-      addCounts(
-        new Set(
-          [...personnel, ...attribution, ...releaseGroupAttribution].map(
-            (credit) => credit.artistId,
-          ),
-        ),
-        "recordingCount",
-      );
+      }
+      return completedPage(await loadLegacyArtistSummaries(ctx, user._id));
     }
-
-    return Promise.all(
-      [...counts.entries()].map(async ([artistId, count]) => {
-        const artist = await ctx.db.get(artistId);
-        if (!artist) throw new Error("Credit references a missing Artist");
-        return {
-          id: artist._id,
-          name: artist.name,
-          kind: artist.kind,
-          ...count,
-        };
-      }),
-    );
+    const page = await ctx.db
+      .query("artistRepertoireSummaries")
+      .withIndex("by_userId", (index) => index.eq("userId", user._id))
+      .paginate(paginationOpts);
+    return {
+      ...page,
+      page: await Promise.all(
+        page.page.map(async (summary) => {
+          const artist = await ctx.db.get(summary.artistId);
+          if (!artist) {
+            throw new Error(
+              "Artist repertoire summary references a missing Artist",
+            );
+          }
+          return {
+            id: artist._id,
+            name: artist.name,
+            kind: artist.kind,
+            songCount: summary.songCount,
+            recordingCount: summary.recordingCount,
+          };
+        }),
+      ),
+    };
   },
 });
 
@@ -202,11 +128,8 @@ export const getMine = query({
         }),
         v.null(),
       ),
-      songs: v.array(ownedSongViewValidator),
-      recordings: v.array(artistRecordingViewValidator),
-      recording_song_titles: v.array(
-        v.object({ song_id: v.id("songs"), title: v.string() }),
-      ),
+      song_count: v.number(),
+      recording_count: v.number(),
     }),
     v.null(),
   ),
@@ -215,7 +138,14 @@ export const getMine = query({
     const artist = await ctx.db.get(artistId);
     if (!artist) return null;
 
-    const [privateData, songCredits, recordingMemberships] = await Promise.all([
+    const legacyCounts = !user.artistRepertoireProjectedAt
+      ? await Promise.all([
+          loadLegacyArtistSongs(ctx, user._id, artistId),
+          loadLegacyArtistRecordings(ctx, user._id, artistId),
+        ])
+      : null;
+
+    const [privateData, summary] = await Promise.all([
       ctx.db
         .query("artistUserData")
         .withIndex("by_userId_and_artistId", (index) =>
@@ -223,103 +153,12 @@ export const getMine = query({
         )
         .unique(),
       ctx.db
-        .query("songArtistCredits")
-        .withIndex("by_artistId", (index) => index.eq("artistId", artistId))
-        .take(repertoireLimit + 1),
-      ctx.db
-        .query("userRecordingData")
-        .withIndex("by_userId", (index) => index.eq("userId", user._id))
-        .take(repertoireLimit + 1),
-    ]);
-    if (
-      songCredits.length > repertoireLimit ||
-      recordingMemberships.length > repertoireLimit
-    ) {
-      throw new Error("Artist detail supports up to 500 credited items");
-    }
-
-    const songs = [];
-    for (const songId of new Set(songCredits.map((credit) => credit.songId))) {
-      const membership = await ctx.db
-        .query("songUserData")
-        .withIndex("by_userId_and_songId", (index) =>
-          index.eq("userId", user._id).eq("songId", songId),
+        .query("artistRepertoireSummaries")
+        .withIndex("by_userId_and_artistId", (index) =>
+          index.eq("userId", user._id).eq("artistId", artistId),
         )
-        .unique();
-      if (!membership) continue;
-      const song = await ctx.db.get(songId);
-      if (!song) throw new Error("Artist credit references a missing Song");
-      songs.push(await toOwnedSongView(ctx, song, membership));
-    }
-
-    const recordings = await Promise.all(
-      [
-        ...new Map(
-          recordingMemberships.map((membership) => [
-            membership.recordingId,
-            membership,
-          ]),
-        ).values(),
-      ].map(async (membership) => {
-        const recording = await ctx.db.get(membership.recordingId);
-        if (!recording) {
-          throw new Error("Saved Recording references a missing Recording");
-        }
-        const relationships = await loadRecordingArtistRelationships(
-          ctx,
-          recording,
-        );
-
-        const { personnel, attribution, releaseGroupAttribution } =
-          relationships;
-
-        const relationshipReasons = [
-          ...(releaseGroupAttribution.some((part) => part.artistId === artistId)
-            ? ["release_group_attribution" as const]
-            : []),
-          ...(attribution.some((part) => part.artistId === artistId)
-            ? ["attribution" as const]
-            : []),
-          ...(personnel.some((credit) => credit.artistId === artistId)
-            ? ["personnel" as const]
-            : []),
-        ];
-        if (relationshipReasons.length === 0) return null;
-
-        return {
-          ...(await toSavedRecordingView(ctx, recording, membership)),
-          relationship_reasons: relationshipReasons,
-        };
-      }),
-    );
-    const reachableRecordings = recordings.filter(
-      (recording): recording is NonNullable<typeof recording> =>
-        recording !== null,
-    );
-    reachableRecordings.sort(
-      (left, right) => left.user_data.sort_order - right.user_data.sort_order,
-    );
-    const recordingSongTitles = [];
-    for (const songId of new Set(
-      reachableRecordings.map((recording) => recording.song_id),
-    )) {
-      const [song, membership] = await Promise.all([
-        ctx.db.get(songId),
-        ctx.db
-          .query("songUserData")
-          .withIndex("by_userId_and_songId", (index) =>
-            index.eq("userId", user._id).eq("songId", songId),
-          )
-          .unique(),
-      ]);
-      if (!song || !membership) {
-        throw new Error("Saved Recording references an unavailable Song");
-      }
-      recordingSongTitles.push({
-        song_id: songId,
-        title: membership.displayTitle || song.name,
-      });
-    }
+        .unique(),
+    ]);
 
     return {
       artist: toArtistIdentityView(artist),
@@ -331,9 +170,124 @@ export const getMine = query({
             tags: privateData.tags,
           }
         : null,
-      songs,
-      recordings: reachableRecordings,
-      recording_song_titles: recordingSongTitles,
+      song_count: legacyCounts?.[0].length ?? summary?.songCount ?? 0,
+      recording_count: legacyCounts?.[1].length ?? summary?.recordingCount ?? 0,
+    };
+  },
+});
+
+export const listSongsMine = query({
+  args: {
+    artistId: v.id("artists"),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginationResultValidator(ownedSongViewValidator),
+  handler: async (ctx, { artistId, paginationOpts }) => {
+    requirePageSizeAtMost(paginationOpts.numItems, 50);
+    const user = await getCurrentUser(ctx);
+    if (!(await ctx.db.get(artistId))) throw new Error("Artist not found");
+    if (!user.artistRepertoireProjectedAt) {
+      if (paginationOpts.cursor !== null) {
+        throw new Error("Legacy Artist detail accepts only an initial cursor");
+      }
+      return completedPage(
+        await loadLegacyArtistSongs(ctx, user._id, artistId),
+      );
+    }
+    const page = await ctx.db
+      .query("artistSongRepertoireEntries")
+      .withIndex("by_userId_and_artistId", (index) =>
+        index.eq("userId", user._id).eq("artistId", artistId),
+      )
+      .paginate(paginationOpts);
+    return {
+      ...page,
+      page: await Promise.all(
+        page.page.map(async (entry) => {
+          const [song, membership] = await Promise.all([
+            ctx.db.get(entry.songId),
+            ctx.db
+              .query("songUserData")
+              .withIndex("by_userId_and_songId", (index) =>
+                index.eq("userId", user._id).eq("songId", entry.songId),
+              )
+              .unique(),
+          ]);
+          if (!song || !membership) {
+            throw new Error("Artist Song entry references an unavailable Song");
+          }
+          return toOwnedSongView(ctx, song, membership);
+        }),
+      ),
+    };
+  },
+});
+
+export const listRecordingsMine = query({
+  args: {
+    artistId: v.id("artists"),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginationResultValidator(artistRecordingViewValidator),
+  handler: async (ctx, { artistId, paginationOpts }) => {
+    requirePageSizeAtMost(paginationOpts.numItems, 50);
+    const user = await getCurrentUser(ctx);
+    if (!(await ctx.db.get(artistId))) throw new Error("Artist not found");
+    if (!user.artistRepertoireProjectedAt) {
+      if (paginationOpts.cursor !== null) {
+        throw new Error("Legacy Artist detail accepts only an initial cursor");
+      }
+      return completedPage(
+        await loadLegacyArtistRecordings(ctx, user._id, artistId),
+      );
+    }
+    const page = await ctx.db
+      .query("artistRecordingRepertoireEntries")
+      .withIndex("by_userId_and_artistId", (index) =>
+        index.eq("userId", user._id).eq("artistId", artistId),
+      )
+      .paginate(paginationOpts);
+    return {
+      ...page,
+      page: await Promise.all(
+        page.page.map(async (entry) => {
+          const [recording, membership, song, songMembership] =
+            await Promise.all([
+              ctx.db.get(entry.recordingId),
+              ctx.db
+                .query("userRecordingData")
+                .withIndex("by_userId_and_recordingId", (index) =>
+                  index
+                    .eq("userId", user._id)
+                    .eq("recordingId", entry.recordingId),
+                )
+                .unique(),
+              ctx.db.get(entry.songId),
+              ctx.db
+                .query("songUserData")
+                .withIndex("by_userId_and_songId", (index) =>
+                  index.eq("userId", user._id).eq("songId", entry.songId),
+                )
+                .unique(),
+            ]);
+          if (
+            !recording ||
+            recording.songId !== entry.songId ||
+            !membership ||
+            !song ||
+            !songMembership
+          ) {
+            throw new Error(
+              "Artist Recording entry references an unavailable source",
+            );
+          }
+          return {
+            ...(await toSavedRecordingView(ctx, recording, membership)),
+            relationship_reasons: entry.relationshipReasons,
+            song_title: songMembership.displayTitle || song.name,
+          };
+        }),
+      ),
     };
   },
 });

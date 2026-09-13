@@ -10,6 +10,10 @@ import type {
   DevAgentProfile,
   DevAgentConfig,
 } from "../src/utils/devAgentAccounts";
+import {
+  projectRecordingForUser,
+  projectSongForUser,
+} from "./model/artistRepertoire";
 
 const ensureUser = async (
   ctx: MutationCtx,
@@ -49,6 +53,7 @@ const ensureUser = async (
     clerkTokenIdentifier: tokenIdentifier,
     email,
     role: profile,
+    artistRepertoireProjectedAt: new Date().toISOString(),
   });
 };
 
@@ -73,6 +78,7 @@ const ensureSong = async (
       );
     if (sharedId && existing.songId !== sharedId)
       throw new Error("Demo shared Song identities differ");
+    await projectSongForUser(ctx, userId, existing.songId);
     return existing.songId;
   }
   const songId =
@@ -101,6 +107,7 @@ const ensureSong = async (
     createdAt: new Date().toISOString(),
     creationRequestId: requestId,
   });
+  await projectSongForUser(ctx, userId, songId);
   return songId;
 };
 
@@ -206,21 +213,28 @@ export const seed = internalMutation({
             q.eq("userId", accountId).eq("recordingId", recordingId),
           )
           .unique();
-        if (saved) continue;
-        await ctx.db.insert("userRecordingData", {
-          userId: accountId,
-          recordingId,
-          songId: sharedId,
-          notes: `${profile.toUpperCase()} ONLY: private demo Recording notes`,
-          rating: null,
-          sortOrder,
-          tags: ["Agent demo"],
-          key: null,
-          tempo: null,
-          createdAt: new Date().toISOString(),
-        });
+        if (!saved) {
+          await ctx.db.insert("userRecordingData", {
+            userId: accountId,
+            recordingId,
+            songId: sharedId,
+            notes: `${profile.toUpperCase()} ONLY: private demo Recording notes`,
+            rating: null,
+            sortOrder,
+            tags: ["Agent demo"],
+            key: null,
+            tempo: null,
+            createdAt: new Date().toISOString(),
+          });
+        }
+        await projectRecordingForUser(ctx, accountId, recordingId);
       }
     }
+    const artistRepertoireProjectedAt = new Date().toISOString();
+    await Promise.all([
+      ctx.db.patch(userId, { artistRepertoireProjectedAt }),
+      ctx.db.patch(adminId, { artistRepertoireProjectedAt }),
+    ]);
     return { users: 2, demoSongs: 3, demoRecordings: recordingIds.length };
   },
 });

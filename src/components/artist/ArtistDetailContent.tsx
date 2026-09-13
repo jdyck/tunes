@@ -35,31 +35,29 @@ export default function ArtistDetailContent({
   backLabel?: string;
 }) {
   const { play } = usePlayer();
-  const { artist, songs, recordings, recordingSongTitles, loading } =
-    useArtistDetail(id);
+  const {
+    artist,
+    songs,
+    recordings,
+    songCount,
+    recordingCount,
+    songStatus,
+    recordingStatus,
+    loadMoreSongs,
+    loadMoreRecordings,
+    loading,
+  } = useArtistDetail(id);
 
   const artistSongs = useMemo(
     () =>
-      songs
-        .filter((song) =>
-          (song.song_artist_credits ?? []).some((c) => c.artists?.id === id),
-        )
-        .map((song) => ({
-          id: song.id,
-          title: effectiveSongTitle(song, song.user_data),
-          year: song.year,
-          credit: formatWriterCredit(song.song_artist_credits ?? []),
-        })),
-    [songs, id],
+      songs.map((song) => ({
+        id: song.id,
+        title: effectiveSongTitle(song, song.user_data),
+        year: song.year,
+        credit: formatWriterCredit(song.song_artist_credits ?? []),
+      })),
+    [songs],
   );
-
-  const songTitleById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const song of recordingSongTitles) {
-      map.set(song.song_id, song.title);
-    }
-    return map;
-  }, [recordingSongTitles]);
 
   if (loading && !artist) {
     return <AsyncStateMessage>Loading artist...</AsyncStateMessage>;
@@ -119,7 +117,7 @@ export default function ArtistDetailContent({
 
       <div className="flex-1 overflow-y-auto overscroll-none p-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
         <ArtistMemberships key={id} artistId={id} />
-        {artistSongs.length > 0 && (
+        {songCount > 0 && (
           <section className="mb-8">
             <div className="flex items-center gap-2 mb-2 max-w-xl">
               <h3
@@ -130,7 +128,7 @@ export default function ArtistDetailContent({
               <span
                 className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-vermillion-700 text-white text-xs ${robotoCondensed.className}`}
               >
-                {artistSongs.length}
+                {songCount}
               </span>
             </div>
 
@@ -165,10 +163,25 @@ export default function ArtistDetailContent({
                 </li>
               ))}
             </ul>
+            {songStatus === "LoadingFirstPage" && (
+              <AsyncStateMessage>Loading Songs...</AsyncStateMessage>
+            )}
+            {songStatus === "CanLoadMore" && (
+              <button
+                type="button"
+                onClick={() => loadMoreSongs(25)}
+                className="mt-3 rounded-sm px-3 py-2 font-semibold text-azure-700 hover:bg-paper-100"
+              >
+                Load more Songs
+              </button>
+            )}
+            {songStatus === "LoadingMore" && (
+              <p className="mt-3 text-sm text-ink-600">Loading more Songs...</p>
+            )}
           </section>
         )}
 
-        {recordings.length > 0 && (
+        {recordingCount > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-2 max-w-xl">
               <h3
@@ -179,15 +192,14 @@ export default function ArtistDetailContent({
               <span
                 className={`inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-vermillion-700 text-white text-xs ${robotoCondensed.className}`}
               >
-                {recordings.length}
+                {recordingCount}
               </span>
             </div>
 
             <ul>
               {recordings.map((recording) => {
                 const youtubeItem = recording.youtube_items[0];
-                const songTitle =
-                  songTitleById.get(recording.song_id) ?? recording.name;
+                const songTitle = recording.song_title;
                 const relationshipReasons =
                   formatArtistRecordingRelationshipReasons(
                     recording.relationship_reasons,
@@ -244,6 +256,23 @@ export default function ArtistDetailContent({
                 );
               })}
             </ul>
+            {recordingStatus === "LoadingFirstPage" && (
+              <AsyncStateMessage>Loading Recordings...</AsyncStateMessage>
+            )}
+            {recordingStatus === "CanLoadMore" && (
+              <button
+                type="button"
+                onClick={() => loadMoreRecordings(25)}
+                className="mt-3 rounded-sm px-3 py-2 font-semibold text-azure-700 hover:bg-paper-100"
+              >
+                Load more Recordings
+              </button>
+            )}
+            {recordingStatus === "LoadingMore" && (
+              <p className="mt-3 text-sm text-ink-600">
+                Loading more Recordings...
+              </p>
+            )}
           </section>
         )}
       </div>

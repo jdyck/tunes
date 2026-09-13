@@ -4,7 +4,7 @@ Start here after time away from the project, before opening an editor.
 
 ## Naming in documentation
 
-Use capitalized domain names—**User**, **Song**, **Artist**, **Recording**, and **Release Group**—when discussing concepts. Use backticked snake_case only for a concrete database table, column, constraint, or code identifier (for example, `user_recording_data` or `user_id`). Describe the conceptual private layer as a User's private data, rather than using a table name as its general-purpose name.
+Use capitalized domain names—**User**, **Song**, **Artist**, **Recording**, and **Release Group**—when discussing concepts. Use backticked, exact project identifiers for concrete database tables, fields, indexes, constraints, or code/API identifiers. Convex schema names use camelCase (for example, `songUserData`, `userRecordingData`, and `userId`); do not invent SQL-style snake_case names for them. Some normalized API payloads intentionally use snake_case, so preserve those names when the contract defines them. Describe the conceptual private layer as a User's private data, rather than using a table name as its general-purpose name.
 
 - [project-stage.md](project-stage.md) — the mutable, authoritative statement of who is using the app now and what privacy/migration assumptions are currently allowed. Check it before schema, authorization, auth, or data-migration work, and update it immediately when its transition trigger is reached.
 - [domain-model.md](domain-model.md) — ubiquitous language (Song, Artist, Recording, Release Group, and their user-data/provider layers) and *why* the model is shaped this way. Read this before touching naming or data model in code.

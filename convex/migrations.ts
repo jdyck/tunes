@@ -3,6 +3,14 @@ import { components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { normalizePersonnelText } from "./model/recordings";
+import {
+  enqueueRecordingReconciliation,
+  projectRecordingForUser,
+  projectSongForUser,
+  verifyArtistRepertoireSummary,
+  verifyRecordingProjection,
+  verifySongProjection,
+} from "./model/artistRepertoire";
 
 export const migrations = new Migrations(components.migrations, {
   internalMutation,
@@ -70,7 +78,9 @@ export const backfillRecordingPersonnel = migrations.define({
     ].entries()) {
       const artist = await ctx.db.get(credit.artistId);
       if (!artist) {
-        throw new Error("Legacy Recording Personnel references a missing Artist");
+        throw new Error(
+          "Legacy Recording Personnel references a missing Artist",
+        );
       }
       const creditedAs = credit.creditedAs.trim();
       if (!creditedAs) {
@@ -88,6 +98,7 @@ export const backfillRecordingPersonnel = migrations.define({
       personnelMigrated: true,
       personnelMigrationKind: "legacy_backfill",
     });
+    await enqueueRecordingReconciliation(ctx, recording._id);
   },
 });
 
@@ -102,7 +113,9 @@ export const verifyRecordingPersonnel = migrations.define({
       loadLegacyCredits(ctx, recording._id),
       loadTargetPersonnel(ctx, recording._id),
     ]);
-    const targetByArtist = new Map(personnel.map((entry) => [entry.artistId, entry]));
+    const targetByArtist = new Map(
+      personnel.map((entry) => [entry.artistId, entry]),
+    );
     if (targetByArtist.size !== personnel.length) {
       throw new Error("Recording Personnel contains duplicate Artists");
     }
@@ -122,7 +135,9 @@ export const verifyRecordingPersonnel = migrations.define({
       const relationshipTypes = new Set<string>();
       for (const relationship of entry.relationships) {
         if (relationshipTypes.has(relationship.type)) {
-          throw new Error("Recording Personnel contains duplicate relationship types");
+          throw new Error(
+            "Recording Personnel contains duplicate relationship types",
+          );
         }
         relationshipTypes.add(relationship.type);
         if (
@@ -130,13 +145,17 @@ export const verifyRecordingPersonnel = migrations.define({
           relationship.type !== "vocal" &&
           relationship.details.length > 0
         ) {
-          throw new Error("Recording Personnel contains an invalid relationship shape");
+          throw new Error(
+            "Recording Personnel contains an invalid relationship shape",
+          );
         }
         detailCount += Math.max(relationship.details.length, 1);
         const details = new Set<string>();
         for (const detail of relationship.details) {
           if (!detail.canonical.trim()) {
-            throw new Error("Recording Personnel detail requires canonical text");
+            throw new Error(
+              "Recording Personnel detail requires canonical text",
+            );
           }
           const key = `${normalizePersonnelText(detail.canonical)}\u0000${
             detail.creditedAs ? normalizePersonnelText(detail.creditedAs) : ""
@@ -168,7 +187,9 @@ export const verifyRecordingPersonnel = migrations.define({
         }
       }
       if (legacyByArtist.size !== personnel.length) {
-        throw new Error("Backfilled Recording Personnel count does not match legacy source");
+        throw new Error(
+          "Backfilled Recording Personnel count does not match legacy source",
+        );
       }
       for (const [artistId, credit] of legacyByArtist) {
         const target = targetByArtist.get(artistId);
@@ -179,9 +200,85 @@ export const verifyRecordingPersonnel = migrations.define({
           target.relationships[0]?.type !== "performer" ||
           target.relationships[0].details.length !== 0
         ) {
-          throw new Error("Backfilled Recording Personnel does not preserve legacy source");
+          throw new Error(
+            "Backfilled Recording Personnel does not preserve legacy source",
+          );
         }
       }
+    }
+  },
+});
+
+export const backfillArtistSongRepertoire = migrations.define({
+  table: "songUserData",
+  batchSize: 8,
+  migrateOne: async (ctx, membership) => {
+    await projectSongForUser(ctx, membership.userId, membership.songId);
+  },
+});
+
+export const backfillArtistRecordingRepertoire = migrations.define({
+  table: "userRecordingData",
+  batchSize: 2,
+  migrateOne: async (ctx, membership) => {
+    await projectRecordingForUser(
+      ctx,
+      membership.userId,
+      membership.recordingId,
+    );
+  },
+});
+
+export const verifyArtistSongRepertoireSources = migrations.define({
+  table: "songUserData",
+  batchSize: 8,
+  migrateOne: async (ctx, membership) => {
+    await verifySongProjection(ctx, membership.userId, membership.songId);
+  },
+});
+
+export const verifyArtistRecordingRepertoireSources = migrations.define({
+  table: "userRecordingData",
+  batchSize: 2,
+  migrateOne: async (ctx, membership) => {
+    await verifyRecordingProjection(
+      ctx,
+      membership.userId,
+      membership.recordingId,
+    );
+  },
+});
+
+export const verifyArtistSongRepertoireEntries = migrations.define({
+  table: "artistSongRepertoireEntries",
+  batchSize: 8,
+  migrateOne: async (ctx, entry) => {
+    await verifySongProjection(ctx, entry.userId, entry.songId);
+  },
+});
+
+export const verifyArtistRecordingRepertoireEntries = migrations.define({
+  table: "artistRecordingRepertoireEntries",
+  batchSize: 2,
+  migrateOne: async (ctx, entry) => {
+    await verifyRecordingProjection(ctx, entry.userId, entry.recordingId);
+  },
+});
+
+export const verifyArtistRepertoireSummaries = migrations.define({
+  table: "artistRepertoireSummaries",
+  batchSize: 1,
+  migrateOne: async (ctx, summary) => {
+    await verifyArtistRepertoireSummary(ctx, summary);
+  },
+});
+
+export const activateArtistRepertoireProjection = migrations.define({
+  table: "users",
+  batchSize: 25,
+  migrateOne: (ctx, user) => {
+    if (!user.artistRepertoireProjectedAt) {
+      return { artistRepertoireProjectedAt: new Date().toISOString() };
     }
   },
 });
@@ -190,4 +287,17 @@ export const run = migrations.runner();
 export const runAll = migrations.runner([
   internal.migrations.backfillRecordingPersonnel,
   internal.migrations.verifyRecordingPersonnel,
+]);
+
+// Deliberately separate from runAll: this private-data backfill requires a
+// snapshot rehearsal and explicit deployment approval before it is run.
+export const runArtistRepertoireProjection = migrations.runner([
+  internal.migrations.backfillArtistSongRepertoire,
+  internal.migrations.backfillArtistRecordingRepertoire,
+  internal.migrations.verifyArtistSongRepertoireSources,
+  internal.migrations.verifyArtistRecordingRepertoireSources,
+  internal.migrations.verifyArtistSongRepertoireEntries,
+  internal.migrations.verifyArtistRecordingRepertoireEntries,
+  internal.migrations.verifyArtistRepertoireSummaries,
+  internal.migrations.activateArtistRepertoireProjection,
 ]);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { api } from "@/../convex/_generated/api";
 import type { Artist } from "@/types/types";
@@ -8,6 +8,16 @@ export const useArtistDetail = (artistId: string) => {
   const result = useQuery(api.artists.getMine, {
     artistId: artistId as Id<"artists">,
   });
+  const songPage = usePaginatedQuery(
+    api.artists.listSongsMine,
+    result?.artist ? { artistId: artistId as Id<"artists"> } : "skip",
+    { initialNumItems: 25 },
+  );
+  const recordingPage = usePaginatedQuery(
+    api.artists.listRecordingsMine,
+    result?.artist ? { artistId: artistId as Id<"artists"> } : "skip",
+    { initialNumItems: 25 },
+  );
   const [imageArtist, setImageArtist] = useState<Artist | null>(null);
   const lookupStartedFor = useRef<string | null>(null);
 
@@ -34,9 +44,14 @@ export const useArtistDetail = (artistId: string) => {
     imageArtist?.id === artistId ? imageArtist : (result?.artist ?? null);
   return {
     artist,
-    songs: result?.songs ?? [],
-    recordings: result?.recordings ?? [],
-    recordingSongTitles: result?.recording_song_titles ?? [],
+    songs: songPage.results,
+    recordings: recordingPage.results,
+    songCount: result?.song_count ?? 0,
+    recordingCount: result?.recording_count ?? 0,
+    songStatus: songPage.status,
+    recordingStatus: recordingPage.status,
+    loadMoreSongs: songPage.loadMore,
+    loadMoreRecordings: recordingPage.loadMore,
     userData: result?.user_data ?? null,
     loading: result === undefined,
   };

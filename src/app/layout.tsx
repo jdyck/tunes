@@ -31,7 +31,7 @@ export default function RootLayout({
     >
     <head>
       <link rel="manifest" href="/manifest.json" />
-      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       {/* Must be a literal -- meta tags can't read CSS custom properties. Keep
           it equal to --color-surface-app (paper-50) so the browser chrome

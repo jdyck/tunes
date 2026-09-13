@@ -2,7 +2,7 @@
 
 The implemented browse architecture is settled in
 [ADR-0010](../adr/0010-responsive-browse-layout-hybrid-parallel-routes.md) and
-[ADR-0011](../adr/0011-symmetric-artist-song-recording-panel-stacking.md): one
+[ADR-0015](../adr/0015-symmetric-artist-song-recording-panel-stacking.md): one
 mounted route tree presents a single pane on mobile and persistent list/detail
 panes on wider screens. This file records only the remaining UX choices.
 
