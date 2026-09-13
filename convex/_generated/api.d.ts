@@ -16,6 +16,7 @@ import type * as model_artistMemberships from "../model/artistMemberships.js";
 import type * as model_artists from "../model/artists.js";
 import type * as model_auth from "../model/auth.js";
 import type * as model_recordings from "../model/recordings.js";
+import type * as model_songFiles from "../model/songFiles.js";
 import type * as model_songs from "../model/songs.js";
 import type * as recordings from "../recordings.js";
 import type * as songFiles from "../songFiles.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   "model/artists": typeof model_artists;
   "model/auth": typeof model_auth;
   "model/recordings": typeof model_recordings;
+  "model/songFiles": typeof model_songFiles;
   "model/songs": typeof model_songs;
   recordings: typeof recordings;
   songFiles: typeof songFiles;
