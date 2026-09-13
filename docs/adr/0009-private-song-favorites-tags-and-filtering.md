@@ -1,7 +1,7 @@
 # Private Song favorites, tags, and filtering
 
 A User's favorite status and tags are private organization on
-`song_user_data`, never canonical Song metadata. Tags are case-insensitive for
+`songUserData`, never canonical Song metadata. Tags are case-insensitive for
 identity and filtering while preserving a stable display spelling. Song-list
 search continues to cover titles and writer credits rather than tags; tags are
 handled by explicit filters.

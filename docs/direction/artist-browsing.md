@@ -11,7 +11,7 @@ is available.
 ## Remaining detail enrichment
 
 - Add User-specific editable tags and personal notes backed only by
-  `artist_user_data`.
+  `artistUserData`.
 - If a suitable metadata source can be matched reliably, add a short shared
   canonical biographical/background section. Prefer the existing
   MusicBrainz/Wikipedia integration patterns over introducing a new provider,

@@ -4,7 +4,7 @@ Decided July 2026, while scoping MusicBrainz matching fixes ([direction/musicbra
 
 **A Song's year is the year it was written**, approximated from the earliest `begin` date among the work's composer/writer/lyricist relationships. A MusicBrainz Work carries no date of its own — only its relationships do — so this is the most direct authorship signal available. Never fall back to a recording (performance) or release date: those post-date authorship and would falsely make a song look newer. These writing-relationship dates are frequently absent; null is preferable to substituting any later date, so coverage for this field is expected to be sparse.
 
-**A Recording's date is when it was performed/recorded — never a release date.** A 1962 session track first released on a 2000s bonus-track CD is 1962; an unreleased take surfacing on a "complete works" box set keeps its session date. MusicBrainz supplies partial dates and sometimes ranges, so preserve its precision in text `recording_date_start` / `recording_date_end` fields (`YYYY`, `YYYY-MM`, or `YYYY-MM-DD`) rather than inventing a full SQL date. Display stays year-level for now, with fuller date-display UX a later decision.
+**A Recording's date is when it was performed/recorded — never a release date.** A 1962 session track first released on a 2000s bonus-track CD is 1962; an unreleased take surfacing on a "complete works" box set keeps its session date. MusicBrainz supplies partial dates and sometimes ranges, so preserve its precision in text `recordingDateStart` / `recordingDateEnd` fields (`YYYY`, `YYYY-MM`, or `YYYY-MM-DD`) rather than inventing a full SQL date. Display stays year-level for now, with fuller date-display UX a later decision.
 
 **Release identity is master-level.** A Standards Release Group represents the overall publication concept, which can be an album, EP, single, or another type. MusicBrainz Release Group and Discogs Master map to it; MusicBrainz Release and Discogs Release are particular editions. Mono/stereo editions, remasters, reissues, and regional variants therefore do not become the headline identity merely because they are the edition through which the Recording was found. A representative edition ID can be retained for source inspection, while Release Group art is the default artwork.
 
@@ -21,7 +21,7 @@ Decided July 2026, while scoping MusicBrainz matching fixes ([direction/musicbra
 
 - Matching and sync code must source dates from the recording→work relationship, not `first-release-date` (work item in [direction/musicbrainz-matching.md](../direction/musicbrainz-matching.md)).
 - Song year sync is best-effort and often null; correctness takes priority over filling the field.
-- `recordings.year` is superseded by `recording_date_start` / `recording_date_end` when that work lands.
-- The current `recordings.album` text is transitional. `recordings.release_group_id` is the normalized display relationship to a shared Release Group.
+- `recordings.year` is superseded by `recordingDateStart` / `recordingDateEnd` when that work lands.
+- The current `recordings.album` text is transitional. `recordings.releaseGroupId` is the normalized display relationship to a shared Release Group.
 - A representative edition ID remains optional and subordinate to Release Group identity.
 - Default display and cover art use the selected Release Group, with representative-edition artwork as a fallback.
