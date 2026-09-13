@@ -8,7 +8,7 @@ layout, an `@detail` parallel slot for Song and Artist detail, and a nested
 already-mounted panes are visible or overlaid:
 
 > Song and Artist are no longer mutually exclusive within `@detail` — see
-> [ADR-0011](0011-symmetric-artist-song-recording-panel-stacking.md), which
+> [ADR-0015](0015-symmetric-artist-song-recording-panel-stacking.md), which
 > makes both symmetric stacking roots. Everything else below still holds.
 
 - mobile presents one pane at a time;
