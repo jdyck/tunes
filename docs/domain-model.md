@@ -28,6 +28,18 @@ periods rather than treating the lineup as timeless.
 **`artistUserData`**:
 A User's private layer over a canonical Artist: personal notes, tags, and any later private organization. There is at most one row per User and Artist. It is not an Artist subtype and must not hold the shared name, kind, biography, or provider identity. `artistUserData` follows the `songUserData` private-layer pattern; those names are schema vocabulary, not UI labels. Owner-scoped Convex authorization keeps this payload private while the Artist identity and credit facts are shared.
 
+**Artist Repertoire Projection**:
+A private, rebuildable view of which Artists are reachable through one User's
+Songs and saved Recordings. `artistRepertoireSummaries` holds distinct Song and
+Recording counts, while `artistSongRepertoireEntries` and
+`artistRecordingRepertoireEntries` identify the underlying owner-scoped
+relationships. A Recording entry preserves all applicable Attribution,
+Release Group Attribution, and Personnel reasons without counting the same
+Recording twice. This projection exists to make Artist browsing bounded; it is
+never an authorization source and never replaces canonical credits,
+`songUserData`, or `userRecordingData`. See
+[ADR-0016](adr/0016-private-artist-repertoire-projection.md).
+
 **Song Credit**:
 A relationship from a Song to an Artist with a role such as `composer`, `lyricist`, or generic `writer`, plus credited-as text and ordering where needed. One Artist may hold more than one role on the same Song; preserve those roles rather than flattening the credit to a list of names. “Writer” is a role, not an entity that is necessarily represented locally as a person. Recording Personnel uses the same canonical Artist identity for evidenced performance relationships.
 

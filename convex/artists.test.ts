@@ -1,12 +1,54 @@
 /// <reference types="vite/client" />
 
-import { convexTest } from "convex-test";
-import { expect, test } from "vitest";
+import { convexTest, type TestConvexForDataModel } from "convex-test";
+import type { FunctionReturnType } from "convex/server";
+import { expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { DataModel, Id } from "./_generated/dataModel";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
+type TestClient = TestConvexForDataModel<DataModel>;
+type ArtistSummary = FunctionReturnType<
+  typeof api.artists.listMine
+>["page"][number];
+type ArtistRecording = FunctionReturnType<
+  typeof api.artists.listRecordingsMine
+>["page"][number];
+
+const listArtists = async (client: TestClient) => {
+  const artists: ArtistSummary[] = [];
+  let cursor: string | null = null;
+  do {
+    const result: FunctionReturnType<typeof api.artists.listMine> =
+      await client.query(api.artists.listMine, {
+        paginationOpts: { cursor, numItems: 100 },
+      });
+    artists.push(...result.page);
+    cursor = result.isDone ? null : result.continueCursor;
+    if (result.isDone) return artists;
+  } while (cursor);
+  return artists;
+};
+
+const listArtistRecordings = async (
+  client: TestClient,
+  artistId: Id<"artists">,
+) => {
+  const recordings: ArtistRecording[] = [];
+  let cursor: string | null = null;
+  do {
+    const result: FunctionReturnType<typeof api.artists.listRecordingsMine> =
+      await client.query(api.artists.listRecordingsMine, {
+        artistId,
+        paginationOpts: { cursor, numItems: 25 },
+      });
+    recordings.push(...result.page);
+    cursor = result.isDone ? null : result.continueCursor;
+    if (result.isDone) return recordings;
+  } while (cursor);
+  return recordings;
+};
 
 const identity = (subject: string) => ({
   subject,
@@ -86,9 +128,11 @@ const recordingUpdateInput = (
 
 test("requires authentication for Artist browsing", async () => {
   const t = convexTest({ schema, modules });
-  await expect(t.query(api.artists.listMine, {})).rejects.toThrow(
-    "Unauthenticated",
-  );
+  await expect(
+    t.query(api.artists.listMine, {
+      paginationOpts: { cursor: null, numItems: 100 },
+    }),
+  ).rejects.toThrow("Unauthenticated");
   await expect(t.query(api.artists.search, { query: "Ella" })).rejects.toThrow(
     "Unauthenticated",
   );
@@ -253,7 +297,7 @@ test("counts only the current User's Songs and saved Recordings", async () => {
   });
   await other.mutation(api.songs.addDiscoverable, { songId });
 
-  const ownerArtists = await owner.query(api.artists.listMine, {});
+  const ownerArtists = await listArtists(owner);
   expect(ownerArtists).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -278,7 +322,7 @@ test("counts only the current User's Songs and saved Recordings", async () => {
       }),
     ]),
   );
-  const otherArtists = await other.query(api.artists.listMine, {});
+  const otherArtists = await listArtists(other);
   expect(otherArtists).toEqual([
     expect.objectContaining({
       name: "George Shearing",
@@ -297,36 +341,36 @@ test("counts only the current User's Songs and saved Recordings", async () => {
   const otherDetail = await other.query(api.artists.getMine, {
     artistId: performer.id,
   });
-  expect(ownerDetail?.recordings).toHaveLength(1);
-  expect(ownerDetail?.recordings[0].user_data.notes).toBe("Owner only");
-  expect(ownerDetail?.recordings[0].relationship_reasons).toEqual([
+  const ownerRecordings = await listArtistRecordings(owner, performer.id);
+  const otherRecordings = await listArtistRecordings(other, performer.id);
+  expect(ownerDetail?.recording_count).toBe(1);
+  expect(otherDetail?.recording_count).toBe(0);
+  expect(ownerRecordings).toHaveLength(1);
+  expect(ownerRecordings[0].user_data.notes).toBe("Owner only");
+  expect(ownerRecordings[0].relationship_reasons).toEqual([
     "release_group_attribution",
     "attribution",
     "personnel",
   ]);
-  expect(ownerDetail?.recording_song_titles).toEqual([
-    { song_id: songId, title: "Lullaby of Birdland" },
-  ]);
-  expect(otherDetail?.recordings).toEqual([]);
+  expect(ownerRecordings[0].song_title).toBe("Lullaby of Birdland");
+  expect(otherRecordings).toEqual([]);
 
   const attributionArtist = ownerArtists.find(
     (artist) => artist.name === "Carmen McRae",
   );
   if (!attributionArtist) throw new Error("Expected Attribution Artist");
   await expect(
-    owner.query(api.artists.getMine, { artistId: attributionArtist.id }),
-  ).resolves.toMatchObject({
-    recordings: [
-      {
-        id: recordingId,
-        relationship_reasons: ["attribution"],
-        user_data: { notes: "Owner only" },
-      },
-    ],
-  });
+    listArtistRecordings(owner, attributionArtist.id),
+  ).resolves.toMatchObject([
+    {
+      id: recordingId,
+      relationship_reasons: ["attribution"],
+      user_data: { notes: "Owner only" },
+    },
+  ]);
   await expect(
-    other.query(api.artists.getMine, { artistId: attributionArtist.id }),
-  ).resolves.toMatchObject({ recordings: [] });
+    listArtistRecordings(other, attributionArtist.id),
+  ).resolves.toEqual([]);
 
   const releaseGroupArtist = ownerArtists.find(
     (artist) => artist.name === "Ella Fitzgerald",
@@ -334,20 +378,18 @@ test("counts only the current User's Songs and saved Recordings", async () => {
   if (!releaseGroupArtist)
     throw new Error("Expected Release Group Attribution Artist");
   await expect(
-    owner.query(api.artists.getMine, { artistId: releaseGroupArtist.id }),
-  ).resolves.toMatchObject({
-    recordings: [
-      {
-        id: recordingId,
-        release_groups: { title: "Ella and Louis" },
-        relationship_reasons: ["release_group_attribution"],
-        user_data: { notes: "Owner only" },
-      },
-    ],
-  });
+    listArtistRecordings(owner, releaseGroupArtist.id),
+  ).resolves.toMatchObject([
+    {
+      id: recordingId,
+      release_groups: { title: "Ella and Louis" },
+      relationship_reasons: ["release_group_attribution"],
+      user_data: { notes: "Owner only" },
+    },
+  ]);
   await expect(
-    other.query(api.artists.getMine, { artistId: releaseGroupArtist.id }),
-  ).resolves.toMatchObject({ recordings: [] });
+    listArtistRecordings(other, releaseGroupArtist.id),
+  ).resolves.toEqual([]);
 });
 
 test("browses each User's saved Recordings through one shared Release Group", async () => {
@@ -415,10 +457,10 @@ test("browses each User's saved Recordings through one shared Release Group", as
   });
   expect(otherRecordingId).toBe(secondRecordingId);
 
-  const ownerArtist = (await owner.query(api.artists.listMine, {})).find(
+  const ownerArtist = (await listArtists(owner)).find(
     (artist) => artist.name === "Ella Fitzgerald",
   );
-  const otherArtist = (await other.query(api.artists.listMine, {})).find(
+  const otherArtist = (await listArtists(other)).find(
     (artist) => artist.name === "Ella Fitzgerald",
   );
   expect(ownerArtist?.recordingCount).toBe(2);
@@ -428,35 +470,31 @@ test("browses each User's saved Recordings through one shared Release Group", as
   }
 
   await expect(
-    owner.query(api.artists.getMine, { artistId: ownerArtist.id }),
-  ).resolves.toMatchObject({
-    recordings: [
-      {
-        id: firstRecordingId,
-        release_groups: { title: "Ella and Louis" },
-        relationship_reasons: ["release_group_attribution"],
-        user_data: { notes: "Owner first" },
-      },
-      {
-        id: secondRecordingId,
-        release_groups: { title: "Ella and Louis" },
-        relationship_reasons: ["release_group_attribution"],
-        user_data: { notes: "Owner second" },
-      },
-    ],
-  });
+    listArtistRecordings(owner, ownerArtist.id),
+  ).resolves.toMatchObject([
+    {
+      id: firstRecordingId,
+      release_groups: { title: "Ella and Louis" },
+      relationship_reasons: ["release_group_attribution"],
+      user_data: { notes: "Owner first" },
+    },
+    {
+      id: secondRecordingId,
+      release_groups: { title: "Ella and Louis" },
+      relationship_reasons: ["release_group_attribution"],
+      user_data: { notes: "Owner second" },
+    },
+  ]);
   await expect(
-    other.query(api.artists.getMine, { artistId: otherArtist.id }),
-  ).resolves.toMatchObject({
-    recordings: [
-      {
-        id: secondRecordingId,
-        release_groups: { title: "Ella and Louis" },
-        relationship_reasons: ["release_group_attribution"],
-        user_data: { notes: null },
-      },
-    ],
-  });
+    listArtistRecordings(other, otherArtist.id),
+  ).resolves.toMatchObject([
+    {
+      id: secondRecordingId,
+      release_groups: { title: "Ella and Louis" },
+      relationship_reasons: ["release_group_attribution"],
+      user_data: { notes: null },
+    },
+  ]);
 });
 
 test("only an admin can cache constrained shared Artist image metadata", async () => {
@@ -479,7 +517,7 @@ test("only an admin can cache constrained shared Artist image metadata", async (
       },
     ],
   });
-  const [artist] = await owner.query(api.artists.listMine, {});
+  const [artist] = await listArtists(owner);
   expect(artist).toBeDefined();
   await expect(
     other.mutation(api.artists.cacheImage, {
@@ -602,7 +640,7 @@ test("membership names link only by existing MusicBrainz identity without creati
       ],
     },
   });
-  const before = await owner.query(api.artists.listMine, {});
+  const before = await listArtists(owner);
   expect(before).toEqual([
     expect.objectContaining({ id: groupId, songCount: 1, recordingCount: 1 }),
   ]);
@@ -630,15 +668,15 @@ test("membership names link only by existing MusicBrainz identity without creati
       artist_id: null,
     },
   ]);
-  await expect(owner.query(api.artists.listMine, {})).resolves.toEqual(before);
-  await expect(other.query(api.artists.listMine, {})).resolves.toEqual([]);
+  await expect(listArtists(owner)).resolves.toEqual(before);
+  await expect(listArtists(other)).resolves.toEqual([]);
   await expect(
     owner.query(api.artists.getMine, { artistId: memberId }),
   ).resolves.toMatchObject({
     artist: { id: memberId },
     user_data: null,
-    songs: [],
-    recordings: [],
+    song_count: 0,
+    recording_count: 0,
   });
   await expect(
     other.query(api.artists.getMine, { artistId: memberId }),

@@ -141,9 +141,12 @@ without replacing development data.
 Both commands show their exact targets and require confirmation. Production
 and pre-pull development snapshots are retained with private permissions under
 ignored `local/backups/`; the filtered import excludes file storage, Song File
-metadata, and component data. The retained backups are full source and
-destination exports made before filtering, so they can include Song File
-metadata. The pull refuses a development target containing Song File rows;
+metadata, component data, and deployment-local Artist-reconciliation jobs. It
+copies only the selected User's private Artist repertoire projection rows, so
+the imported Artist views remain usable without replaying another deployment's
+scheduled work. The retained backups are full source and destination exports
+made before filtering, so they can include Song File metadata. The pull refuses
+a development target containing Song File rows;
 delete those private development files in the app before pulling rather than
 creating dangling storage references. If a replacement fails after it starts
 clearing tables, rerun it or restore the saved pre-pull development ZIP.

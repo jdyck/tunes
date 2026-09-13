@@ -14,6 +14,7 @@ export default defineSchema({
     clerkSubject: v.string(),
     email: nullableString,
     role: v.union(v.literal("user"), v.literal("admin")),
+    artistRepertoireProjectedAt: v.optional(v.string()),
   })
     .index("by_clerkTokenIdentifier", ["clerkTokenIdentifier"])
     .index("by_clerkSubject", ["clerkSubject"])
@@ -108,6 +109,66 @@ export default defineSchema({
     .index("by_artistId", ["artistId"])
     .index("by_userId_and_artistId", ["userId", "artistId"]),
 
+  // Private, derived Artist-browsing read model. Canonical credits and the
+  // owner-scoped Song/Recording membership tables remain authoritative.
+  artistRepertoireSummaries: defineTable({
+    userId: v.id("users"),
+    artistId: v.id("artists"),
+    songCount: v.number(),
+    recordingCount: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_artistId", ["userId", "artistId"]),
+
+  artistSongRepertoireEntries: defineTable({
+    userId: v.id("users"),
+    artistId: v.id("artists"),
+    songId: v.id("songs"),
+  })
+    .index("by_userId_and_songId", ["userId", "songId"])
+    .index("by_userId_and_artistId", ["userId", "artistId"])
+    .index("by_userId_and_artistId_and_songId", [
+      "userId",
+      "artistId",
+      "songId",
+    ]),
+
+  artistRecordingRepertoireEntries: defineTable({
+    userId: v.id("users"),
+    artistId: v.id("artists"),
+    recordingId: v.id("recordings"),
+    songId: v.id("songs"),
+    relationshipReasons: v.array(
+      v.union(
+        v.literal("release_group_attribution"),
+        v.literal("attribution"),
+        v.literal("personnel"),
+      ),
+    ),
+  })
+    .index("by_userId_and_recordingId", ["userId", "recordingId"])
+    .index("by_userId_and_artistId", ["userId", "artistId"])
+    .index("by_userId_and_artistId_and_recordingId", [
+      "userId",
+      "artistId",
+      "recordingId",
+    ]),
+
+  // Durable, idempotent fanout work for shared credit changes. A source-keyed
+  // row is reset when another edit lands while an earlier pass is running.
+  artistRepertoireReconciliationJobs: defineTable({
+    sourceKey: v.string(),
+    kind: v.union(
+      v.literal("song"),
+      v.literal("recording"),
+      v.literal("release_group"),
+    ),
+    songId: v.union(v.id("songs"), v.null()),
+    recordingId: v.union(v.id("recordings"), v.null()),
+    releaseGroupId: v.union(v.id("releaseGroups"), v.null()),
+    cursor: v.union(v.string(), v.null()),
+  }).index("by_sourceKey", ["sourceKey"]),
+
   songArtistCredits: defineTable({
     songId: v.id("songs"),
     artistId: v.id("artists"),
@@ -126,8 +187,7 @@ export default defineSchema({
   releaseGroups: defineTable({
     title: v.string(),
     musicbrainzReleaseGroupId: nullableString,
-  })
-    .index("by_musicbrainzReleaseGroupId", ["musicbrainzReleaseGroupId"]),
+  }).index("by_musicbrainzReleaseGroupId", ["musicbrainzReleaseGroupId"]),
 
   recordings: defineTable({
     songId: v.id("songs"),
@@ -194,8 +254,7 @@ export default defineSchema({
     ytmusicAlbumName: nullableString,
     durationSeconds: v.union(v.number(), v.null()),
     metadataFetchedAt: nullableString,
-  })
-    .index("by_videoId", ["videoId"]),
+  }).index("by_videoId", ["videoId"]),
 
   recordingYoutubeItems: defineTable({
     recordingId: v.id("recordings"),
@@ -204,10 +263,7 @@ export default defineSchema({
     createdAt: v.string(),
   })
     .index("by_recordingId_and_createdAt", ["recordingId", "createdAt"])
-    .index("by_recordingId_and_youtubeItemId", [
-      "recordingId",
-      "youtubeItemId",
-    ])
+    .index("by_recordingId_and_youtubeItemId", ["recordingId", "youtubeItemId"])
     .index("by_songId_and_youtubeItemId", ["songId", "youtubeItemId"])
     .index("by_youtubeItemId", ["youtubeItemId"]),
 

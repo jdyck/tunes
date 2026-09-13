@@ -33,7 +33,9 @@ test("data pull accounts for every application table in the Convex schema", () =
     new URL("../convex/schema.ts", import.meta.url),
     "utf8",
   );
-  const schemaTables = [...schema.matchAll(/^  ([a-zA-Z][a-zA-Z0-9]*): defineTable\(/gm)]
+  const schemaTables = [
+    ...schema.matchAll(/^  ([a-zA-Z][a-zA-Z0-9]*): defineTable\(/gm),
+  ]
     .map((match) => match[1])
     .sort();
 
@@ -99,6 +101,53 @@ const productionSnapshot = () => {
     document("private-artist-other", {
       userId: "other-prod-user",
       artistId: "artist-other",
+    }),
+  ];
+  snapshot.artistRepertoireSummaries = [
+    document("summary-selected", {
+      userId: "prod-user",
+      artistId: "artist-songwriter",
+      songCount: 1,
+      recordingCount: 0,
+    }),
+    document("summary-other", {
+      userId: "other-prod-user",
+      artistId: "artist-other",
+      songCount: 1,
+      recordingCount: 0,
+    }),
+  ];
+  snapshot.artistSongRepertoireEntries = [
+    document("song-projection-selected", {
+      userId: "prod-user",
+      artistId: "artist-songwriter",
+      songId: "song-selected",
+    }),
+    document("song-projection-other", {
+      userId: "other-prod-user",
+      artistId: "artist-other",
+      songId: "song-other",
+    }),
+  ];
+  snapshot.artistRecordingRepertoireEntries = [
+    document("recording-projection-selected", {
+      userId: "prod-user",
+      artistId: "artist-performer",
+      recordingId: "recording-selected",
+      songId: "song-selected",
+    }),
+    document("recording-projection-other", {
+      userId: "other-prod-user",
+      artistId: "artist-other",
+      recordingId: "recording-other",
+      songId: "song-other",
+    }),
+  ];
+  snapshot.artistRepertoireReconciliationJobs = [
+    document("production-job", {
+      sourceKey: "song:song-selected",
+      kind: "song",
+      songId: "song-selected",
     }),
   ];
   snapshot.recordings = [
@@ -244,7 +293,9 @@ test("local clear seeds avoid incoming IDs owned by another table", () => {
   ];
   local.releaseGroups = [document("safe-release-id", { title: "Old release" })];
   const incoming = emptySnapshot();
-  incoming.releaseGroups = [document("incoming-release-id", { title: "New release" })];
+  incoming.releaseGroups = [
+    document("incoming-release-id", { title: "New release" }),
+  ];
 
   const seeds = selectLocalClearSeeds(
     ["songs", "releaseGroups"],
@@ -264,7 +315,10 @@ test("production pull includes the selected user's complete app closure", () => 
       role: "user",
       email: "agent@example.invalid",
     }),
-    document("local-admin", { clerkSubject: "user_local_admin", role: "admin" }),
+    document("local-admin", {
+      clerkSubject: "user_local_admin",
+      role: "admin",
+    }),
   ];
 
   const result = filterProductionSnapshot(productionSnapshot(), local, {
@@ -274,31 +328,57 @@ test("production pull includes the selected user's complete app closure", () => 
 
   assert.equal(result.productionUserId, "prod-user");
   assert.equal(result.importedUserId, "prod-user");
-  assert.deepEqual(result.tables.users.map((item) => item._id), ["prod-user"]);
-  assert.deepEqual(result.tables.songs.map((item) => item._id).sort(), ["song-selected"]);
   assert.deepEqual(
-    result.tables.recordings.map((item) => item._id).sort(),
-    ["recording-also-on-song", "recording-selected"],
+    result.tables.users.map((item) => item._id),
+    ["prod-user"],
+  );
+  assert.deepEqual(result.tables.songs.map((item) => item._id).sort(), [
+    "song-selected",
+  ]);
+  assert.deepEqual(result.tables.recordings.map((item) => item._id).sort(), [
+    "recording-also-on-song",
+    "recording-selected",
+  ]);
+  assert.deepEqual(result.tables.artists.map((item) => item._id).sort(), [
+    "artist-performer",
+    "artist-personnel",
+    "artist-private",
+    "artist-release",
+    "artist-songwriter",
+  ]);
+  assert.deepEqual(
+    result.tables.releaseGroups.map((item) => item._id),
+    ["release-group-selected"],
   );
   assert.deepEqual(
-    result.tables.artists.map((item) => item._id).sort(),
-    [
-      "artist-performer",
-      "artist-personnel",
-      "artist-private",
-      "artist-release",
-      "artist-songwriter",
-    ],
+    result.tables.youtubeItems.map((item) => item._id),
+    ["youtube-selected"],
   );
-  assert.deepEqual(result.tables.releaseGroups.map((item) => item._id), ["release-group-selected"]);
-  assert.deepEqual(result.tables.youtubeItems.map((item) => item._id), ["youtube-selected"]);
   assert.equal(result.tables.songUserData[0]?.userId, "prod-user");
   assert.equal(result.tables.artistUserData[0]?.userId, "prod-user");
   assert.equal(result.tables.userRecordingData[0]?.userId, "prod-user");
+  assert.equal(result.tables.artistRepertoireSummaries[0]?.userId, "prod-user");
+  assert.equal(
+    result.tables.artistSongRepertoireEntries[0]?.userId,
+    "prod-user",
+  );
+  assert.equal(
+    result.tables.artistRecordingRepertoireEntries[0]?.userId,
+    "prod-user",
+  );
+  assert.deepEqual(result.tables.artistRepertoireReconciliationJobs, []);
   assert.equal(result.tables.users[0]?._creationTime, 1);
   assert.equal(result.counts.recordingYoutubeItems, 1);
-  assert.equal(result.tables.songUserData.some((item) => item._id === "private-song-other"), false);
-  assert.equal(result.tables.artists.some((item) => item._id === "artist-other"), false);
+  assert.equal(
+    result.tables.songUserData.some(
+      (item) => item._id === "private-song-other",
+    ),
+    false,
+  );
+  assert.equal(
+    result.tables.artists.some((item) => item._id === "artist-other"),
+    false,
+  );
   for (const table of APPLICATION_TABLES) {
     assert.equal(result.counts[table], result.tables[table].length);
   }
@@ -306,7 +386,9 @@ test("production pull includes the selected user's complete app closure", () => 
 
 test("pull rejects ambiguous users and broken selected references", () => {
   const local = emptySnapshot();
-  local.users = [document("local-user", { clerkSubject: "user_local_dev", role: "user" })];
+  local.users = [
+    document("local-user", { clerkSubject: "user_local_dev", role: "user" }),
+  ];
   assert.throws(
     () =>
       filterProductionSnapshot(productionSnapshot(), local, {
@@ -333,25 +415,49 @@ test("pull rejects ambiguous users and broken selected references", () => {
   );
 });
 
-
 test("pull keeps User IDs in the production namespace while using only development identity fields", () => {
   const production = productionSnapshot();
   production.users[0].email = "production@example.invalid";
   production.users[0].role = "admin";
+  production.users[0].artistRepertoireProjectedAt = "production-ready";
   const local = emptySnapshot();
-  local.users = [document("local-user", {
-    clerkSubject: "user_local_dev", role: "user", email: "dev@example.invalid",
-  })];
+  local.users = [
+    document("local-user", {
+      clerkSubject: "user_local_dev",
+      role: "user",
+      email: "dev@example.invalid",
+      artistRepertoireProjectedAt: "development-ready",
+    }),
+  ];
   const result = filterProductionSnapshot(production, local, {
-    productionClerkSubject: "user_production_owner", localClerkSubject: "user_local_dev",
+    productionClerkSubject: "user_production_owner",
+    localClerkSubject: "user_local_dev",
   });
-  assert.equal(result.tables.users[0]._id, production.users[0]._id,
-    "Mixing development User IDs with production IDs can assign users and recordings the same table number");
+  assert.equal(
+    result.tables.users[0]._id,
+    production.users[0]._id,
+    "Mixing development User IDs with production IDs can assign users and recordings the same table number",
+  );
   assert.equal(result.tables.users[0].clerkSubject, "user_local_dev");
   assert.equal(result.tables.users[0].role, "user");
   assert.equal(result.tables.users[0].email, "dev@example.invalid");
-  for (const table of ["songUserData", "artistUserData", "userRecordingData"] as const) {
-    assert.ok(result.tables[table].every(row => row.userId === result.tables.users[0]._id));
+  assert.equal(
+    result.tables.users[0].artistRepertoireProjectedAt,
+    "production-ready",
+  );
+  for (const table of [
+    "songUserData",
+    "artistUserData",
+    "userRecordingData",
+    "artistRepertoireSummaries",
+    "artistSongRepertoireEntries",
+    "artistRecordingRepertoireEntries",
+  ] as const) {
+    assert.ok(
+      result.tables[table].every(
+        (row) => row.userId === result.tables.users[0]._id,
+      ),
+    );
   }
   assert.equal(local.users[0]._id, "local-user");
 });

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { leagueGothic, robotoCondensed } from "@/lib/fonts";
 import {
@@ -69,14 +69,21 @@ const nameForSorting = (name: string) => {
 
 export default function ArtistsListPane() {
   const pathname = usePathname();
-  const artistResult = useQuery(api.artists.listMine, {});
-  const artists = artistResult ?? [];
-  const loading = artistResult === undefined;
+  const {
+    results: artists,
+    status: artistStatus,
+    loadMore: loadMoreArtists,
+  } = usePaginatedQuery(api.artists.listMine, {}, { initialNumItems: 100 });
+  const loading = artistStatus !== "Exhausted";
+
+  useEffect(() => {
+    if (artistStatus === "CanLoadMore") loadMoreArtists(100);
+  }, [artistStatus, loadMoreArtists]);
 
   const [listState, setListState] = useSessionState<ArtistsListState>(
     "standards:artists-list-state",
     () => ({ search: "", sortKey: "name", sortDirection: "asc" }),
-    isArtistsListState
+    isArtistsListState,
   );
   const { search, sortKey, sortDirection } = listState;
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -84,7 +91,7 @@ export default function ArtistsListPane() {
     const searchTerm = search.trim().toLowerCase();
     const filtered = searchTerm
       ? artists.filter((artist) =>
-          artist.name.toLowerCase().includes(searchTerm)
+          artist.name.toLowerCase().includes(searchTerm),
         )
       : artists;
 
@@ -96,8 +103,7 @@ export default function ArtistsListPane() {
           nameForSorting(a.name).localeCompare(nameForSorting(b.name)) ||
           a.name.localeCompare(b.name);
       } else if (sortKey === "songs") {
-        comparison =
-          a.songCount - b.songCount || a.name.localeCompare(b.name);
+        comparison = a.songCount - b.songCount || a.name.localeCompare(b.name);
       } else {
         comparison =
           a.recordingCount - b.recordingCount || a.name.localeCompare(b.name);
@@ -123,7 +129,9 @@ export default function ArtistsListPane() {
             {search && (
               <button
                 type="button"
-                onClick={() => setListState((state) => ({ ...state, search: "" }))}
+                onClick={() =>
+                  setListState((state) => ({ ...state, search: "" }))
+                }
                 aria-label="Clear search"
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-ink-600 hover:bg-paper-200 hover:text-ink-900"
               >
@@ -133,7 +141,9 @@ export default function ArtistsListPane() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setListState((state) => ({ ...state, search: e.target.value }))}
+              onChange={(e) =>
+                setListState((state) => ({ ...state, search: e.target.value }))
+              }
               placeholder="Search artists"
               className="w-full pl-9 pr-9 py-2 rounded-sm border-[1.5] border-ink-400 bg-surface-app"
             />
@@ -144,7 +154,7 @@ export default function ArtistsListPane() {
           <span
             className={`text-azure-600/90 font-bold uppercase ${leagueGothic.className} text-base tracking-widest`}
           >
-            {visibleArtists.length} Artists
+            {loading ? "Loading artists…" : `${visibleArtists.length} Artists`}
           </span>
           <div className="relative flex items-center">
             <button
@@ -233,8 +243,8 @@ export default function ArtistsListPane() {
           <p>No artists match “{search}”.</p>
         ) : (
           <p>
-            No artists yet — they appear here once your songs or recordings
-            have credits.
+            No artists yet — they appear here once your songs or recordings have
+            credits.
           </p>
         )}
       </div>
