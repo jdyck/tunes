@@ -10,8 +10,8 @@ export default function ArtistDetailLayout({
   recording,
 }: {
   children: React.ReactNode;
-  song?: React.ReactNode;
-  recording?: React.ReactNode;
+  song: React.ReactNode;
+  recording: React.ReactNode;
 }) {
   const { id } = useParams();
   const artistId = Array.isArray(id) ? id[0] : id;

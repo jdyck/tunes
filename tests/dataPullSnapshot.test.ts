@@ -9,6 +9,7 @@ import {
 } from "../scripts/lib/dataPullProcess.ts";
 import {
   APPLICATION_TABLES,
+  NON_PORTABLE_APPLICATION_TABLES,
   documentsToJsonLines,
   filterProductionSnapshot,
   parseDocumentsJsonl,
@@ -27,7 +28,7 @@ const document = (
 const emptySnapshot = (): Record<string, SnapshotDocument[]> =>
   Object.fromEntries(APPLICATION_TABLES.map((table) => [table, []]));
 
-test("data pull includes every application table in the Convex schema", () => {
+test("data pull accounts for every application table in the Convex schema", () => {
   const schema = readFileSync(
     new URL("../convex/schema.ts", import.meta.url),
     "utf8",
@@ -36,7 +37,11 @@ test("data pull includes every application table in the Convex schema", () => {
     .map((match) => match[1])
     .sort();
 
-  assert.deepEqual([...APPLICATION_TABLES].sort(), schemaTables);
+  assert.deepEqual(
+    [...APPLICATION_TABLES, ...NON_PORTABLE_APPLICATION_TABLES].sort(),
+    schemaTables,
+  );
+  assert.deepEqual(NON_PORTABLE_APPLICATION_TABLES, ["songFiles"]);
 });
 
 test("data pull config selects the browser development User independently of agent fixtures", () => {

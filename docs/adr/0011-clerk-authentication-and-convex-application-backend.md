@@ -53,6 +53,8 @@ surface of two services is acceptable at this scale.
   than creating a second application User and orphaning their private data.
 - Development and production require separate Clerk/Convex configuration,
   issuer values, Users, data imports, and verification.
-- Raw Convex storage URLs are bearer URLs. Before private Lead Sheets or other
-  revocable files are implemented, storage delivery must receive a separate
-  privacy design rather than assuming those URLs enforce per-request access.
+- Raw Convex storage URLs are bearer URLs. Private Song File delivery uses the
+  owner-authorized HTTP-action design in
+  [ADR-0014](0014-private-song-file-delivery.md), rather than treating a
+  storage URL as per-request authorization. Other revocable file types need an
+  equally explicit privacy design.

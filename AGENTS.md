@@ -4,10 +4,8 @@ Instructions for AI coding agents working in this repo. Keep this file lean — 
 
 ## Project overview
 
-Standards (repo folder: `tunes`): a personal Next.js app using Clerk and Convex
-to track a solo musician's repertoire (Songs), private Song data, and saved
-Recordings with private User data—separate from casual playlists. Solo personal
-project, early stage, dormant between sessions. See
+Standards (repo folder: `tunes`): an app to track a musician's repertoire (Songs),
+including notes on and files about the songs and tracking the musicaina's favorite recordings f the song from YouTube. See
 [docs/domain-model.md](docs/domain-model.md) for why it exists and the domain
 vocabulary.
 
@@ -28,7 +26,7 @@ src/components/      shared React components, grouped by feature
   ui/                  generic primitives (Spinner, Modal, FormField…) + cross-feature domain bits (MusicBrainzLink)
   layout/              shells, panes, gates (BrowseLayoutShell, DetailPaneGate…)
   player/              GlobalPlayer + its gate
-  song/, recording/    feature components; future features (playlists, lead sheets) get their own folder
+  song/, recording/    feature components; future features (playlists) get their own folder
 src/hooks/           shared React hooks
 src/lib/             effectful/stateful modules — anything that fetches or holds state (fonts, metadata clients, componentRegistry)
 src/types/           shared TS types
@@ -121,7 +119,7 @@ Git, back up valuable WIP and audits independently.
 - **Terminology and Song boundary**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). Shared identity and metadata live on `songs`, while membership, notes, display title, and added time live in private `songUserData`. Don't reintroduce "tune" or owner/private payload on `songs`.
 - **Canonical entity migrations are scoped work, not drive-bys**: shared `artists` include people and groups; Song credits live in `songArtistCredits`; private Artist state belongs in `artistUserData`; Recording is provider-neutral; private Recording state belongs in `userRecordingData`; YouTube results belong in `youtubeItems`; and `releaseGroupId` is the Recording's single normalized display/artwork context. Follow [ADR-0008](docs/adr/0008-provider-neutral-music-entities-and-user-data.md) and [canonical-entity-migrations.md](docs/direction/canonical-entity-migrations.md) rather than extending transitional Recording release fields as if they were final.
 - **Song creation is not admin-gated**: any user can create a new Song on no search match; don't add approval/moderation gates here ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)).
-- **Lead Sheets are private by default and publishing is admin-only**, never self-service or automatic — don't build a user-facing "publish" action ([ADR-0002](docs/adr/0002-lead-sheets-admin-gated-publishing.md)).
+- **Song Files are private by default and publishing is admin-only**, never self-service or automatic — don't build a user-facing "publish" action ([ADR-0002](docs/adr/0002-song-files-admin-gated-publishing.md)).
 - **One email = one account** across auth methods (password + Google) — don't treat them as separate identities ([ADR-0001](docs/adr/0001-unique-email-account-linking.md)).
 - **Only the owner commits — never an agent.** Agents stage changes (`git add`) and suggest a `git commit -m` message for the owner to run; never run `git commit` (or push, amend, etc.) themselves. When the work reaches a point where a commit seems like a good idea, proactively suggest one; if unsure whether it's commit-worthy, ask.
 - **Keep docs handoff-ready at all times.** The owner returns after long gaps and any session may be the last before a handoff, so update the relevant docs (`docs/direction/`, ADRs, this file, `docs/domain-model.md`) *as part of the work*, not as a follow-up: scope changes, decisions made, and completed/obsolete tasks must be reflected before the session ends. If a session were interrupted right now, the docs — not the conversation — must be enough for the next agent to pick up. Handoff context that shouldn't be committed (in-progress state, half-formed plans) goes in `local/wip/`. Before finishing, explicitly report which docs changed or say `Docs impact: none.` after checking.

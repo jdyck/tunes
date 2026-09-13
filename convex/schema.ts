@@ -1,8 +1,12 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { artistMembershipValidator } from "./model/artistMemberships";
+import { acceptedSongFileContentTypes } from "@/types/songFiles.ts";
 
 const nullableString = v.union(v.string(), v.null());
+const songFileContentTypeValidator = v.union(
+  ...acceptedSongFileContentTypes.map((contentType) => v.literal(contentType)),
+);
 
 export default defineSchema({
   users: defineTable({
@@ -46,6 +50,24 @@ export default defineSchema({
     .index("by_songId", ["songId"])
     .index("by_userId_and_songId", ["userId", "songId"])
     .index("by_userId_and_creationRequestId", ["userId", "creationRequestId"]),
+
+  // Private, owner-bound Song Files. The storage ID is never returned through
+  // a public query: this table is the authorization record for delivery.
+  songFiles: defineTable({
+    userId: v.id("users"),
+    songId: v.id("songs"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    contentType: songFileContentTypeValidator,
+    sizeBytes: v.number(),
+    createdAt: v.string(),
+  })
+    .index("by_userId_and_songId_and_createdAt", [
+      "userId",
+      "songId",
+      "createdAt",
+    ])
+    .index("by_storageId", ["storageId"]),
 
   artists: defineTable({
     name: v.string(),

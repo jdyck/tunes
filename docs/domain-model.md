@@ -2,7 +2,7 @@
 
 The app is named **Standards** (renamed from "Tunes", July 2026 — the repo folder still says `tunes`). "Standards" as in the repertoire sense: the songs a musician keeps.
 
-A personal tool for consolidating scattered musical repertoire — song lists and lead sheets currently kept on paper and scattered across digital tools, plus liked recordings currently tracked as one YouTube Music playlist per song. Those playlists work for focused/analytical listening (transcription, comparison) but get in the way of casual listening, so this app exists to hold that analytical, per-song recording list on its own, separate from casual playlists. Built for personal use first, with multi-user use as a goal.
+A personal tool for consolidating scattered musical repertoire — song lists and Song Files currently kept on paper and scattered across digital tools, plus liked recordings currently tracked as one YouTube Music playlist per song. Those playlists work for focused/analytical listening (transcription, comparison) but get in the way of casual listening, so this app exists to hold that analytical, per-song recording list on its own, separate from casual playlists. Built for personal use first, with multi-user use as a goal.
 
 ## Language
 
@@ -76,10 +76,16 @@ A person using the app to track their own Songs and Recordings through `song_use
 **Platform Preference**:
 A User's own ranked list of which platforms they care about (e.g. YouTube Music, YouTube, Amazon Music, Spotify, in that order for one User; Spotify, YouTube for another) — an order, not just a set. Controls which Platform Links are shown for a Recording (unranked platforms are normally hidden) and which is shown as the primary "Play on X" action (the highest-ranked platform that has a match). If none match, an attached playable YouTube Item is the explicit fallback exception when one exists, even if YouTube was not ranked. YouTube is common but not guaranteed in the provider-neutral model; a Recording created from Spotify may have no YouTube Item.
 
-**Lead Sheet / Score**:
-An image or PDF of sheet music a user attaches to a Song. Private by default, even if the underlying work is public domain. Can only become visible to other users if a Site Admin personally vets it and marks it public — never automatic, never self-service by the uploading user.
-_Avoid_: Chart (unless quoting a genre convention)
+**Song File**:
+A User's private attachment to a Song. The Song UI calls these **Files** because
+the Song supplies the context. The first release accepts only images and PDFs,
+including lead sheets and scores. A backing track may become a Song File later,
+but audio support requires a separate format, playback, and rights-policy
+decision. A Song File remains private by default and can only become visible to
+other users when a Site Admin personally vets its permission or public-domain
+status — never automatically or by self-service.
+_Avoid_: Lead Sheet as the generic term; Attachment (when Song File precision matters)
 
 **Site Admin**:
-A trusted role (the app owner, or someone they explicitly trust), distinct from an ordinary User, who can vet and approve content — e.g. marking a Lead Sheet as verified public domain, or merging duplicate Songs — for visibility across users.
+A trusted role (the app owner, or someone they explicitly trust), distinct from an ordinary User, who can vet and approve content — e.g. approving a Song File for visibility after checking rights, or merging duplicate Songs.
 _Avoid_: Moderator, curator

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSongsList } from "@/components/song/SongsListContext";
 import RecordingsSection from "@/components/song/RecordingsSection";
+import SongFilesSection from "@/components/song/SongFilesSection";
 import SongWritersEditor from "@/components/song/SongWritersEditor";
 import SongDetailHeader from "@/components/song/SongDetailHeader";
 import SongBackgroundSection from "@/components/song/SongBackgroundSection";
@@ -230,6 +231,7 @@ export default function SongDetailContent({
           onReorder={reorderRecordings}
           recordingHrefBase={recordingHrefBase}
         />
+        <SongFilesSection songId={id} />
         <SaveAction
           status={saveLifecycle.status}
           error={saveLifecycle.error}
