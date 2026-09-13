@@ -1,4 +1,5 @@
-// Keep this complete list in sync with the top-level tables in convex/schema.ts.
+// Keep this portable list in sync with convex/schema.ts, excluding only the
+// explicitly named non-portable tables below.
 export const APPLICATION_TABLES = [
   "users",
   "songs",
@@ -17,6 +18,11 @@ export const APPLICATION_TABLES = [
   "recordingArtistAttributions",
   "releaseGroupArtistAttributions",
 ] as const;
+
+// A Song File row is meaningful only with its private Convex storage Blob.
+// The owner-only data pull deliberately does not transfer those bytes, so it
+// must never transfer the metadata with its unusable storage ID either.
+export const NON_PORTABLE_APPLICATION_TABLES = ["songFiles"] as const;
 
 export type ApplicationTable = (typeof APPLICATION_TABLES)[number];
 

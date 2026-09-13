@@ -32,14 +32,19 @@ and Site Admin access as applicable for every public query and mutation. These
 tests complement rather than replace the focused pure contracts above and run
 through `npm test`.
 
-Mocked identities cannot prove the real Clerk-to-Convex token seam. The adoption
-verification therefore included a manual smoke with two real Clerk Development
-Users: the second User discovered and added the owner's shared Song without
-seeing the owner's favorite, notes, Recordings, or Site Admin controls. Repeat a
-small two-account smoke when authentication wiring or a private-data boundary
-changes, and before the project enters privacy-active use. Keep browser
-automation, hosted browser CI, broad component testing, and general browser
-coverage as separate decisions.
+Song File coverage also exercises the authenticated Convex HTTP actions:
+anonymous and non-member uploads, type/size/magic-byte validation, owner-only
+list/delivery/delete behavior, Site Admin non-bypass behavior, private delivery
+headers, storage deletion, and the absence of storage IDs from public query
+output. Mocked identities cannot prove the real Clerk-to-Convex token seam, so
+the adoption verification included a manual smoke with two real Clerk
+Development Users: the second User discovered and added the owner's shared Song
+without seeing the owner's favorite, notes, Recordings, or Site Admin controls.
+Repeat this small two-account smoke after changes to authentication wiring or a
+private-data boundary, including Song File HTTP actions, and verify the
+development deployment's exact `APP_ORIGIN` CORS value. Keep browser automation,
+hosted browser CI, broad component testing, and general browser coverage as
+separate decisions.
 
 Repeatable local agent sessions use the dedicated development accounts in
 [local development access](../agents/local-dev-access.md), with isolated private

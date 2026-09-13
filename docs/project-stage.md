@@ -1,45 +1,38 @@
 # Current project stage
 
-- **Current stage:** trusted development and testing
-- **Last reviewed:** 2026-07-21
+- **Current stage:** privacy-active
+- **Last reviewed:** 2026-09-12
 
 This is the repository's mutable operational-status document, not an ADR. It answers what privacy and migration assumptions are valid **right now**. Update it immediately when the project crosses one of the transition triggers below; do not preserve old stage text here for history.
 
 ## What the current stage means
 
 - The only Users are the owner, a small number of personally known, explicitly invited testers, and two owner-authorized agent test accounts restricted to the development environment ([local development access](agents/local-dev-access.md)).
-- Content created in development is test content. It is not treated as sensitive personal data or as content whose authors expect confidentiality from the other trusted testers.
+- User-scoped content is expected to remain private from every other User. This includes notes, tags, saved Recordings, and private Song Files.
 - The owner's hosted development deployment may contain a temporary clone of
   production data. Treat those rows and snapshots under `local/backups/` as
-  private production data; the trusted-testing posture does not make copies
-  nonsensitive.
-- Data migrations do not need zero-exposure choreography merely to prevent temporary visibility of current User-scoped test data among authenticated trusted testers. A migration plan may accept a short, explicit transition window while tables, queries, and owner-scoped authorization move to their target shape.
-- Existing Song and Recording data is useful and should be preserved by default, but it is still replaceable development data: the owner has not stored personal notes of consequence and accepts a targeted reset or loss when it materially simplifies work that unlocks the next model. Never discard, corrupt, or merge rows silently; explain the concrete benefit and get explicit approval for the destructive step first.
-- Authentication credentials, API keys, and other secrets are never covered by this relaxed test-data assumption.
+  private production data.
+- Data migrations must preserve the confidentiality boundary for User-scoped data throughout the migration, not only at its final schema shape. Review a migration's read paths, temporary data, and authorization before running it.
+- Existing Song and Recording data is useful and should be preserved by default. Never discard, corrupt, or merge rows silently; explain the concrete benefit and get explicit approval for the destructive step first.
+- Authentication credentials, API keys, and other secrets are always sensitive.
 
-The relaxed migration posture is temporary. It does **not** change the target
-domain model: `songUserData`, `artistUserData`, and `userRecordingData` remain
-private per User, and completed migrations must finish with server-enforced
-authorization and User-scoped application queries in place. It also does not
-relax the private-by-default and admin-gated publishing rule for future Lead
-Sheets.
+The target domain model is now also the operating privacy posture:
+`songUserData`, `artistUserData`, `userRecordingData`, and Song Files remain
+private per User, with server-enforced authorization and owner-scoped
+application queries in place. The private-by-default and admin-gated publishing
+rule for Song Files remains in force.
 
-## Transition to privacy-active use
+## Privacy-active checklist for expanded access
 
-Change this document to **privacy-active** before either of these happens:
+Any later expansion of access must preserve this posture; do not downgrade it
+merely because the app remains small or invite-only.
 
-- someone other than the owner or a personally known, explicitly invited tester receives access; or
-- any User begins storing content they expect to remain private from another User, even if everyone is still a tester.
+Before admitting a new category of expected-private content, or a User outside
+the current invited group:
 
-Whichever happens first is the transition point. Do not wait for a public launch or a large User count.
-
-When transitioning:
-
-1. Change the current-stage line and review date at the top of this file.
-2. Remove the permission for temporary cross-User test-data visibility from the current-stage description.
-3. Review unfinished schema/data-migration plans for transition windows that expose or mix User-scoped data; revise or finish them before admitting privacy-active data.
-4. Verify backend authorization and application queries with at least two Users
-   for every private User-data table then in use.
-5. Update any plan or direction document that explicitly relied on the trusted-testing stage.
-
-Once the stage is privacy-active, confidentiality becomes a migration requirement rather than only a target end state. Later changes may strengthen that posture further, but must not silently downgrade it.
+1. Review any unfinished schema/data-migration plan for data exposure or mixed
+   ownership, and revise it before the content or User is admitted.
+2. Verify backend authorization and application queries with at least two Users
+   for every affected private table and delivery path.
+3. Update any plan or direction document that still assumes trusted-test data
+   can be visible across Users.

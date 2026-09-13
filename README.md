@@ -40,6 +40,21 @@ YOUTUBE_API_KEY=
 prefix; both YouTube search and selected-video enrichment run through server
 routes.
 
+### Private Song File uploads
+
+Song File uploads use authenticated Convex HTTP actions. Set the
+development deployment's `APP_ORIGIN` to the exact local Next.js origin before
+using them:
+
+```bash
+npx convex env set APP_ORIGIN http://localhost:3000
+```
+
+For a Cloudflare quick tunnel, temporarily use that exact HTTPS tunnel origin
+instead. Never use `*`; the file actions accept only one configured browser
+origin. Configure the matching production origin separately during a
+production-release task.
+
 ### Refreshing hosted development data from production
 
 This owner-only command copies one User's production data into the hosted
@@ -65,6 +80,6 @@ for safeguards and recovery.
 
 ## Learn more about this project
 
-- [docs/project-stage.md](docs/project-stage.md) — current development/tester phase and the trigger for switching to privacy-active operation.
+- [docs/project-stage.md](docs/project-stage.md) — current development/tester phase and privacy-active operating posture.
 - [docs/README.md](docs/README.md) — index of domain model, architecture decisions, and notes on where the project is headed.
 - [AGENTS.md](AGENTS.md) — instructions for AI coding agents working in this repo.

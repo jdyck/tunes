@@ -22,6 +22,7 @@ import {
 } from "./lib/dataPullProcess.ts";
 import {
   APPLICATION_TABLES,
+  NON_PORTABLE_APPLICATION_TABLES,
   documentsToJsonLines,
   filterProductionSnapshot,
   parseDocumentsJsonl,
@@ -182,6 +183,29 @@ const readSnapshotDirectory = async (directory: string): Promise<SnapshotTables>
   return snapshot;
 };
 
+const assertNoNonPortableDestinationData = async (directory: string) => {
+  for (const table of NON_PORTABLE_APPLICATION_TABLES) {
+    const path = join(directory, table, "documents.jsonl");
+    try {
+      const file = await stat(path);
+      if (!file.isFile()) {
+        throw new Error(`Snapshot entry is not a file: ${table}`);
+      }
+      const documents = parseDocumentsJsonl(await readFile(path, "utf8"), table);
+      if (documents.length > 0) {
+        throw new Error(
+          `Hosted development has ${documents.length} ${table} row(s). Delete those private files in the app before running data:pull; file storage is not copied between deployments.`,
+        );
+      }
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+  }
+};
+
 const writeFilteredSnapshot = async (
   directory: string,
   tables: Readonly<Record<ApplicationTable, readonly SnapshotDocument[]>>,
@@ -295,6 +319,7 @@ const main = async () => {
       childEnvironment(),
     );
 
+    await assertNoNonPortableDestinationData(rawLocal);
     const productionSnapshot = await readSnapshotDirectory(rawProduction);
     const localSnapshot = await readSnapshotDirectory(rawLocal);
     const filteredSnapshot = filterProductionSnapshot(
