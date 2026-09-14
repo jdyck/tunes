@@ -4,10 +4,8 @@ How the engineering skills should consume this repository’s domain documentati
 
 ## Before exploring, read these
 
-- `CONTEXT.md` at the repository root, if present.
-- Relevant ADRs under `docs/adr/`.
-
-If a file does not exist, proceed silently. Domain-modeling skills create `CONTEXT.md` lazily when terms or decisions are resolved.
+- `docs/domain-model.md` for terminology and private/canonical boundaries.
+- Relevant ADRs under `docs/adr/` for settled architectural trade-offs.
 
 ## Layout
 
@@ -15,14 +13,16 @@ This is a single-context repository:
 
 ```text
 /
-├── CONTEXT.md
+├── docs/domain-model.md
 ├── docs/adr/
 └── src/
 ```
 
 ## Use the glossary’s vocabulary
 
-Use domain terms as defined in `CONTEXT.md`. Do not drift to synonyms it explicitly avoids. If a needed concept is absent, reconsider the terminology or note the gap for domain modeling.
+Use domain terms as defined in `docs/domain-model.md`. Do not drift to synonyms
+it explicitly avoids. If a needed concept is absent, reconsider the terminology
+or note the gap for domain modeling.
 
 ## Flag ADR conflicts
 

@@ -1,10 +1,23 @@
 # Recording platform links: store direct and Odesli-expanded links; link out rather than embed
 
-`Recording.url` today is a single free-text field, always assumed to be a YouTube link, embedded directly as an iframe. We want a User to play a Recording through whichever streaming service they actually subscribe to (Spotify, Apple Music, Amazon Music, YouTube Music), while still supporting Recordings that only exist as a YouTube video — performance footage, TV broadcast rips — with no commercial release at all. [ADR-0008](0008-provider-neutral-music-entities-and-user-data.md) later clarified that the selected YouTube result is a provider item attached to a provider-neutral Recording; `Recording.url` is therefore transitional rather than the target identity boundary.
+A Recording may have a YouTube Item for embedded playback while a User also
+needs to play a released Recording through services they subscribe to (Spotify,
+Apple Music, Amazon Music, or YouTube Music). Performance footage, TV broadcast
+rips, and other `video_capture` Recordings can remain YouTube-only rather than
+pretending to have a commercial match. [ADR-0008](0008-provider-neutral-music-entities-and-user-data.md)
+clarifies that a selected YouTube result is a provider item attached to a
+provider-neutral Recording, not the Recording's identity.
 
 We decided to **link out** (open the platform's own app/website) for Spotify, Apple Music, and Amazon Music, and leave the existing embedded YouTube iframe as it is. Apple Music embedding requires Apple Developer Program enrollment plus a per-user MusicKit authorization flow; Amazon Music's public API is closed-beta/partner-only with no embedding support at all; Spotify's embed degrades to a 30-second preview for most visitors anyway. None of that is worth taking on up front, and it doesn't block embedding a specific platform later — the hard part (matching a Recording to the right URL per platform, and the data model to hold those links) is identical whether the result is a link-out button or an embedded player.
 
-Cross-platform expansion uses the free Odesli (song.link) API, which takes one URL and returns matching links on other platforms. It's only called for Recordings whose Kind is `released` — see [domain-model.md](../domain-model.md) — and a match is fetched once and stored rather than re-queried live on every page view. Platform Links are not part of the current Convex schema. When this capability is implemented, use a dedicated relationship table with fields such as `recordingId`, `platform`, and `url`, rather than fixed platform columns on `recordings`; the future table name is deliberately left unspecified until that phase is designed. Links obtained directly from the selected source (such as YouTube/YouTube Music, or a future Spotify search result) use the same relationship store; Odesli expands them rather than being the only possible source of a Platform Link. The target permits at most one selected link for a Recording/platform pair.
+Cross-platform expansion uses the free Odesli (song.link) API, which takes one
+URL and returns matching links on other platforms. It is only called for
+`released` Recordings, and a match is fetched once and stored rather than
+re-queried live on every page view. Platform Links use a dedicated
+Recording/platform relationship rather than fixed columns on `recordings`.
+Links obtained directly from a selected source use the same store; Odesli
+expands them rather than being the only possible source of a Platform Link. A
+Recording has at most one selected link per platform.
 
 ## Considered
 
@@ -12,6 +25,5 @@ Embedding every platform immediately — rejected, since Apple Music alone would
 
 ## Consequences
 
-Recordings created before this decision have no Kind and no Platform Links. There's no backfill migration for this (see [direction/streaming-platform-links.md](../direction/streaming-platform-links.md)) — existing Recordings are classified and matched by hand, one at a time, since there are only a handful.
-
-Odesli is not wired up first. Build order favors the existing YouTube Music plus official YouTube search experience, Spotify search as a later source, and Odesli-based expansion to Apple Music/Amazon Music last — see [direction/streaming-platform-links.md](../direction/streaming-platform-links.md) for the current phased plan. A provider result's `song` / `video` category is not identical to Recording Kind: songs are strong evidence for `released`, while a video can be either an official released music video or an unofficial `video_capture` and needs an overrideable classification.
+Classify and match legacy Recordings one at a time when a User chooses to
+rematch them; do not introduce a bulk backfill solely for Platform Links.

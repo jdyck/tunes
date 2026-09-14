@@ -1,6 +1,10 @@
 # Dates describe creation; release identity is master-level, not an edition
 
-Decided July 2026, while scoping MusicBrainz matching fixes ([direction/musicbrainz-matching.md](../direction/musicbrainz-matching.md)). The date semantics share one principle: this app cares about when music was *made*, not when some later edition was packaged. The release entity boundary was subsequently refined by [ADR-0008](0008-provider-neutral-music-entities-and-user-data.md), including one Release Group display context independent of performance date.
+Decided July 2026 while scoping MusicBrainz metadata matching. The date
+semantics share one principle: this app cares about when music was *made*, not
+when some later edition was packaged. The release entity boundary was
+subsequently refined by [ADR-0008](0008-provider-neutral-music-entities-and-user-data.md),
+including one Release Group display context independent of performance date.
 
 **A Song's year is the year it was written**, approximated from the earliest `begin` date among the work's composer/writer/lyricist relationships. A MusicBrainz Work carries no date of its own — only its relationships do — so this is the most direct authorship signal available. Never fall back to a recording (performance) or release date: those post-date authorship and would falsely make a song look newer. These writing-relationship dates are frequently absent; null is preferable to substituting any later date, so coverage for this field is expected to be sparse.
 
@@ -19,7 +23,7 @@ Decided July 2026, while scoping MusicBrainz matching fixes ([direction/musicbra
 
 ## Consequences
 
-- Matching and sync code must source dates from the recording→work relationship, not `first-release-date` (work item in [direction/musicbrainz-matching.md](../direction/musicbrainz-matching.md)).
+- Matching and sync code source dates from the recording→Work relationship, not `first-release-date`; see [ADR-0017](0017-musicbrainz-metadata-is-advisory-until-explicit-save.md).
 - Song year sync is best-effort and often null; correctness takes priority over filling the field.
 - `recordings.year` is superseded by `recordingDateStart` / `recordingDateEnd` when that work lands.
 - The current `recordings.album` text is transitional. `recordings.releaseGroupId` is the normalized display relationship to a shared Release Group.

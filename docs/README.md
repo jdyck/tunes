@@ -9,12 +9,15 @@ Use capitalized domain names—**User**, **Song**, **Artist**, **Recording**, an
 - [project-stage.md](project-stage.md) — the mutable, authoritative statement of who is using the app now and what privacy/migration assumptions are currently allowed. Check it before schema, authorization, auth, or data-migration work, and update it immediately when its transition trigger is reached.
 - [domain-model.md](domain-model.md) — ubiquitous language (Song, Artist, Recording, Release Group, and their user-data/provider layers) and *why* the model is shaped this way. Read this before touching naming or data model in code.
 - [adr/](adr/) — architecture decision records. Point-in-time decisions and the reasoning/rejected alternatives behind them.
-- [direction/](direction/) — one file per subject/issue (e.g. `music-player.md`, `artist-browsing.md`). Each file mixes whatever's true about that subject — known problems, things to add, patterns to avoid — rather than being sorted into "bugs" vs "features" categories. Looser and more opinionated than an ADR; not all of it will happen.
 - [verifying-changes.md](verifying-changes.md) — reusable checks for code, UI, route, backend, and migration changes.
 - [working-with-agents.md](working-with-agents.md) — collaboration, worktree safety, and best-practice pushback norms.
 - [agents/local-dev-access.md](agents/local-dev-access.md) — dedicated Clerk development accounts, local agent login, and fixture setup.
 
+Unfinished approved work belongs in GitHub Issues. Provisional investigations,
+plans, and evidence-backed gaps belong in the ignored `local/wip/` workspace;
+they are not committed project direction.
+
 See also, at repo root:
 
 - `../README.md` — human-facing pitch + setup instructions.
-- `../AGENTS.md` — instructions for AI coding agents (stack, commands, guardrails). Links back into this folder for domain language and direction.
+- `../AGENTS.md` — instructions for AI coding agents (stack, commands, guardrails). Links back into this folder for domain language and architecture.
