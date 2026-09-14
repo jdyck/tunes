@@ -6,7 +6,7 @@ import { auth } from "@clerk/nextjs/server";
 
 // Static scan, not a runtime one: dynamically-constructed class names are
 // missed, which is acceptable for an at-a-glance inventory
-// (docs/direction/styling-cleanup.md, Task 1).
+// (ADR-0021: semantic-token adoption).
 const COLOR_CLASS =
   /(?:^|[\s"'`{])((?:hover:|focus:|active:|disabled:|group-hover:)*(?:bg|text|border|ring|fill|stroke|outline|decoration|divide|accent|caret|from|via|to)-([a-z]+)(?:-(\d{2,3}|default|app))?(?:\/\d{1,3})?)(?=[\s"'`}$])/g;
 

@@ -24,7 +24,7 @@ type ChildComponent = {
 
 // Dev-gallery-only panel listing the color classes a component's source
 // uses, split into @theme tokens vs raw Tailwind palettes (drift) --
-// docs/direction/styling-cleanup.md, Task 1.
+// ADR-0021: semantic-token adoption.
 export default function TokenInventoryPanel() {
   const pathname = usePathname();
   const slug = getComponentFromGalleryPathname(pathname)?.slug;
@@ -86,7 +86,7 @@ export default function TokenInventoryPanel() {
         {drift.length > 0 && (
           <p className="mt-2 text-xs text-vermillion-600">
             {drift.length} class{drift.length === 1 ? "" : "es"} outside the
-            @theme palette — see docs/direction/styling-cleanup.md.
+            @theme palette — see ADR-0021.
           </p>
         )}
       </section>

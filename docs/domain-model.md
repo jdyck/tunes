@@ -6,8 +6,13 @@ A personal tool for consolidating scattered musical repertoire — song lists an
 
 ## Language
 
+**Canonical**:
+A shared identity boundary, not a claim that a row is verified, authoritative,
+or immutable. Canonical facts can still need an explicit curation, conflict, or
+merge workflow; that authority never turns User-scoped data into shared data.
+
 **Song**:
-A canonical, shared piece of music — title, composer, year (the year it was *written*, see [ADR-0007](adr/0007-original-dates-and-albums.md)), lyricist, etc. — genre-neutral (not jazz-specific "tune" or lyrics-specific "song" in the strict sense; covers instrumental pieces too). For repertoire centered on the composition, an original instrumental or original-language MusicBrainz Work anchors the Song even when some performers use the title of a translated lyric version; a User's familiar title belongs in their private display title. A translated or adapted lyric Work becomes a separate Song when that exact version matters independently, such as for singing or accurate lyricist credits. MusicBrainz Work-family matching must preserve this distinction rather than merging credits or relying on title similarity; see [direction/musicbrainz-matching.md](direction/musicbrainz-matching.md). Any User can create a new Song when search/autocomplete finds no match, so occasional duplicates are expected and get merged by a Site Admin later rather than gated upfront. A new Song begins non-discoverable: it is available to its creator but appears in another authenticated User's Add Song search only after a Site Admin enables **Visible to all users**. Discoverability is not anonymous publication and never exposes a User's private Song data. This reverses an earlier assumption that Song data would stay fully siloed per User — see [ADR-0003](adr/0003-song-canonical-user-song-personal.md).
+A canonical, shared piece of music — title, composer, year (the year it was *written*, see [ADR-0007](adr/0007-original-dates-and-albums.md)), lyricist, etc. — genre-neutral (not jazz-specific "tune" or lyrics-specific "song" in the strict sense; covers instrumental pieces too). For repertoire centered on the composition, an original instrumental or original-language MusicBrainz Work anchors the Song even when some performers use the title of a translated lyric version; a User's familiar title belongs in their private display title. A translated or adapted lyric Work becomes a separate Song when that exact version matters independently, such as for singing or accurate lyricist credits. Work-family matching must preserve this distinction rather than merging credits or relying on title similarity. Any User can create a new Song when search/autocomplete finds no match, so occasional duplicates are expected and get merged by a Site Admin later rather than gated upfront. A new Song begins non-discoverable: it is available to its creator but appears in another authenticated User's Add Song search only after a Site Admin enables **Visible to all users**. Discoverability is not anonymous publication and never exposes a User's private Song data. A Song has no artwork of its own; a Song-list image, when available, is a representative saved Recording's Release Group/artwork context. This reverses an earlier assumption that Song data would stay fully siloed per User — see [ADR-0003](adr/0003-song-canonical-user-song-personal.md).
 _Avoid_: Tune (legacy/jazz-specific term being phased out)
 
 **`songUserData`**:
@@ -15,7 +20,7 @@ A User's private layer over a canonical Song: their own notes, their own display
 _Avoid_: User Song, My Tune, Listed Song, Repertoire Entry (earlier names considered and rejected — "User Song" in particular wrongly implies a subtype of Song)
 
 **Artist**:
-A canonical, shared identity that can receive a musical credit: a person, group, orchestra, choir, character, or another credited entity. This follows MusicBrainz's broad and useful meaning rather than treating Artist as synonymous with individual performer. Artist kind may be absent when the source does not know it; missing is not the same as MusicBrainz's positive `Other` type and must not be coerced to it. Composer, lyricist, writer, and performer are roles relating an Artist to a Song or Recording; they are not different entity types. A credited group remains the group unless individual members are separately known — never omit it because it is not a person, and never infer its members. Shared identity lives in `artists`; ordered Song roles live in `songArtistCredits`, while grouped Recording Personnel lives in `recordingPersonnel`. See [ADR-0008](adr/0008-provider-neutral-music-entities-and-user-data.md) and [direction/artist-browsing.md](direction/artist-browsing.md).
+A canonical, shared identity that can receive a musical credit: a person, group, orchestra, choir, character, or another credited entity. This follows MusicBrainz's broad and useful meaning rather than treating Artist as synonymous with individual performer. Artist kind may be absent when the source does not know it; missing is not the same as MusicBrainz's positive `Other` type and must not be coerced to it. Composer, lyricist, writer, and performer are roles relating an Artist to a Song or Recording; they are not different entity types. A credited group remains the group unless individual members are separately known — never omit it because it is not a person, and never infer its members. Shared identity lives in `artists`; ordered Song roles live in `songArtistCredits`, while grouped Recording Personnel lives in `recordingPersonnel`. See [ADR-0008](adr/0008-provider-neutral-music-entities-and-user-data.md).
 _Avoid_: using Person as the universal identity; using performer as a synonym for Artist
 
 An Artist's sourced group memberships are shared background facts, separate from
@@ -24,6 +29,13 @@ have no local Artist identity; link a name only when its MusicBrainz ID matches
 an existing Standards Artist. Membership never creates an Artist automatically
 or attributes a group's Recordings to its members. Preserve known membership
 periods rather than treating the lineup as timeless.
+
+**Artist Enrichment**:
+Optional shared background facts about an Artist, such as an identity-backed
+image or explicit group membership. Enrichment is distinct from private
+`artistUserData`, never creates an Artist or changes credits, and is absent
+rather than guessed when a source cannot establish it. Name-based image or
+identity matching is not evidence.
 
 **`artistUserData`**:
 A User's private layer over a canonical Artist: personal notes, tags, and any later private organization. There is at most one row per User and Artist. It is not an Artist subtype and must not hold the shared name, kind, biography, or provider identity. `artistUserData` follows the `songUserData` private-layer pattern; those names are schema vocabulary, not UI labels. Owner-scoped Convex authorization keeps this payload private while the Artist identity and credit facts are shared.
@@ -58,6 +70,9 @@ _Avoid_: Recording Artist Credit (MusicBrainz uses artist credit for Recording A
 **Recording**:
 A canonical, provider-neutral identity for one specific recorded performance or version of a Song. Within the current product model it is Song-scoped: every Recording belongs to one Song. An external catalog Recording or a long provider item can involve multiple Works/Songs; until a richer multi-Work model is deliberately designed, that source may support separate Song-scoped Recordings rather than collapsing them into one cross-Song row. A Recording can optionally match a MusicBrainz Recording, but it still exists when no catalog knows about it — for example, an informal concert video. One Recording can have several provider items and Platform Links rather than being either a YouTube Music track *or* a YouTube video. Its `name` is free text because a Recording's useful title is often a live/session descriptor (e.g. "Live at Village Vanguard, 1961") rather than just the Song title. Canonical facts include its structured Recording Attribution, performance date, duration, and Recording Personnel when known. The Attribution can contain several credited Artists and join phrases, can name a group, and can differ from notable individual Personnel; an Attribution Fallback preserves unresolved display text without inventing an Artist identity. Every Recording has a Kind — see below. Canonical Recordings are readable to authenticated Users. A User who saved a Recording may edit it under the temporary last-write-wins policy. Client-side canonical deletion is not permitted.
 _Avoid_: defining a Recording as a provider result; using performer as a substitute for its Recording Attribution
+
+**Performance Date**:
+The date a Recording was performed or recorded, not the date it was released. It preserves source precision (`YYYY`, `YYYY-MM`, or `YYYY-MM-DD`) and a genuine range when known; an edition date, a first-release date, provider album metadata, and a legacy year are never performance-date evidence.
 
 **`userRecordingData`**:
 A User's private relationship to a canonical Recording: that they saved it, their notes and rating, their preferred order within the Recording's Song, their preferred playing key and practice tempo, and other genuinely personal organization such as tags. Key and tempo here are the User's working values, not claims about the key or measured tempo of the canonical performance. There is at most one such relationship per User and Recording, enforced by one owner/Recording relationship; its presence means saved and its absence means unsaved. It is not a kind or copy of Recording. The UI simply shows these as the User's Recordings; `userRecordingData` is the Convex table name, not UI vocabulary. Owner-scoped Convex authorization keeps this payload private, and unsaving removes only this relationship rather than the shared Recording or provider evidence.
@@ -99,5 +114,5 @@ status — never automatically or by self-service.
 _Avoid_: Lead Sheet as the generic term; Attachment (when Song File precision matters)
 
 **Site Admin**:
-A trusted role (the app owner, or someone they explicitly trust), distinct from an ordinary User, who can vet and approve content — e.g. approving a Song File for visibility after checking rights, or merging duplicate Songs.
+A trusted role (the app owner, or someone they explicitly trust), distinct from an ordinary User, who can vet and approve content — e.g. approving a Song File for visibility after checking rights, or merging duplicate Songs. Authority over shared canonical facts never bypasses another User's private `songUserData`, `artistUserData`, `userRecordingData`, or Song Files.
 _Avoid_: Moderator, curator

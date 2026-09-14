@@ -32,10 +32,10 @@ src/lib/             effectful/stateful modules — anything that fetches or hol
 src/types/           shared TS types
 src/utils/           pure functions only
 convex/              schema, authenticated queries/mutations, and model helpers
-docs/                domain model, ADRs, direction notes (issues + ideas by subject) — see docs/README.md
+docs/                domain model, ADRs, verification and collaboration guides — see docs/README.md
 ```
 
-The folder scheme and lib/utils rule above are deliberate decisions (recorded in [docs/direction/code-organization.md](docs/direction/code-organization.md)) — place new files accordingly, and check that doc before further structural changes.
+The folder scheme and lib/utils rule above are deliberate decisions (recorded in [ADR-0006](docs/adr/0006-components-by-feature-lib-effectful-utils-pure.md)) — place new files accordingly, and check that ADR before further structural changes. Shared component additions belong in `componentRegistry` and get a matching dev-gallery preview; preserve existing styling during an extraction unless redesign is explicitly in scope.
 
 ## Tech stack
 
@@ -43,7 +43,7 @@ The folder scheme and lib/utils rule above are deliberate decisions (recorded in
 - Tailwind CSS
 - Clerk — authentication and invite-only account access
 - Convex — application data, authorization, reactive queries, and atomic mutations; read `convex/_generated/ai/guidelines.md` before editing `convex/`
-- Persistent custom player for Recordings, backed by the YouTube IFrame API (`src/components/player/GlobalPlayer.tsx`, `src/lib/youtube.ts`) — see [docs/direction/music-player.md](docs/direction/music-player.md)
+- Persistent custom player for Recordings, backed by the YouTube IFrame API (`src/components/player/GlobalPlayer.tsx`, `src/lib/youtube.ts`) — see [ADR-0018](docs/adr/0018-one-persistent-embedded-youtube-player.md)
 - dnd-kit (`@dnd-kit/core`, `/sortable`, `/utilities`) — drag-to-reorder for a User's Recordings within a Song (`src/components/song/RecordingsSection.tsx`). Order is private state: `useSavedRecordings.reorder` calls the owner-scoped `recordings.reorder` mutation; position within a Song must remain private to the User.
 
 ## Commands
@@ -56,9 +56,8 @@ npm run start    # run production build
 ```
 
 The focused test suite covers pure normalization/MusicBrainz contracts and
-Convex authorization behavior; broader component/browser testing remains
-undecided. See
-[docs/direction/testing.md](docs/direction/testing.md).
+Convex authorization behavior. See
+[docs/verifying-changes.md](docs/verifying-changes.md).
 
 For local browser sign-in, account setup, or auth blockers, read
 [docs/agents/local-dev-access.md](docs/agents/local-dev-access.md). Use the
@@ -117,14 +116,14 @@ Git, back up valuable WIP and audits independently.
 ## Rules and guardrails
 
 - **Terminology and Song boundary**: "Song", never "Tune" ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)). Shared identity and metadata live on `songs`, while membership, notes, display title, and added time live in private `songUserData`. Don't reintroduce "tune" or owner/private payload on `songs`.
-- **Canonical entity migrations are scoped work, not drive-bys**: shared `artists` include people and groups; Song credits live in `songArtistCredits`; private Artist state belongs in `artistUserData`; Recording is provider-neutral; private Recording state belongs in `userRecordingData`; YouTube results belong in `youtubeItems`; and `releaseGroupId` is the Recording's single normalized display/artwork context. Follow [ADR-0008](docs/adr/0008-provider-neutral-music-entities-and-user-data.md) and [canonical-entity-migrations.md](docs/direction/canonical-entity-migrations.md) rather than extending transitional Recording release fields as if they were final.
+- **Canonical entity migrations are scoped work, not drive-bys**: shared `artists` include people and groups; Song credits live in `songArtistCredits`; private Artist state belongs in `artistUserData`; Recording is provider-neutral; private Recording state belongs in `userRecordingData`; YouTube results belong in `youtubeItems`; and `releaseGroupId` is the Recording's single normalized display/artwork context. Follow [ADR-0008](docs/adr/0008-provider-neutral-music-entities-and-user-data.md) rather than extending transitional Recording release fields as if they were final.
 - **Song creation is not admin-gated**: any user can create a new Song on no search match; don't add approval/moderation gates here ([ADR-0003](docs/adr/0003-song-canonical-user-song-personal.md)).
 - **Song Files are private by default and publishing is admin-only**, never self-service or automatic — don't build a user-facing "publish" action ([ADR-0002](docs/adr/0002-song-files-admin-gated-publishing.md)).
 - **One email = one account** across auth methods (password + Google) — don't treat them as separate identities ([ADR-0001](docs/adr/0001-unique-email-account-linking.md)).
 - **Only the owner commits — never an agent.** Agents stage changes (`git add`) and suggest a `git commit -m` message for the owner to run; never run `git commit` (or push, amend, etc.) themselves. When the work reaches a point where a commit seems like a good idea, proactively suggest one; if unsure whether it's commit-worthy, ask.
-- **Keep docs handoff-ready at all times.** The owner returns after long gaps and any session may be the last before a handoff, so update the relevant docs (`docs/direction/`, ADRs, this file, `docs/domain-model.md`) *as part of the work*, not as a follow-up: scope changes, decisions made, and completed/obsolete tasks must be reflected before the session ends. If a session were interrupted right now, the docs — not the conversation — must be enough for the next agent to pick up. Handoff context that shouldn't be committed (in-progress state, half-formed plans) goes in `local/wip/`. Before finishing, explicitly report which docs changed or say `Docs impact: none.` after checking.
-- **Docs record direction and decisions, not history.** When work scoped in [docs/direction/](docs/direction/) is completed, *delete* that task/section (git history is the record — no "DONE" markers accumulating). Standing decisions worth keeping get an ADR; a direction file whose content is all completed gets deleted.
-- Before "fixing" something you notice in passing, check [docs/direction/](docs/direction/) for a file on that subject — it may already be a known, deliberately-not-yet-fixed issue, or something the owner has other plans for. A hit there needs a conversation, not a silent fix.
+- **Keep docs handoff-ready at all times.** The owner returns after long gaps and any session may be the last before a handoff, so update the relevant ADRs, this file, `docs/domain-model.md`, and verification guidance *as part of the work*, not as a follow-up. Record approved unfinished work in GitHub Issues; handoff context that should not be committed (in-progress state, half-formed plans, evidence-backed gaps) goes in `local/wip/`. Before finishing, explicitly report which docs changed or say `Docs impact: none.` after checking.
+- **Docs record settled knowledge, not history or a speculative backlog.** Put durable architecture decisions in ADRs and domain rules in `docs/domain-model.md`; delete completed material rather than accumulating "DONE" markers. Keep proposed work in GitHub Issues or `local/wip/`, not committed documentation.
+- Before "fixing" something you notice in passing, check related ADRs/domain rules, open GitHub Issues, and relevant `local/wip/` material. A known but unapproved gap needs a conversation, not a silent fix.
 - This is a solo hobby project the owner returns to after long gaps and is also using to learn broader dev practices — prefer clear, conventional patterns over clever ones, and explain non-obvious choices.
 
 <!-- convex-ai-start -->

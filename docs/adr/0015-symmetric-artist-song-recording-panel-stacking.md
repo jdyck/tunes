@@ -2,15 +2,21 @@
 
 ## Decision
 
-Artist and Song are now both stacking roots in the `@detail` slot, each able
-to nest the other, with Recording nestable one level further under whichever
-of the two is currently the root:
+Artist and Song are both stacking roots in the `@detail` slot. The complete
+allowed trails are:
 
 ```
+Artist
+Artist > Song
 Artist > Song > Recording
-Song > Artist            (terminal — does not extend to Recording)
+Song
+Song > Artist
+Song > Recording
 Song > Recording > Artist
 ```
+
+Recording is never a root. A trail contains at most one panel of each entity
+type; closing a panel drops that panel and everything nested inside it.
 
 This supersedes the "Song or Artist, mutually exclusive" statement in
 [ADR-0010](0010-responsive-browse-layout-hybrid-parallel-routes.md). Every
@@ -42,12 +48,11 @@ to claim a fourth static column.
 
 The owner wanted writer credits, recording personnel, and release-group
 attribution to open their linked Artist without losing the Song or Recording
-context that got you there, and wanted the reverse (browsing an Artist's
-Songs and Recordings) to keep the Artist panel open too — see
-[routing-trails.md](../direction/routing-trails.md) for the full approved
-trail set. Making only one of Artist/Song a stacking root (the other always
-replacing on navigate) was considered and rejected: it would have made the
-two directions behave inconsistently for no reason the owner asked for.
+context that got you there, and wanted the reverse (browsing an Artist's Songs
+and Recordings) to keep the Artist panel open too. Making only one of
+Artist/Song a stacking root (the other always replacing on navigate) was
+considered and rejected: it would have made the two directions behave
+inconsistently for no reason the owner asked for.
 
 ## Consequences
 
@@ -57,12 +62,11 @@ within a Song, the Songs/Recordings lists within an Artist) needed its href
 changed to the appropriate nested or root-anchored form; none needed new data
 threaded in, since the ids were already present at each call site.
 
-Extending a trail versus resetting to a fresh one turns out to produce the
-same href in every case except one (a Song's own outbound Recording links,
-which must extend using whichever root — Song or Artist — is currently
-active). Every other outbound link direction is anchored purely to its own
-entity's id, with the correct extend/reset behavior falling out for free: see
-routing-trails.md's "Link-generation rule" for the case-by-case reasoning.
+Links extend the current trail only when their destination forms an allowed
+sequence. A Song's outbound Recording links preserve whichever Song or Artist
+root already owns the Song panel; Recording Attribution and Personnel links
+form `Song > Recording > Artist`. Other selections start at their canonical
+Artist or Song root instead of inventing an unlisted trail.
 
 The route tree roughly doubles in file count (Artist's `@song`/`@recording`
 slots mirror Song's existing `@recording` slot, plus one more slot each for

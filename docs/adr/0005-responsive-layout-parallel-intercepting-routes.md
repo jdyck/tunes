@@ -12,4 +12,7 @@ Plain client-side viewport checks (each detail page manually renders its sibling
 
 ## Consequences
 
-Whether there's an intermediate 2-pane tablet tier (list + one active detail pane) between mobile's 1-pane stack and desktop's 3-pane view, and the exact pixel breakpoints, are deliberately left open — see [direction/mobile-desktop-ux.md](../direction/mobile-desktop-ux.md) — to be decided once a rough version of the 3-pane layout is on screen, since that's the highest-rework-risk piece of this decision if the UX doesn't hold up.
+Whether there's an intermediate 2-pane tablet tier (list + one active detail
+pane) between mobile's 1-pane stack and desktop's 3-pane view, and the exact
+pixel breakpoints, were deliberately left open until the rough 3-pane layout
+could be evaluated. ADR-0010 superseded this route architecture.

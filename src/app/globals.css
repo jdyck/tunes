@@ -88,7 +88,7 @@
 
   --color-status-success: var(--color-azure-700);
   /* Absorbed amber. Warning is now the same colour as an action, which is a
-     real cost -- see the open decision in direction/styling-cleanup.md. */
+     real cost; destructive-state treatment needs non-colour cues. */
   --color-status-warning: var(--color-vermillion-600);
   /* Was the bare hex #a83221, which was vermillion-700 to within a deltaE of
      0.9 -- a colour nobody could tell apart, pretending to be its own. */

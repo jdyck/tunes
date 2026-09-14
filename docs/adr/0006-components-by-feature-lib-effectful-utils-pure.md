@@ -4,7 +4,7 @@ Two standing rules for where source files live, decided together (July 2026) whe
 
 **Components are grouped by feature, plus two structural folders**: `components/ui/` (generic primitives — Spinner, Modal, FormField, LinkButton — plus cross-feature domain bits like MusicBrainzLink that both song and recording features use), `components/layout/` (shells, panes, gates), and one folder per feature (`song/`, `recording/`, `player/`). Song Files are an attachment capability within the Song feature; a future Playlist feature (ordered subsets of a user's Songs) gets its own folder when it arrives, so the scheme scales by feature rather than by file count.
 
-**`src/lib` holds anything effectful or stateful** (I/O, fetch wrappers, external-service access, singletons, config); **`src/utils` holds pure functions only**. The rule is deliberately mechanical — an agent or future self can apply it without judgment: if it fetches, talks to an external service, or holds state, it's `lib`. The stateful/networked YouTube Music client therefore lives in `src/lib/ytmusic.ts`; provider clients are not exceptions to the rule (see [code-organization.md](../direction/code-organization.md)).
+**`src/lib` holds anything effectful or stateful** (I/O, fetch wrappers, external-service access, singletons, config); **`src/utils` holds pure functions only**. The rule is deliberately mechanical — an agent or future self can apply it without judgment: if it fetches, talks to an external service, or holds state, it's `lib`. The stateful/networked YouTube Music client therefore lives in `src/lib/ytmusic.ts`; provider clients are not exceptions to the rule.
 
 ## Considered
 
